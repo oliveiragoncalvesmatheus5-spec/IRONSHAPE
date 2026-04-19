@@ -1904,7 +1904,7 @@ function QuickAction({ icon, label, color }: { icon: React.ReactNode, label: str
 }
 
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
-  const { isAdmin, simulatedPlan, user } = useAuth();
+  const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan = (isAdmin && simulatedPlan) ? simulatedPlan : profile.plano;
   const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(effectivePlan === 'free' ? 'Iniciante' : effectivePlan);
   const initialLevel: Level = effectivePlan === 'Elite' ? 'Avançado' : effectivePlan === 'Pro' ? 'Intermediário' : 'Iniciante';
@@ -1912,7 +1912,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'Todos'>('Todos');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early'>('workouts');
-  
+
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     const saved = localStorage.getItem('completedWorkouts');
     return saved ? JSON.parse(saved) : [];
@@ -1929,12 +1929,36 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     return weights[effectivePlan] >= weights[planId];
   };
 
-  const toggleComplete = (workoutId: string) => {
-    setCompletedWorkouts(prev => 
-      prev.includes(workoutId) 
-        ? prev.filter(id => id !== workoutId) 
-        : [...prev, workoutId]
+  const toggleComplete = async (workoutId: string) => {
+    const alreadyDone = completedWorkouts.includes(workoutId);
+    setCompletedWorkouts(prev =>
+      alreadyDone ? prev.filter(id => id !== workoutId) : [...prev, workoutId]
     );
+    if (!alreadyDone && user) {
+      const workout = ALL_WORKOUTS.find(w => w.id === workoutId);
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        await dataService.addWorkoutLog({
+          userUid: user.id,
+          workoutId,
+          workoutName: workout?.name ?? workoutId,
+          completedAt: new Date().toISOString(),
+          duration: parseInt(workout?.duration ?? '0') || 0,
+        });
+        const lastDate = profile.lastWorkoutDate;
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const isConsecutive = lastDate === yesterday.toISOString().split('T')[0];
+        const newStreak = lastDate === today ? profile.streak : isConsecutive ? profile.streak + 1 : 1;
+        await updateProfile({
+          points: (profile.points || 0) + 100,
+          streak: newStreak,
+          lastWorkoutDate: today,
+        });
+      } catch (e) {
+        console.error('Erro ao salvar treino:', e);
+      }
+    }
   };
 
   if (selectedWorkout) {
@@ -5295,45 +5319,75 @@ function IAAdaptativaView() {
 }
 
 function WorkoutHistoryView({ userUid }: { userUid: string }) {
-  // Mock history
-  const history = [
-    { id: '1', name: 'Peito Básico', date: '08/04/2026', duration: '35 min', type: 'Força' },
-    { id: '2', name: 'Costas e Postura', date: '06/04/2026', duration: '40 min', type: 'Força' },
-    { id: '3', name: 'Full Body Iniciante', date: '04/04/2026', duration: '45 min', type: 'Funcional' },
-  ];
+  const [history, setHistory] = useState<WorkoutLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userUid) { setLoading(false); return; }
+    dataService.getWorkoutLogs(userUid)
+      .then(setHistory)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userUid]);
 
   return (
     <div className="space-y-8">
       <h2 className="text-2xl font-black uppercase tracking-tight">Histórico de Treinos</h2>
-      <div className="space-y-4">
-        {history.map((item) => (
-          <div key={item.id} className="bg-surface p-6 rounded-3xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-muted">
-                <Calendar size={20} />
-              </div>
-              <div>
-                <p className="font-bold">{item.name}</p>
-                <p className="text-xs text-text-muted">{item.date} • {item.duration}</p>
-              </div>
-            </div>
-            <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-full uppercase tracking-widest">
-              {item.type}
-            </span>
+      {loading ? (
+        <div className="text-text-muted text-sm">Carregando...</div>
+      ) : history.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-text-muted">
+            <Calendar size={32} />
           </div>
-        ))}
-      </div>
+          <p className="text-xl font-bold">Nenhum treino concluído ainda</p>
+          <p className="text-text-muted text-sm">Complete um treino para ele aparecer aqui.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {history.map((item) => {
+            const date = new Date(item.completedAt).toLocaleDateString('pt-BR');
+            return (
+              <div key={item.id} className="bg-surface p-6 rounded-3xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-muted">
+                    <Calendar size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold">{item.workoutName}</p>
+                    <p className="text-xs text-text-muted">{date} • {item.duration} min</p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-full uppercase tracking-widest">
+                  +100 pts
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 function GlobalRankingView() {
-  const ranking: RankingEntry[] = [
-    { uid: '1', name: 'Carlos Silva', points: 1250, streak: 12 },
-    { uid: '2', name: 'Ana Oliveira', points: 1100, streak: 8 },
-    { uid: '3', name: 'Bruno Santos', points: 950, streak: 15 },
-    { uid: '4', name: 'Mariana Lima', points: 880, streak: 5 },
-  ];
+  const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('id, name, points, streak')
+      .gt('points', 0)
+      .order('points', { ascending: false })
+      .limit(20)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setRanking(data.map((p: any) => ({ uid: p.id, name: p.name, points: p.points, streak: p.streak })));
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -5341,31 +5395,43 @@ function GlobalRankingView() {
         <h2 className="text-2xl font-black uppercase tracking-tight">Ranking Global</h2>
         <div className="text-xs text-text-muted font-bold uppercase tracking-widest">Atualizado em tempo real</div>
       </div>
-      
-      <div className="bg-surface rounded-[40px] border border-white/5 overflow-hidden">
-        {ranking.map((entry, index) => (
-          <div key={entry.uid} className={`p-6 flex items-center justify-between border-b border-white/5 last:border-0 ${index === 0 ? 'bg-primary/5' : ''}`}>
-            <div className="flex items-center gap-6">
-              <span className={`w-8 text-center font-black text-xl ${index === 0 ? 'text-primary' : 'text-text-muted'}`}>
-                #{index + 1}
-              </span>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center font-black text-lg">
-                  {entry.name[0]}
-                </div>
-                <div>
-                  <p className="font-bold">{entry.name}</p>
-                  <p className="text-xs text-text-muted">{entry.streak} dias de sequência</p>
+
+      {loading ? (
+        <div className="text-text-muted text-sm">Carregando...</div>
+      ) : ranking.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-text-muted">
+            <Trophy size={32} />
+          </div>
+          <p className="text-xl font-bold">Ranking vazio por enquanto</p>
+          <p className="text-text-muted text-sm">Complete treinos para aparecer no ranking!</p>
+        </div>
+      ) : (
+        <div className="bg-surface rounded-[40px] border border-white/5 overflow-hidden">
+          {ranking.map((entry, index) => (
+            <div key={entry.uid} className={`p-6 flex items-center justify-between border-b border-white/5 last:border-0 ${index === 0 ? 'bg-primary/5' : ''}`}>
+              <div className="flex items-center gap-6">
+                <span className={`w-8 text-center font-black text-xl ${index === 0 ? 'text-primary' : 'text-text-muted'}`}>
+                  #{index + 1}
+                </span>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center font-black text-lg">
+                    {entry.name?.[0] ?? '?'}
+                  </div>
+                  <div>
+                    <p className="font-bold">{entry.name}</p>
+                    <p className="text-xs text-text-muted">{entry.streak} dias de sequência</p>
+                  </div>
                 </div>
               </div>
+              <div className="text-right">
+                <p className="font-black text-primary">{entry.points}</p>
+                <p className="text-[10px] text-text-muted uppercase font-black">Pontos</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="font-black text-primary">{entry.points}</p>
-              <p className="text-[10px] text-text-muted uppercase font-black">Pontos</p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

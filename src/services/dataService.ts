@@ -9,7 +9,7 @@ export const dataService = {
         .from('workout_logs')
         .select('*')
         .eq('userUid', userUid)
-        .order('date', { ascending: false });
+        .order('completedAt', { ascending: false });
       
       if (error) throw error;
       return data as WorkoutLog[];

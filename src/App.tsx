@@ -2120,14 +2120,15 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                           <h2 className="text-2xl font-black tracking-tight uppercase">{group}</h2>
                           <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:overflow-visible md:pb-0 md:snap-none">
                           {groupWorkouts.map((workout) => (
-                            <WorkoutCard 
-                              key={workout.id} 
-                              workout={workout} 
-                              isCompleted={completedWorkouts.includes(workout.id)}
-                              onClick={() => setSelectedWorkout(workout)}
-                            />
+                            <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
+                              <WorkoutCard
+                                workout={workout}
+                                isCompleted={completedWorkouts.includes(workout.id)}
+                                onClick={() => setSelectedWorkout(workout)}
+                              />
+                            </div>
                           ))}
                         </div>
                       </section>
@@ -2217,9 +2218,9 @@ function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgra
 
 function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCompleted: boolean, onClick: () => void }) {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className="bg-surface p-8 rounded-[40px] border border-white/5 hover:border-primary/30 transition-all duration-500 group relative overflow-hidden flex flex-col text-left"
+      className="w-full h-full bg-surface p-8 rounded-[40px] border border-white/5 hover:border-primary/30 transition-all duration-500 group relative overflow-hidden flex flex-col text-left"
     >
       <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all duration-700">
         <Dumbbell size={100} />

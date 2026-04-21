@@ -123,24 +123,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Watchdog timer to prevent infinite loading
     const watchdog = setTimeout(() => {
-      setLoading(currentLoading => {
-        if (currentLoading) {
-          console.warn('Auth watchdog triggered: forcing loading to false after 5s');
-          // If we still don't have a user, it might be a timeout
-          if (!user && !authError) {
-            setAuthError('O carregamento inicial demorou muito. Verifique sua conexão.');
-          }
+      setLoading(prev => {
+        if (prev) {
+          console.warn('Auth watchdog triggered: forcing loading to false after 8s');
+          setAuthError('O carregamento demorou muito. Verifique sua conexão.');
           return false;
         }
-        return currentLoading;
+        return prev;
       });
-    }, 5000); // 5s watchdog as requested
+    }, 8000);
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(watchdog);
     };
-  }, [user, authError]); // Removed loading from dependencies to prevent watchdog reset
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchingProfileFor = useRef<string | null>(null);
 
@@ -168,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (fetchingProfileFor.current === id && retryCount === 0) {
       console.log('Already fetching profile for:', id);
+      setLoading(false);
       return;
     }
     

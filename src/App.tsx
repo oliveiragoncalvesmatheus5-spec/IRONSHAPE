@@ -383,10 +383,10 @@ function AffiliateView({ profile }: { profile: UserProfile | null }) {
           ) as any;
 
         if (conversions) {
-          const total = conversions.reduce((acc, curr) => acc + Number(curr.valor_comissao), 0);
+          const total = conversions.reduce((acc: number, curr: any) => acc + Number(curr.valor_comissao), 0);
           const pending = conversions
-            .filter(c => c.status_pagamento === 'pendente')
-            .reduce((acc, curr) => acc + Number(curr.valor_comissao), 0);
+            .filter((c: any) => c.status_pagamento === 'pendente')
+            .reduce((acc: number, curr: any) => acc + Number(curr.valor_comissao), 0);
           
           setMetrics({
             clicks: clicks?.length || 0,
@@ -2064,7 +2064,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                     <div className="flex flex-col gap-3">
                       <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Nível de Intensidade</span>
                       <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5">
-                        {(selectedPlanTab === 'Elite' ? ['Avançado'] : selectedPlanTab === 'Pro' ? ['Intermediário'] : ['Iniciante'] as Level[]).map((level) => (
+                        {(selectedPlanTab === 'Elite' ? ['Avançado' as Level] : selectedPlanTab === 'Pro' ? ['Intermediário' as Level] : ['Iniciante' as Level]).map((level: Level) => (
                           <button
                             key={level}
                             onClick={() => setSelectedLevel(level)}
@@ -5369,7 +5369,7 @@ function GlobalRankingView() {
           setRanking(data.map((p: any) => ({ uid: p.id, name: p.name, points: p.points, streak: p.streak })));
         }
       })
-      .finally(() => setLoading(false));
+      .then(() => setLoading(false));
   }, []);
 
   return (

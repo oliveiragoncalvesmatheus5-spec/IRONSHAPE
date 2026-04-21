@@ -1518,6 +1518,26 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   const [newWeight, setNewWeight] = useState('');
   const [savingWeight, setSavingWeight] = useState(false);
   const [weightSaveError, setWeightSaveError] = useState<string | null>(null);
+  const [weeklyCount, setWeeklyCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun
+    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+    supabase
+      .from('workout_logs')
+      .select('id', { count: 'exact' })
+      .eq('userUid', user.id)
+      .gte('completedAt', monday.toISOString())
+      .then(({ count }) => { if (count !== null) setWeeklyCount(count); });
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const WEEKLY_TARGET = 5;
+  const weeklyPercent = Math.min(100, Math.round((weeklyCount / WEEKLY_TARGET) * 100));
 
   const fetchWeightLogs = async () => {
     if (!user) return;
@@ -1630,7 +1650,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
               <span className="text-primary">{getFirstName()}!</span>
             </h1>
             <p className="text-text-secondary text-base md:text-lg max-w-md leading-relaxed">
-              "A disciplina é a ponte entre metas e realizações." Você já completou <span className="text-text-primary font-bold">85%</span> da sua meta semanal.
+              "A disciplina é a ponte entre metas e realizações." Você já completou <span className="text-text-primary font-bold">{weeklyPercent}%</span> da sua meta semanal ({weeklyCount}/{WEEKLY_TARGET} treinos).
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -1656,10 +1676,20 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
           </div>
           
           <div className="hidden lg:block relative">
-            <div className="w-64 h-64 rounded-full border-4 border-primary/20 flex items-center justify-center relative">
-              <div className="absolute inset-0 border-4 border-primary rounded-full border-t-transparent -rotate-45" />
-              <div className="text-center">
-                <div className="text-5xl font-black">85%</div>
+            <div className="w-64 h-64 flex items-center justify-center relative">
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 256 256">
+                <circle cx="128" cy="128" r="112" fill="none" stroke="rgba(255,106,0,0.15)" strokeWidth="8" />
+                <circle
+                  cx="128" cy="128" r="112" fill="none"
+                  stroke="#FF6A00" strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 112}`}
+                  strokeDashoffset={`${2 * Math.PI * 112 * (1 - weeklyPercent / 100)}`}
+                  style={{ transition: 'stroke-dashoffset 1s ease' }}
+                />
+              </svg>
+              <div className="text-center z-10">
+                <div className="text-5xl font-black">{weeklyPercent}%</div>
                 <div className="text-[10px] font-black text-text-muted uppercase tracking-widest">Meta Semanal</div>
               </div>
             </div>

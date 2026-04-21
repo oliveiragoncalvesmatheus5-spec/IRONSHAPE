@@ -5710,10 +5710,11 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
       period: '',
       description: 'Ideal para quem está começando sua jornada fitness.',
       features: [
-        'Acesso a treinos básicos',
-        'Calculadora de macros',
-        'Histórico de progresso',
-        'Comunidade básica'
+        'Treinos de nível básico (Iniciante)',
+        'Calculadora de macros e nutrição',
+        'Dashboard de evolução de peso',
+        'Acesso à comunidade',
+        'Programa de afiliados'
       ],
       color: 'bg-white/5',
       buttonText: currentPlan === 'Iniciante' ? 'Plano Atual' : 'Começar Agora'
@@ -5727,10 +5728,11 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
       description: 'Para quem busca performance e resultados consistentes.',
       features: [
         'Tudo do Iniciante',
-        'Treinos com IA Adaptativa',
-        'Dieta Estratégica Personalizada',
-        'Suporte prioritário',
-        'Sem anúncios'
+        'Treinos intermediários (Protocolo Pro)',
+        'IA Adaptativa — treinos gerados por IA',
+        'Histórico completo de treinos',
+        'Ranking global de pontos',
+        'Evolução de peso com filtros 7D / 1M / 6M'
       ],
       color: 'bg-primary/10 border-primary/30',
       highlight: true,
@@ -5745,10 +5747,11 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
       description: 'O protocolo definitivo para atletas e entusiastas de elite.',
       features: [
         'Tudo do Pro',
-        'Protocolos de Competição',
-        'Ajustes Manuais Avançados',
-        'Consultoria VIP (Em breve)',
-        'Acesso Antecipado a Recursos'
+        'Treinos avançados (Protocolo Elite)',
+        'Planilha Atleta semanal',
+        'Acesso antecipado a novos treinos',
+        'Edição e personalização de treinos',
+        'Protocolos de Competição'
       ],
       color: 'bg-white/5',
       buttonText: currentPlan === 'Elite' ? 'Plano Atual' : 'Seja Elite'

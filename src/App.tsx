@@ -2006,20 +2006,23 @@ function QuickAction({ icon, label, color }: { icon: React.ReactNode, label: str
   );
 }
 
-class ViewErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+class ViewErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; errorMsg: string }> {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorMsg: '' };
   }
-  static getDerivedStateFromError() { return { hasError: true }; }
+  static getDerivedStateFromError(error: Error) { return { hasError: true, errorMsg: error?.message || String(error) }; }
   componentDidCatch(error: Error) { console.error('View render error:', error); }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 px-6">
           <p className="text-xl font-bold">Algo deu errado ao carregar esta tela.</p>
+          {this.state.errorMsg && (
+            <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/20 rounded-xl px-4 py-2 max-w-sm break-all">{this.state.errorMsg}</p>
+          )}
           <button
-            onClick={() => { localStorage.removeItem('completedWorkouts'); window.location.reload(); }}
+            onClick={() => { localStorage.clear(); window.location.reload(); }}
             className="bg-primary text-white font-bold px-6 py-3 rounded-2xl text-sm"
           >
             Limpar cache e recarregar

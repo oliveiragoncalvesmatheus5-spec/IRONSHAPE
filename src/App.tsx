@@ -417,13 +417,12 @@ function AffiliateView({ profile }: { profile: UserProfile | null }) {
           ...formData,
           user_id: profile.id,
           codigo_afiliado: codigo,
-          status: 'pendente'
+          status: 'ativo'
         }]);
 
       if (error) throw error;
-      
-      alert('Cadastro enviado! Aguarde aprovação em até 48 horas.');
-      fetchAffiliateData();
+
+      await fetchAffiliateData();
     } catch (err) {
       console.error('Error registering affiliate:', err);
       alert('Erro ao realizar cadastro.');
@@ -537,22 +536,6 @@ function AffiliateView({ profile }: { profile: UserProfile | null }) {
     );
   }
 
-  if (affiliate.status === 'pendente') {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
-        <div className="w-24 h-24 bg-yellow-500/10 rounded-3xl flex items-center justify-center border border-yellow-500/20">
-          <Clock className="text-yellow-500" size={48} />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-3xl font-black uppercase tracking-tight">Cadastro em Análise</h2>
-          <p className="text-text-muted max-w-md">
-            Seu cadastro foi enviado com sucesso! Nossa equipe está revisando seus documentos. 
-            A aprovação ocorre em até 48 horas.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (affiliate.status === 'rejeitado' || affiliate.status === 'bloqueado') {
     return (

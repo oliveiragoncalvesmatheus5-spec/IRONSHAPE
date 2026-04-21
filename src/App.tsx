@@ -2044,7 +2044,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('completedWorkouts');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       localStorage.removeItem('completedWorkouts');
       return [];

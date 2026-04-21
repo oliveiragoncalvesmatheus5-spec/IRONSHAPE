@@ -2036,8 +2036,10 @@ class ViewErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
 
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
-  const effectivePlan = (isAdmin && simulatedPlan) ? simulatedPlan : profile.plano;
-  const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(effectivePlan === 'free' ? 'Iniciante' : effectivePlan);
+  const effectivePlan: Plan = (isAdmin && simulatedPlan) ? simulatedPlan : (profile.plano as Plan) || 'Iniciante';
+  const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(
+    (effectivePlan === 'free' || !effectivePlan) ? 'Iniciante' : effectivePlan
+  );
   const initialLevel: Level = effectivePlan === 'Elite' ? 'Avançado' : effectivePlan === 'Pro' ? 'Intermediário' : 'Iniciante';
   const [selectedLevel, setSelectedLevel] = useState<Level>(initialLevel);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'Todos'>('Todos');
@@ -2370,7 +2372,7 @@ function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgra
           onClick={onUpgrade}
           className="bg-primary text-text-primary font-black px-8 sm:px-12 py-4 sm:py-5 rounded-[20px] sm:rounded-[24px] hover:bg-primary-hover hover:scale-105 transition-all shadow-2xl shadow-primary/30 active:scale-95 flex items-center gap-3 mx-auto text-xs sm:text-sm"
         >
-          FAZER UPGRADE PARA {plan.toUpperCase()}
+          FAZER UPGRADE PARA {(plan || '').toUpperCase()}
           <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
@@ -2398,7 +2400,7 @@ function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCo
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${isCompleted ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary'}`}>
-              NÍVEL {workout.level.toUpperCase()}
+              NÍVEL {(workout.level || '').toUpperCase()}
             </span>
             {isCompleted && <span className="text-[8px] font-black text-success uppercase tracking-widest">Concluído</span>}
           </div>

@@ -5135,8 +5135,8 @@ function CommunityView({ profile }: { profile: UserProfile }) {
   );
 }
 
-function SettingsView({ profile, logout, onUpgrade }: { profile: UserProfile, logout: () => void, onUpgrade: () => void }) {
-  const { isAdmin, simulatedPlan, setSimulatedPlan, user } = useAuth();
+function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserProfile, logout: () => void, onUpgrade: () => void }) {
+  const { isAdmin, simulatedPlan, setSimulatedPlan, user, logout } = useAuth();
   const effectivePlan = (isAdmin && simulatedPlan) ? simulatedPlan : profile.plano;
 
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || profile.name || 'Usuário';
@@ -5235,12 +5235,12 @@ function SettingsView({ profile, logout, onUpgrade }: { profile: UserProfile, lo
           onClick={async () => {
             try {
               localStorage.clear();
-              await logout();
+              sessionStorage.clear();
+              await supabase.auth.signOut();
             } catch {
               // ignore
-            } finally {
-              window.location.reload();
             }
+            window.location.href = window.location.origin;
           }}
           className="w-full bg-error/10 text-error font-bold py-4 rounded-2xl border border-error/20 hover:bg-error/20 transition-all"
         >

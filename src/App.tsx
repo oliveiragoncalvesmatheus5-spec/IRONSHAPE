@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
@@ -282,7 +282,7 @@ export default function App() {
                 onViewNutrition={() => setActiveTab('nutrition')}
               />
             )}
-            {activeTab === 'workouts' && <WorkoutsView profile={profile} onUpgrade={() => setShowPricing(true)} />}
+            {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => setShowPricing(true)} /></ViewErrorBoundary>}
             {activeTab === 'nutrition' && <NutritionView profile={profile} onUpgrade={() => setShowPricing(true)} updateProfile={updateProfile} />}
             {activeTab === 'community' && <CommunityView profile={profile} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} />}
@@ -2006,6 +2006,31 @@ function QuickAction({ icon, label, color }: { icon: React.ReactNode, label: str
   );
 }
 
+class ViewErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error) { console.error('View render error:', error); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+          <p className="text-xl font-bold">Algo deu errado ao carregar esta tela.</p>
+          <button
+            onClick={() => { localStorage.removeItem('completedWorkouts'); window.location.reload(); }}
+            className="bg-primary text-white font-bold px-6 py-3 rounded-2xl text-sm"
+          >
+            Limpar cache e recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan = (isAdmin && simulatedPlan) ? simulatedPlan : profile.plano;
@@ -2017,8 +2042,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early'>('workouts');
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
-    const saved = localStorage.getItem('completedWorkouts');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('completedWorkouts');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      localStorage.removeItem('completedWorkouts');
+      return [];
+    }
   });
 
   useEffect(() => {

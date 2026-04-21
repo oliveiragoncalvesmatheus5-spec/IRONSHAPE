@@ -1480,7 +1480,7 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
                       )}
                     </div>
                     <span className="text-[10px] uppercase tracking-widest opacity-60">
-                      {p === 'Iniciante' ? 'Básico • GRATUITO' : p === 'Pro' ? 'IA + Histórico • R$39,90' : 'Consultoria • R$59,90'}
+                      {p === 'Iniciante' ? 'Básico • GRATUITO' : p === 'Pro' ? 'IA + Histórico • R$19,90' : 'Consultoria • R$29,90'}
                     </span>
                   </div>
                   {formData.plano === p ? (
@@ -5579,8 +5579,8 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
     {
       id: 'Pro' as Plan,
       name: 'Pro',
-      price: hasReferral ? 'R$ 35,91' : 'R$ 39,90',
-      originalPrice: hasReferral ? 'R$ 39,90' : null,
+      price: hasReferral ? 'R$ 17,91' : 'R$ 19,90',
+      originalPrice: hasReferral ? 'R$ 19,90' : null,
       period: '/mês',
       description: 'Para quem busca performance e resultados consistentes.',
       features: [
@@ -5597,8 +5597,8 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
     {
       id: 'Elite' as Plan,
       name: 'Elite',
-      price: hasReferral ? 'R$ 53,91' : 'R$ 59,90',
-      originalPrice: hasReferral ? 'R$ 59,90' : null,
+      price: hasReferral ? 'R$ 26,91' : 'R$ 29,90',
+      originalPrice: hasReferral ? 'R$ 29,90' : null,
       period: '/mês',
       description: 'O protocolo definitivo para atletas e entusiastas de elite.',
       features: [
@@ -5644,7 +5644,7 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
           .single();
         
         if (aff) {
-          const valorOriginal = selectedPlan === 'Pro' ? 39.90 : 59.90;
+          const valorOriginal = selectedPlan === 'Pro' ? 19.90 : 29.90;
           const valorComDesconto = valorOriginal * 0.9;
           const comissao = valorOriginal * 0.35; // 35% do valor original conforme solicitado
           
@@ -5788,8 +5788,8 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
                   <span className="text-text-muted">Valor Mensal</span>
                   <span className="font-bold text-primary">
                     {selectedPlan === 'Iniciante' ? 'GRÁTIS' : 
-                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 35,91' : 'R$ 39,90') : 
-                     (hasReferral ? 'R$ 53,91' : 'R$ 59,90')}
+                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 17,91' : 'R$ 19,90') :
+                     (hasReferral ? 'R$ 26,91' : 'R$ 29,90')}
                   </span>
                 </div>
                 {hasReferral && selectedPlan !== 'Iniciante' && (
@@ -5803,8 +5803,8 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
                   <span>Total Hoje</span>
                   <span className="text-xl">
                     {selectedPlan === 'Iniciante' ? 'GRÁTIS' : 
-                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 35,91' : 'R$ 39,90') : 
-                     (hasReferral ? 'R$ 53,91' : 'R$ 59,90')}
+                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 17,91' : 'R$ 19,90') :
+                     (hasReferral ? 'R$ 26,91' : 'R$ 29,90')}
                   </span>
                 </div>
               </div>

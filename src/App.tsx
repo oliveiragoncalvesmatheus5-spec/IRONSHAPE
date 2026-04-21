@@ -1517,6 +1517,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   const [addingWeight, setAddingWeight] = useState(false);
   const [newWeight, setNewWeight] = useState('');
   const [savingWeight, setSavingWeight] = useState(false);
+  const [weightSaveError, setWeightSaveError] = useState<string | null>(null);
 
   const fetchWeightLogs = async () => {
     if (!user) return;
@@ -1543,13 +1544,18 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     const w = parseFloat(newWeight.replace(',', '.'));
     if (!user || isNaN(w) || w <= 0) return;
     setSavingWeight(true);
+    setWeightSaveError(null);
     try {
-      await dataService.addProgressLog({ userUid: user.id, weight: w, date: new Date().toISOString() });
+      await Promise.race([
+        dataService.addProgressLog({ userUid: user.id, weight: w, date: new Date().toISOString() }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000)),
+      ]);
       setNewWeight('');
       setAddingWeight(false);
-      await fetchWeightLogs();
-    } catch (err) {
+      fetchWeightLogs();
+    } catch (err: any) {
       console.error('Error adding weight log:', err);
+      setWeightSaveError(err?.message?.includes('Timeout') ? 'Tempo esgotado. Verifique sua conexão.' : 'Erro ao salvar. Verifique as permissões do banco.');
     } finally {
       setSavingWeight(false);
     }
@@ -1721,30 +1727,35 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
           </div>
 
           {addingWeight && (
-            <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/10">
-              <input
-                type="number"
-                step="0.1"
-                min="20"
-                max="300"
-                value={newWeight}
-                onChange={e => setNewWeight(e.target.value)}
-                placeholder="Peso em kg (ex: 72.5)"
-                className="flex-1 bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors"
-              />
-              <button
-                onClick={handleAddWeight}
-                disabled={savingWeight || !newWeight}
-                className="bg-primary text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider disabled:opacity-50 transition-all hover:bg-primary/90"
-              >
-                {savingWeight ? '...' : 'Salvar'}
-              </button>
-              <button
-                onClick={() => { setAddingWeight(false); setNewWeight(''); }}
-                className="text-text-muted hover:text-text-primary text-xs px-2 py-2 transition-colors"
-              >
-                ✕
-              </button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/10">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="20"
+                  max="300"
+                  value={newWeight}
+                  onChange={e => { setNewWeight(e.target.value); setWeightSaveError(null); }}
+                  placeholder="Peso em kg (ex: 72.5)"
+                  className="flex-1 bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors"
+                />
+                <button
+                  onClick={handleAddWeight}
+                  disabled={savingWeight || !newWeight}
+                  className="bg-primary text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider disabled:opacity-50 transition-all hover:bg-primary/90"
+                >
+                  {savingWeight ? '...' : 'Salvar'}
+                </button>
+                <button
+                  onClick={() => { setAddingWeight(false); setNewWeight(''); setWeightSaveError(null); }}
+                  className="text-text-muted hover:text-text-primary text-xs px-2 py-2 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              {weightSaveError && (
+                <p className="text-xs text-red-400 px-2">{weightSaveError}</p>
+              )}
             </div>
           )}
 

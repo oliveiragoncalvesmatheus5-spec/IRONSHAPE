@@ -37,7 +37,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
-  const initSession = async (retryCount = 0) => {
+  const initSession = async () => {
+    setAuthError(null);
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchProfile(currentUser.id, currentUser);
+      } else {
+        setLoading(false);
+      }
+    } catch {
+      setLoading(false);
+      setAuthError('Erro ao conectar. Verifique sua internet.');
+    }
+  };
+
+  const _initSessionLegacy = async (retryCount = 0) => {
     setAuthError(null);
     setLoading(true);
     try {
@@ -82,16 +100,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Single source of truth: onAuthStateChange handles everything including initial session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const currentUser = session?.user ?? null;
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+    let cancelled = false;
+
+    // Primary init: fast getSession check
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (cancelled) return;
+        const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
           await fetchProfile(currentUser.id, currentUser);
         } else {
           setLoading(false);
         }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    init();
+
+    // Listen for subsequent auth changes only
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelled) return;
+      const currentUser = session?.user ?? null;
+      if (event === 'SIGNED_IN') {
+        setUser(currentUser);
+        if (currentUser) await fetchProfile(currentUser.id, currentUser);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
@@ -99,18 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Safety net: force stop loading after 10s
+    // Safety net: stop spinner after 15s without error message
     const watchdog = setTimeout(() => {
-      setLoading(prev => {
-        if (prev) {
-          setAuthError('Conexão lenta. Verifique sua internet e tente novamente.');
-          return false;
-        }
-        return prev;
-      });
-    }, 10000);
+      setLoading(false);
+    }, 15000);
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
       clearTimeout(watchdog);
     };

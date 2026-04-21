@@ -5231,8 +5231,17 @@ function SettingsView({ profile, logout, onUpgrade }: { profile: UserProfile, lo
           </section>
         )}
 
-        <button 
-          onClick={logout}
+        <button
+          onClick={async () => {
+            try {
+              localStorage.clear();
+              await logout();
+            } catch {
+              // ignore
+            } finally {
+              window.location.reload();
+            }
+          }}
           className="w-full bg-error/10 text-error font-bold py-4 rounded-2xl border border-error/20 hover:bg-error/20 transition-all"
         >
           Sair da Conta

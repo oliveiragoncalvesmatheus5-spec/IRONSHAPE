@@ -1513,42 +1513,62 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   };
 
   const [weightLogs, setWeightLogs] = useState<ProgressLog[]>([]);
+  const [weightPeriod, setWeightPeriod] = useState<'7D' | '1M' | '6M'>('7D');
+  const [addingWeight, setAddingWeight] = useState(false);
+  const [newWeight, setNewWeight] = useState('');
+  const [savingWeight, setSavingWeight] = useState(false);
 
-  useEffect(() => {
+  const fetchWeightLogs = async () => {
+    if (!user) return;
     let retryCount = 0;
     const maxRetries = 2;
-
-    const fetchLogs = async () => {
-      if (user) {
-        try {
-          const logs = await dataService.getProgressLogs(user.id);
-          setWeightLogs(logs);
-        } catch (err: any) {
-          console.error('Error fetching progress logs:', err);
-          if (err.message === 'Timeout na requisição' && retryCount < maxRetries) {
-            retryCount++;
-            const backoff = 1000 * retryCount;
-            console.log(`Retrying progress logs fetch in ${backoff}ms... (${retryCount}/${maxRetries})`);
-            setTimeout(fetchLogs, backoff);
-          }
+    const tryFetch = async () => {
+      try {
+        const logs = await dataService.getProgressLogs(user.id);
+        setWeightLogs(logs);
+      } catch (err: any) {
+        console.error('Error fetching progress logs:', err);
+        if (err.message === 'Timeout na requisição' && retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(tryFetch, 1000 * retryCount);
         }
       }
     };
+    tryFetch();
+  };
 
-    fetchLogs();
-  }, [user]);
+  useEffect(() => { fetchWeightLogs(); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const weightData = weightLogs.length > 0 
-    ? weightLogs.map(log => ({ name: new Date(log.date).toLocaleDateString('pt-BR', { weekday: 'short' }), weight: log.weight }))
-    : [
-        { name: 'Seg', weight: 70 },
-        { name: 'Ter', weight: 69.8 },
-        { name: 'Qua', weight: 70.2 },
-        { name: 'Qui', weight: 69.5 },
-        { name: 'Sex', weight: 69.2 },
-        { name: 'Sab', weight: 69.0 },
-        { name: 'Dom', weight: 68.8 },
-      ];
+  const handleAddWeight = async () => {
+    const w = parseFloat(newWeight.replace(',', '.'));
+    if (!user || isNaN(w) || w <= 0) return;
+    setSavingWeight(true);
+    try {
+      await dataService.addProgressLog({ userUid: user.id, weight: w, date: new Date().toISOString() });
+      setNewWeight('');
+      setAddingWeight(false);
+      await fetchWeightLogs();
+    } catch (err) {
+      console.error('Error adding weight log:', err);
+    } finally {
+      setSavingWeight(false);
+    }
+  };
+
+  const periodDays = weightPeriod === '7D' ? 7 : weightPeriod === '1M' ? 30 : 180;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - periodDays);
+
+  const filteredLogs = weightLogs
+    .filter(l => new Date(l.date) >= cutoff)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const weightData = filteredLogs.map(log => ({
+    name: weightPeriod === '7D'
+      ? new Date(log.date).toLocaleDateString('pt-BR', { weekday: 'short' })
+      : new Date(log.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+    weight: log.weight,
+  }));
 
   return (
     <div className="space-y-10 pb-12">
@@ -1670,20 +1690,66 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Progress Chart */}
         <div className="lg:col-span-2 bg-surface p-8 rounded-[40px] border border-white/5 space-y-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h3 className="text-xl font-black tracking-tight uppercase">Evolução de Peso</h3>
-              <p className="text-sm text-text-muted">Seu progresso nos últimos 7 dias</p>
+              <p className="text-sm text-text-muted">
+                {weightPeriod === '7D' ? 'Últimos 7 dias' : weightPeriod === '1M' ? 'Último mês' : 'Últimos 6 meses'}
+              </p>
             </div>
-            <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
-              <button className="px-4 py-1.5 rounded-lg text-xs font-bold bg-primary text-text-primary shadow-lg shadow-primary/20">7D</button>
-              <button className="px-4 py-1.5 rounded-lg text-xs font-bold text-text-muted hover:text-text-secondary transition-colors">1M</button>
-              <button className="px-4 py-1.5 rounded-lg text-xs font-bold text-text-muted hover:text-text-secondary transition-colors">6M</button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setAddingWeight(v => !v)}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+              >
+                + Registrar
+              </button>
+              <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
+                {(['7D', '1M', '6M'] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setWeightPeriod(p)}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      weightPeriod === p
+                        ? 'bg-primary text-text-primary shadow-lg shadow-primary/20'
+                        : 'text-text-muted hover:text-text-secondary'
+                    }`}
+                  >{p}</button>
+                ))}
+              </div>
             </div>
           </div>
-          
+
+          {addingWeight && (
+            <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/10">
+              <input
+                type="number"
+                step="0.1"
+                min="20"
+                max="300"
+                value={newWeight}
+                onChange={e => setNewWeight(e.target.value)}
+                placeholder="Peso em kg (ex: 72.5)"
+                className="flex-1 bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors"
+              />
+              <button
+                onClick={handleAddWeight}
+                disabled={savingWeight || !newWeight}
+                className="bg-primary text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider disabled:opacity-50 transition-all hover:bg-primary/90"
+              >
+                {savingWeight ? '...' : 'Salvar'}
+              </button>
+              <button
+                onClick={() => { setAddingWeight(false); setNewWeight(''); }}
+                className="text-text-muted hover:text-text-primary text-xs px-2 py-2 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div className="h-[320px] w-full relative">
-            {weightData && weightData.length > 0 ? (
+            {weightData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" minHeight={320}>
                 <AreaChart data={weightData}>
                 <defs>
@@ -1693,39 +1759,47 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                <XAxis 
-                  dataKey="name" 
-                  stroke="#6F6F6F" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
+                <XAxis
+                  dataKey="name"
+                  stroke="#6F6F6F"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
                   dy={10}
                 />
                 <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#121212', 
-                    border: '1px solid #ffffff10', 
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#121212',
+                    border: '1px solid #ffffff10',
                     borderRadius: '16px',
                     boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
                   }}
                   itemStyle={{ color: '#FF6A00', fontWeight: 'bold' }}
                   cursor={{ stroke: '#FF6A00', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  formatter={(value: number) => [`${value} kg`, 'Peso']}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="weight" 
-                  stroke="#FF6A00" 
-                  strokeWidth={4} 
-                  fillOpacity={1} 
-                  fill="url(#colorWeight)" 
+                <Area
+                  type="monotone"
+                  dataKey="weight"
+                  stroke="#FF6A00"
+                  strokeWidth={4}
+                  fillOpacity={1}
+                  fill="url(#colorWeight)"
                   animationDuration={2000}
                 />
               </AreaChart>
             </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-text-muted">
-                Sem dados disponíveis
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-text-muted">
+                <TrendingUp size={32} className="opacity-30" />
+                <p className="text-sm">Nenhum registro neste período.</p>
+                <button
+                  onClick={() => setAddingWeight(true)}
+                  className="text-primary text-xs font-bold hover:underline"
+                >
+                  Registrar primeiro peso
+                </button>
               </div>
             )}
           </div>

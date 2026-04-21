@@ -81,57 +81,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const initialized = useRef(false);
-
   useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true;
-      initSession().catch(err => {
-        console.error('Failed to initialize session:', err);
-        setLoading(false);
-        setAuthError('Erro ao iniciar sessão. Verifique sua conexão.');
-      });
-    }
-
-    // Listen for changes on auth state (logged in, signed out, etc.)
+    // Single source of truth: onAuthStateChange handles everything including initial session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      try {
-        console.log('Auth event:', event);
-        const currentUser = session?.user ?? null;
-        
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          setUser(currentUser);
-          if (currentUser) {
-            await fetchProfile(currentUser.id, currentUser);
-          } else {
-            setLoading(false);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
+      const currentUser = session?.user ?? null;
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchProfile(currentUser.id, currentUser);
+        } else {
           setLoading(false);
-        } else if (event === 'USER_UPDATED') {
-          setUser(currentUser);
-        } else if (event === 'TOKEN_REFRESHED') {
-          setUser(currentUser);
         }
-      } catch (err) {
-        console.error('Error in onAuthStateChange handler:', err);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
         setLoading(false);
       }
     });
 
-    // Watchdog timer to prevent infinite loading
+    // Safety net: force stop loading after 10s
     const watchdog = setTimeout(() => {
       setLoading(prev => {
         if (prev) {
-          console.warn('Auth watchdog triggered: forcing loading to false after 8s');
-          setAuthError('O carregamento demorou muito. Verifique sua conexão.');
+          setAuthError('Conexão lenta. Verifique sua internet e tente novamente.');
           return false;
         }
         return prev;
       });
-    }, 8000);
+    }, 10000);
 
     return () => {
       subscription.unsubscribe();
@@ -139,38 +116,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchingProfileFor = useRef<string | null>(null);
-
   const fetchProfile = async (id: string, userObj?: User | null, retryCount = 0) => {
-    // Try to load from cache first if we're not already loading
-    if (!profile && retryCount === 0) {
+    // Show cached profile immediately while fetching fresh data
+    if (retryCount === 0) {
       const cached = localStorage.getItem(`profile_${id}`);
       if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          console.log('Using cached profile for initial render');
-          setProfile(parsed as UserProfile);
-          // We still continue to fetch the fresh one in the background
-        } catch (e) {
-          console.error('Error parsing cached profile:', e);
-        }
+        try { setProfile(JSON.parse(cached) as UserProfile); } catch {}
       }
     }
 
-    if (profile && profile.id === id && retryCount === 0) {
-      console.log('Profile already loaded for:', id);
-      setLoading(false);
-      return;
-    }
-
-    if (fetchingProfileFor.current === id && retryCount === 0) {
-      console.log('Already fetching profile for:', id);
-      setLoading(false);
-      return;
-    }
-    
-    fetchingProfileFor.current = id;
-    if (retryCount === 0) setLoading(true);
     setAuthError(null);
     try {
       console.log(`Fetching profile for ${id} (retry: ${retryCount})`);
@@ -292,10 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthError(err.message || 'Erro ao carregar perfil.');
       }
     } finally {
-      if (fetchingProfileFor.current === id && retryCount === 0) {
-        fetchingProfileFor.current = null;
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 

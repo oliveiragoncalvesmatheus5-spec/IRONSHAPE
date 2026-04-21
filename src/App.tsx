@@ -1546,16 +1546,21 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     setSavingWeight(true);
     setWeightSaveError(null);
     try {
-      await Promise.race([
-        dataService.addProgressLog({ userUid: user.id, weight: w, date: new Date().toISOString() }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000)),
-      ]);
+      const { error } = await supabase
+        .from('progress_logs')
+        .insert([{ userUid: user.id, weight: w, date: new Date().toISOString() }]);
+      if (error) throw error;
       setNewWeight('');
       setAddingWeight(false);
-      fetchWeightLogs();
+      const { data } = await supabase
+        .from('progress_logs')
+        .select('*')
+        .eq('userUid', user.id)
+        .order('date', { ascending: true });
+      if (data) setWeightLogs(data as ProgressLog[]);
     } catch (err: any) {
       console.error('Error adding weight log:', err);
-      setWeightSaveError(err?.message?.includes('Timeout') ? 'Tempo esgotado. Verifique sua conexão.' : 'Erro ao salvar. Verifique as permissões do banco.');
+      setWeightSaveError(err?.message || 'Erro ao salvar peso.');
     } finally {
       setSavingWeight(false);
     }

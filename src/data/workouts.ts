@@ -2397,6 +2397,446 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         ]
       }
     ]
+  },
+  {
+    id: "costas-pro-3",
+    name: "Força das Costas",
+    muscleGroup: "Costas",
+    level: "Intermediário",
+    duration: "50 min",
+    carga: "Alta",
+    description: "Remadas e puxadas de alta carga para força máxima nas costas.",
+    planRequired: "Pro",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-pro-cf-1",
+        name: "Remada Curvada com Barra",
+        series: 4,
+        reps: "8",
+        restTime: "90s",
+        muscleGroup: "Costas",
+        description: "Remada inclinada para espessura máxima do dorsal.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-seated-cable-row-in-gym-23426-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162449/pexels-photo-4162449.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Fique em pé com os pés na largura dos ombros, segure a barra com pegada pronada.",
+          "Incline o tronco a 45 graus mantendo a coluna neutra e joelhos levemente flexionados.",
+          "Puxe a barra em direção ao umbigo, retraindo as escápulas no topo.",
+          "Desça de forma controlada até os braços ficarem quase estendidos."
+        ],
+        proTips: [
+          "Imagine que está tentando 'amassar uma laranja' com as escápulas no topo.",
+          "Mantenha o pescoço neutro — olhe para um ponto no chão à sua frente."
+        ],
+        commonErrors: [
+          "Arredondar a lombar sob carga pesada.",
+          "Usar o impulso do tronco para erguer a barra."
+        ]
+      },
+      {
+        id: "ex-pro-cf-2",
+        name: "Puxada Supinada",
+        series: 4,
+        reps: "10",
+        restTime: "75s",
+        muscleGroup: "Costas",
+        description: "Puxada com pegada invertida para ativar mais o latíssimo e bíceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-a-pull-up-exercise-23430-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162581/pexels-photo-4162581.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Segure a barra de puxada com a pegada supinada (palmas para você), mãos na largura dos ombros.",
+          "Puxe em direção ao queixo contraindo o latíssimo e os bíceps.",
+          "No topo, mantenha os cotovelos apontados para baixo e as escápulas retraídas.",
+          "Desça lentamente até os braços ficarem completamente estendidos."
+        ],
+        proTips: [
+          "A pegada supinada proporciona maior amplitude de movimento.",
+          "Inicie o movimento retraindo as escápulas antes de puxar."
+        ],
+        commonErrors: [
+          "Usar impulso do corpo para completar as repetições.",
+          "Não atingir a extensão completa na descida."
+        ]
+      },
+      {
+        id: "ex-pro-cf-3",
+        name: "Pullover com Halter",
+        series: 3,
+        reps: "12",
+        restTime: "60s",
+        muscleGroup: "Costas",
+        description: "Isolamento do latíssimo com grande amplitude — expande a caixa torácica.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-seated-cable-row-in-gym-23426-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162449/pexels-photo-4162449.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Deite-se transversalmente no banco, com os ombros apoiados e o quadril suspenso.",
+          "Segure um halter com ambas as mãos acima do peito, cotovelos levemente flexionados.",
+          "Desça o halter em arco atrás da cabeça até sentir o alongamento máximo do latíssimo.",
+          "Retorne à posição inicial usando a força das costas, não os braços."
+        ],
+        proTips: [
+          "O peso deve ser moderado — amplitude é mais importante que carga.",
+          "Inspire profundamente ao descer para expandir ao máximo a caixa torácica."
+        ],
+        commonErrors: [
+          "Dobrar excessivamente os cotovelos transformando em exercício de tríceps.",
+          "Usar carga muito pesada sacrificando a amplitude."
+        ]
+      }
+    ]
+  },
+  {
+    id: "pernas-pro-3",
+    name: "Quadríceps & Glúteos Pro",
+    muscleGroup: "Pernas",
+    level: "Intermediário",
+    duration: "55 min",
+    carga: "Alta",
+    description: "Protocolo avançado para desenvolvimento de quadríceps e glúteos.",
+    planRequired: "Pro",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-pro-pq-1",
+        name: "Leg Press 45°",
+        series: 4,
+        reps: "12",
+        restTime: "90s",
+        muscleGroup: "Pernas",
+        description: "Agachamento na máquina para sobrecarga segura nos quadríceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Sente-se no leg press com os pés na plataforma na largura dos ombros.",
+          "Desça a plataforma controladamente até os joelhos formarem 90 graus.",
+          "Empurre a plataforma de volta sem travar completamente os joelhos no topo.",
+          "Mantenha a lombar encostada no encosto durante todo o movimento."
+        ],
+        proTips: [
+          "Pés mais altos na plataforma ativam mais os glúteos e posteriores.",
+          "Pés mais baixos intensificam o trabalho dos quadríceps."
+        ],
+        commonErrors: [
+          "Deixar os joelhos colapsarem durante o empurrão.",
+          "Retirar a lombar do encosto ao descer com carga pesada."
+        ]
+      },
+      {
+        id: "ex-pro-pq-2",
+        name: "Avanço com Halteres",
+        series: 4,
+        reps: "10 cada perna",
+        restTime: "75s",
+        muscleGroup: "Pernas",
+        description: "Exercício unilateral para equilíbrio e força funcional.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Fique em pé segurando um halter em cada mão ao lado do corpo.",
+          "Dê um passo à frente e desça o joelho traseiro em direção ao chão.",
+          "O joelho da frente deve ficar alinhado com o tornozelo — não ultrapasse.",
+          "Empurre com o calcanhar da frente para voltar à posição inicial."
+        ],
+        proTips: [
+          "Mantenha o tronco ereto durante todo o movimento.",
+          "Alterne as pernas de forma controlada — sem pressa."
+        ],
+        commonErrors: [
+          "Deixar o joelho da frente ultrapassar a ponta dos pés.",
+          "Inclinar excessivamente o tronco para frente."
+        ]
+      },
+      {
+        id: "ex-pro-pq-3",
+        name: "Cadeira Extensora",
+        series: 3,
+        reps: "15",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Isolamento do quadríceps em amplitude completa.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Sente-se na cadeira extensora com os pés posicionados sob o rolo.",
+          "Estenda as pernas até a posição horizontal, contraindo o quadríceps no topo.",
+          "Segure a contração por 1 segundo antes de descer.",
+          "Desça lentamente até 90 graus — não solte o peso."
+        ],
+        proTips: [
+          "Fase excêntrica lenta (3-4 segundos) maximiza o crescimento muscular.",
+          "Mantenha os pés em posição neutra para trabalho equilibrado do quadríceps."
+        ],
+        commonErrors: [
+          "Usar impulso do tronco para erguer o peso.",
+          "Não atingir a extensão completa no topo."
+        ]
+      }
+    ]
+  },
+  {
+    id: "ombros-pro-3",
+    name: "Ombros 360°",
+    muscleGroup: "Ombros",
+    level: "Intermediário",
+    duration: "45 min",
+    carga: "Média",
+    description: "Protocolo completo para desenvolver as três cabeças do deltóide.",
+    planRequired: "Pro",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-pro-o3-1",
+        name: "Desenvolvimento Arnold",
+        series: 4,
+        reps: "10",
+        restTime: "75s",
+        muscleGroup: "Ombros",
+        description: "Variação rotacional que ativa todas as cabeças do deltóide.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-shoulder-press-with-dumbbells-23431-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162579/pexels-photo-4162579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Sente-se com os halteres na frente do peito, palmas voltadas para você.",
+          "Ao empurrar para cima, rotacione os pulsos de forma que as palmas fiquem para fora no topo.",
+          "Estenda completamente os braços sem travar os cotovelos.",
+          "Reverta o movimento descendo de forma controlada com a rotação."
+        ],
+        proTips: [
+          "A rotação ativa o deltóide anterior, medial e posterior sequencialmente.",
+          "Movimento fluido — não quebre a rotação em duas fases distintas."
+        ],
+        commonErrors: [
+          "Fazer a rotação muito tarde (apenas no final do movimento).",
+          "Usar carga excessiva que compromete a amplitude de rotação."
+        ]
+      },
+      {
+        id: "ex-pro-o3-2",
+        name: "Elevação Lateral com Cabo",
+        series: 4,
+        reps: "15",
+        restTime: "60s",
+        muscleGroup: "Ombros",
+        description: "Cabo mantém tensão constante no deltóide medial — superior ao halter.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-shoulder-press-with-dumbbells-23431-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162579/pexels-photo-4162579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Fique ao lado da polia baixa e segure o cabo com a mão oposta ao aparelho.",
+          "Eleve o braço lateralmente até a altura dos ombros mantendo o cotovelo levemente flexionado.",
+          "Mantenha o polegar levemente apontado para baixo para maior ativação do deltóide medial.",
+          "Desça lentamente resistindo à tensão do cabo."
+        ],
+        proTips: [
+          "O cabo cria tensão constante durante todo o movimento, ao contrário do halter.",
+          "Incline ligeiramente o tronco para longe da polia para maior amplitude."
+        ],
+        commonErrors: [
+          "Elevar o braço além da altura dos ombros — ativa os trapézios.",
+          "Usar impulso do corpo para completar as repetições."
+        ]
+      },
+      {
+        id: "ex-pro-o3-3",
+        name: "Face Pull",
+        series: 3,
+        reps: "15",
+        restTime: "60s",
+        muscleGroup: "Ombros",
+        description: "Saúde do manguito rotador e ativação do deltóide posterior.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-shoulder-press-with-dumbbells-23431-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162579/pexels-photo-4162579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Ajuste a polia na altura do rosto e use a corda dupla.",
+          "Puxe a corda em direção ao rosto separando as mãos no final do movimento.",
+          "Cotovelos devem ficar acima dos ombros no ponto final.",
+          "Retorne lentamente à posição inicial mantendo a tensão."
+        ],
+        proTips: [
+          "Exercício essencial para saúde dos ombros — não negligencie.",
+          "Foco na retração e depressão das escápulas durante o movimento."
+        ],
+        commonErrors: [
+          "Puxar abaixo da linha dos ombros — vira remada, não face pull.",
+          "Usar carga excessiva que impede a rotação externa completa."
+        ]
+      }
+    ]
+  },
+  {
+    id: "bracos-pro-3",
+    name: "Braços de Ferro",
+    muscleGroup: "Braços",
+    level: "Intermediário",
+    duration: "45 min",
+    carga: "Média",
+    description: "Superset de bíceps e tríceps para máximo pump e volume.",
+    planRequired: "Pro",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-pro-bf-1",
+        name: "Rosca Concentrada",
+        series: 4,
+        reps: "12",
+        restTime: "60s",
+        muscleGroup: "Braços",
+        description: "Isolamento máximo do bíceps com pico de contração.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-curling-dumbbells-23432-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162514/pexels-photo-4162514.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Sente-se em um banco e apoie o cotovelo na parte interna da coxa.",
+          "Segure o halter com a palma virada para cima e o braço quase estendido.",
+          "Flexione o cotovelo levando o halter até o ombro, girando levemente o pulso.",
+          "Desça lentamente até quase a extensão completa."
+        ],
+        proTips: [
+          "No topo do movimento, contraia o bíceps ao máximo por 1 segundo.",
+          "Mantenha o cotovelo fixo na coxa — não deixe elevar."
+        ],
+        commonErrors: [
+          "Elevar o cotovelo da coxa para 'ajudar' com carga pesada.",
+          "Não completar a extensão na descida, perdendo amplitude."
+        ]
+      },
+      {
+        id: "ex-pro-bf-2",
+        name: "Tríceps Testa com Barra EZ",
+        series: 4,
+        reps: "10",
+        restTime: "75s",
+        muscleGroup: "Braços",
+        description: "Extensão de tríceps em decúbito — máxima ativação da cabeça longa.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-curling-dumbbells-23432-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162514/pexels-photo-4162514.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Deite-se no banco plano segurando a barra EZ acima do peito com braços estendidos.",
+          "Flexione apenas os cotovelos abaixando a barra em direção à testa.",
+          "Mantenha os cotovelos apontados para o teto — não os abra.",
+          "Estenda os braços de volta à posição inicial contraindo os tríceps."
+        ],
+        proTips: [
+          "Cotovelos levemente inclinados para trás ativa mais a cabeça longa do tríceps.",
+          "Movimento controlado — não deixe a barra 'cair' em direção à testa."
+        ],
+        commonErrors: [
+          "Abrir os cotovelos durante o movimento, perdendo o isolamento.",
+          "Usar carga excessiva que compromete o controle do movimento."
+        ]
+      },
+      {
+        id: "ex-pro-bf-3",
+        name: "Martelo Alternado",
+        series: 3,
+        reps: "12 cada",
+        restTime: "60s",
+        muscleGroup: "Braços",
+        description: "Ativa o braquial e braquiorradial além do bíceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-curling-dumbbells-23432-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162514/pexels-photo-4162514.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Fique em pé com os halteres ao lado do corpo, palmas voltadas para o tronco.",
+          "Flexione um cotovelo de cada vez sem rotacionar o pulso.",
+          "Suba até o halter chegar à altura do ombro.",
+          "Desça controladamente antes de iniciar o outro lado."
+        ],
+        proTips: [
+          "A pegada neutra (martelo) ativa músculos que a rosca tradicional não alcança.",
+          "Mantenha os cotovelos próximos ao tronco durante todo o movimento."
+        ],
+        commonErrors: [
+          "Balançar o tronco para dar impulso.",
+          "Rotar o pulso transformando em rosca tradicional."
+        ]
+      }
+    ]
+  },
+  {
+    id: "abdomen-pro-3",
+    name: "Core de Alta Intensidade",
+    muscleGroup: "Abdômen",
+    level: "Intermediário",
+    duration: "30 min",
+    carga: "Média",
+    description: "Protocolo de core com alta tensão e estabilidade para resultados avançados.",
+    planRequired: "Pro",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-pro-ac-1",
+        name: "Abdominal na Polia Alta",
+        series: 4,
+        reps: "15",
+        restTime: "60s",
+        muscleGroup: "Abdômen",
+        description: "Crunch com resistência progressiva — tensão constante no abdominal.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-crunches-23435-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Ajoelhe-se de frente para a polia alta segurando a corda atrás da cabeça.",
+          "Contraia o abdômen e flexione o tronco em direção aos joelhos.",
+          "A resistência deve vir do abdômen — não do pescoço ou braços.",
+          "Retorne à posição inicial de forma controlada."
+        ],
+        proTips: [
+          "Imagine que está tentando tocar o umbigo nos joelhos.",
+          "Adicione carga progressivamente para continuar evoluindo."
+        ],
+        commonErrors: [
+          "Puxar com os braços em vez de contrair o abdômen.",
+          "Fazer o movimento muito rápido perdendo a tensão muscular."
+        ]
+      },
+      {
+        id: "ex-pro-ac-2",
+        name: "Roda Abdominal (Ab Wheel)",
+        series: 3,
+        reps: "10",
+        restTime: "75s",
+        muscleGroup: "Abdômen",
+        description: "Um dos exercícios mais desafiadores para o core completo.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-crunches-23435-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Ajoelhe-se com a roda abdominal à sua frente, mãos na alça.",
+          "Role para frente lentamente estendendo os quadris e mantendo o core rígido.",
+          "Vá até onde conseguir manter o controle — sem arquear a lombar.",
+          "Retorne puxando com o abdômen e os dorsais simultaneamente."
+        ],
+        proTips: [
+          "Comece com amplitude reduzida e aumente gradualmente.",
+          "Contrair o glúteo durante o movimento protege a lombar."
+        ],
+        commonErrors: [
+          "Arquear a lombar durante a extensão — risco de lesão.",
+          "Avançar além da capacidade atual de controle."
+        ]
+      },
+      {
+        id: "ex-pro-ac-3",
+        name: "Bicicleta Abdominal",
+        series: 3,
+        reps: "30",
+        restTime: "45s",
+        muscleGroup: "Abdômen",
+        description: "Exercício dinâmico que integra reto abdominal e oblíquos.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-crunches-23435-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Deite-se com as mãos atrás da cabeça e pernas elevadas a 45 graus.",
+          "Leve o cotovelo direito ao joelho esquerdo enquanto estende a perna direita.",
+          "Alterne de forma contínua simulando o movimento de pedalar.",
+          "Mantenha o abdômen contraído e o lombar levemente pressionado no chão."
+        ],
+        proTips: [
+          "Rotação deve vir do tronco, não apenas dos cotovelos.",
+          "Ritmo moderado com controle — não vire em movimento de balanço."
+        ],
+        commonErrors: [
+          "Puxar o pescoço com as mãos — sobrecarga cervical.",
+          "Fazer muito rápido perdendo a ativação dos oblíquos."
+        ]
+      }
+    ]
   }
 ];
 

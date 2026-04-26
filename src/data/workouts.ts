@@ -91,6 +91,94 @@ export const BEGINNER_WORKOUTS: Workout[] = [
     ]
   },
   {
+    id: "peito-iniciante-2",
+    name: "Peito & Tríceps",
+    muscleGroup: "Peito",
+    level: "Iniciante",
+    duration: "35 min",
+    carga: "Baixa",
+    description: "Combinação de peito e tríceps para máxima ativação do empurrão.",
+    planRequired: "Iniciante",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-ini-p2-1",
+        name: "Flexão de Braços Completa",
+        series: 3,
+        reps: "Máximo",
+        restTime: "60s",
+        muscleGroup: "Peito",
+        description: "Flexão tradicional com corpo reto da cabeça aos pés.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-push-ups-in-the-gym-23419-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162491/pexels-photo-4162491.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Posicione as mãos no chão na largura dos ombros, braços estendidos.",
+          "Mantenha o corpo em linha reta da cabeça aos calcanhares, core contraído.",
+          "Desça o peito até quase tocar o chão, cotovelos a 45 graus.",
+          "Empurre de volta à posição inicial de forma explosiva."
+        ],
+        proTips: [
+          "Contraia o abdômen durante todo o exercício para estabilizar a coluna.",
+          "Se necessário, apoie os joelhos no chão para manter a boa forma."
+        ],
+        commonErrors: [
+          "Deixar o quadril subir ou afundar.",
+          "Abrir os cotovelos em 90 graus — prejudica os ombros."
+        ]
+      },
+      {
+        id: "ex-ini-p2-2",
+        name: "Supino Reto com Barra",
+        series: 3,
+        reps: "10",
+        restTime: "60s",
+        muscleGroup: "Peito",
+        description: "Exercício base para ganho de força e volume no peitoral.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-a-bench-press-in-the-gym-23421-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3838389/pexels-photo-3838389.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Deite-se no banco plano, pés firmes no chão, pegada na barra ligeiramente além dos ombros.",
+          "Desça a barra de forma controlada até tocar levemente o peito.",
+          "Empurre a barra para cima até os braços ficarem quase estendidos.",
+          "Mantenha as escápulas retraídas e o arco lombar natural."
+        ],
+        proTips: [
+          "Inspire ao descer e expire ao empurrar.",
+          "Mantenha os punhos alinhados com os cotovelos durante o movimento."
+        ],
+        commonErrors: [
+          "Soltar a barra de forma descontrolada no peito.",
+          "Retirar os pés do chão para forçar mais carga."
+        ]
+      },
+      {
+        id: "ex-ini-p2-3",
+        name: "Tríceps no Banco",
+        series: 3,
+        reps: "12",
+        restTime: "60s",
+        muscleGroup: "Braços",
+        description: "Extensão de tríceps usando o peso do corpo em um banco.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-dips-23427-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162580/pexels-photo-4162580.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Sente-se na borda de um banco e apoie as mãos ao lado dos quadris.",
+          "Deslize o corpo para fora do banco e desça flexionando os cotovelos.",
+          "Desça até os cotovelos formarem cerca de 90 graus.",
+          "Empurre de volta à posição inicial estendendo os tríceps."
+        ],
+        proTips: [
+          "Mantenha o corpo próximo ao banco durante o movimento.",
+          "Não desça além de 90 graus para proteger os ombros."
+        ],
+        commonErrors: [
+          "Afastar demais o corpo do banco.",
+          "Usar os ombros em vez de focar nos tríceps."
+        ]
+      }
+    ]
+  },
+  {
     id: "costas-iniciante-1",
     name: "Largura das Costas",
     muscleGroup: "Costas",
@@ -1068,6 +1156,94 @@ export const BEGINNER_WORKOUTS: Workout[] = [
           "Arredondar a lombar ao puxar a carga.",
           "Usar os bíceps em vez de focar nas costas.",
           "Oscilar o tronco para frente e para trás."
+        ]
+      }
+    ]
+  },
+  {
+    id: "fullbody-iniciante-2",
+    name: "Full Body Funcional",
+    muscleGroup: "Full Body",
+    level: "Iniciante",
+    duration: "40 min",
+    carga: "Baixa",
+    description: "Circuito funcional de corpo inteiro com foco em mobilidade e força.",
+    planRequired: "Iniciante",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-ini-fb2-1",
+        name: "Agachamento Sumô",
+        series: 3,
+        reps: "15",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Agachamento com pegada ampla para ativar adutores e glúteos.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Fique em pé com os pés mais afastados que a largura dos ombros, dedos apontados para fora.",
+          "Mantenha o tronco ereto e o core ativado.",
+          "Desça flexionando os joelhos na direção dos dedos dos pés.",
+          "Suba contraindo os glúteos e adutores."
+        ],
+        proTips: [
+          "Quanto mais afastados os pés, maior o foco nos adutores e glúteos.",
+          "Mantenha os joelhos apontando na mesma direção dos dedos."
+        ],
+        commonErrors: [
+          "Deixar os joelhos colapsarem para dentro.",
+          "Inclinar excessivamente o tronco para frente."
+        ]
+      },
+      {
+        id: "ex-ini-fb2-2",
+        name: "Flexão Diamante",
+        series: 3,
+        reps: "10",
+        restTime: "60s",
+        muscleGroup: "Peito",
+        description: "Flexão com as mãos formando um diamante, foco em tríceps e peitoral interno.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-push-ups-in-the-gym-23419-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162491/pexels-photo-4162491.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Posicione as mãos próximas formando um triângulo com os polegares e indicadores.",
+          "Mantenha o corpo reto e o core contraído.",
+          "Desça o peito em direção às mãos, cotovelos apontando para trás.",
+          "Empurre de volta à posição inicial."
+        ],
+        proTips: [
+          "Se for difícil, apoie os joelhos no chão para reduzir a carga.",
+          "Foque na contração dos tríceps no topo do movimento."
+        ],
+        commonErrors: [
+          "Deixar os cotovelos abrirem para os lados.",
+          "Não manter o corpo em linha reta."
+        ]
+      },
+      {
+        id: "ex-ini-fb2-3",
+        name: "Prancha Isométrica",
+        series: 3,
+        reps: "30s",
+        restTime: "45s",
+        muscleGroup: "Abdômen",
+        description: "Isometria de core para estabilidade e força abdominal.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-plank-in-gym-23416-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162579/pexels-photo-4162579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Apoie os antebraços e as pontas dos pés no chão.",
+          "Mantenha o corpo em linha reta da cabeça aos calcanhares.",
+          "Contraia o abdômen, glúteos e quadríceps simultaneamente.",
+          "Respire normalmente e mantenha a posição pelo tempo determinado."
+        ],
+        proTips: [
+          "Olhe para o chão a cerca de 30 cm à frente das mãos para manter o pescoço neutro.",
+          "Aumente o tempo gradualmente à medida que ganhar força."
+        ],
+        commonErrors: [
+          "Deixar o quadril subir ou afundar.",
+          "Prender a respiração durante o exercício."
         ]
       }
     ]

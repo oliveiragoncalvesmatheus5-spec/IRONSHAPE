@@ -2387,12 +2387,12 @@ function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCo
   return (
     <button
       onClick={onClick}
-      className="w-full h-full bg-surface p-8 rounded-[40px] border border-white/5 hover:border-primary/30 transition-all duration-500 group relative overflow-hidden flex flex-col text-left"
+      className="w-full h-full bg-surface p-8 rounded-[40px] border border-primary/30 transition-all duration-500 relative overflow-hidden flex flex-col text-left"
     >
-      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all duration-700">
+      <div className="absolute top-0 right-0 p-8 opacity-10 scale-110 transition-all duration-700">
         <Dumbbell size={100} />
       </div>
-      
+
       {isCompleted && (
         <div className="absolute top-6 right-6 bg-success text-text-primary p-1.5 rounded-full z-20 shadow-lg shadow-success/20">
           <CheckCircle2 size={16} />
@@ -2407,15 +2407,15 @@ function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCo
             </span>
             {isCompleted && <span className="text-[8px] font-black text-success uppercase tracking-widest">Concluído</span>}
           </div>
-          <h3 className="text-2xl font-black tracking-tight leading-tight group-hover:text-primary transition-colors duration-500">{workout.name}</h3>
+          <h3 className="text-2xl font-black tracking-tight leading-tight text-primary">{workout.name}</h3>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white/5 p-4 rounded-2xl border border-white/5 group-hover:bg-white/10 transition-colors duration-500">
+          <div className="bg-white/10 p-4 rounded-2xl border border-white/5">
             <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">Exercícios</div>
             <div className="text-lg font-black">{workout.exercises.length}</div>
           </div>
-          <div className="bg-white/5 p-4 rounded-2xl border border-white/5 group-hover:bg-white/10 transition-colors duration-500">
+          <div className="bg-white/10 p-4 rounded-2xl border border-white/5">
             <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">Duração</div>
             <div className="text-lg font-black">{workout.duration}</div>
           </div>
@@ -2432,7 +2432,7 @@ function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCo
               +12
             </div>
           </div>
-          <div className="p-3 rounded-2xl bg-white/5 group-hover:bg-primary group-hover:text-text-primary transition-all duration-500 group-hover:translate-x-1">
+          <div className="p-3 rounded-2xl bg-primary text-text-primary translate-x-1">
             <ChevronRight size={20} />
           </div>
         </div>

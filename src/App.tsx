@@ -2881,7 +2881,7 @@ function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, can
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-12 pb-52 md:pb-20"
+      className="space-y-12 pb-24"
     >
       <AnimatePresence>
         {selectedExerciseForVideo && (
@@ -2997,8 +2997,7 @@ function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, can
         </div>
       </div>
 
-      {/* Fixed on mobile above the bottom nav, sticky on desktop */}
-      <div className="fixed bottom-[4.5rem] left-0 right-0 px-6 z-40 md:static md:pt-12 md:px-0">
+      <div className="pt-8">
         <button
           onClick={onToggleComplete}
           className={`w-full py-6 rounded-[32px] font-black text-xl shadow-2xl transition-all duration-500 active:scale-[0.98] flex items-center justify-center gap-4 ${

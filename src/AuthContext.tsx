@@ -3,14 +3,13 @@ import { Plan, UserProfile } from './types';
 import { supabase } from './lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 
-import { withTimeout } from './lib/utils';
-
 const ADMIN_EMAIL = 'carlosalbertojuniorourak@gmail.com';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  profileLoading: boolean;
   authError: string | null;
   initSession: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -34,111 +33,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [simulatedPlan, setSimulatedPlan] = useState<Plan | null>(null);
+  const profileFetchingRef = useRef(false);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const isAdmin = user?.email === ADMIN_EMAIL;
+
+  // Promise.race wrapper — getSession can hang forever on mobile without throwing
+  const getSessionWithTimeout = (ms = 5000) =>
+    Promise.race([
+      supabase.auth.getSession(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('session_timeout')), ms)
+      ),
+    ]);
 
   const initSession = async () => {
     setAuthError(null);
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await getSessionWithTimeout(5000);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      if (currentUser) {
-        await fetchProfile(currentUser.id, currentUser);
-      } else {
-        setLoading(false);
-      }
+      setLoading(false);
+      if (currentUser) fetchProfileBackground(currentUser.id, currentUser);
+      else setLoading(false);
     } catch {
+      setUser(null);
       setLoading(false);
       setAuthError('Erro ao conectar. Verifique sua internet.');
     }
   };
 
-  const _initSessionLegacy = async (retryCount = 0) => {
-    setAuthError(null);
-    setLoading(true);
-    try {
-      console.log(`Initializing session... (attempt ${retryCount + 1})`);
-      
-      // Increased timeout to 15 seconds for session verification
-      const { data: { session }, error } = await withTimeout(() => supabase.auth.getSession(), 15000, 2);
-      
-      if (error) {
-        console.error('Supabase getSession error:', error);
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      if (currentUser) {
-        console.log('User verified:', currentUser.email);
-        await fetchProfile(currentUser.id, currentUser);
-      } else {
-        setLoading(false);
-      }
-    } catch (error: any) {
-      console.error('Error initializing session:', error);
-      
-      // Auto-retry session init on timeout with exponential backoff
-      if (error.message === 'Timeout na requisição' && retryCount < 2) {
-        const backoff = 1000 * (retryCount + 1);
-        console.log(`Retrying session init after timeout in ${backoff}ms... (${retryCount + 1}/2)`);
-        await new Promise(resolve => setTimeout(resolve, backoff));
-        return initSession(retryCount + 1);
-      }
-
-      setUser(null);
-      setLoading(false);
-      if (error.message === 'Timeout na requisição') {
-        setAuthError('A conexão com o servidor demorou muito. Verifique sua internet.');
-      }
-    }
+  const fetchProfileBackground = (id: string, userObj: User) => {
+    if (profileFetchingRef.current) return;
+    profileFetchingRef.current = true;
+    setProfileLoading(true);
+    fetchProfile(id, userObj).finally(() => {
+      profileFetchingRef.current = false;
+      setProfileLoading(false);
+    });
   };
 
   useEffect(() => {
     let cancelled = false;
 
-    // Primary init: fast getSession check
-    const init = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (cancelled) return;
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchProfile(currentUser.id, currentUser);
-        } else {
-          setLoading(false);
-        }
-      } catch {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    init();
-
-    // Listen for subsequent auth changes only
+    // onAuthStateChange fires INITIAL_SESSION synchronously from localStorage —
+    // fastest possible path. SIGNED_IN fires after OAuth/email login.
+    // Both must be handled to cover every auth scenario in supabase-js v2.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return;
       const currentUser = session?.user ?? null;
-      if (event === 'SIGNED_IN') {
+
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
         setUser(currentUser);
-        if (currentUser) await fetchProfile(currentUser.id, currentUser);
+        setLoading(false);
+        if (currentUser) fetchProfileBackground(currentUser.id, currentUser);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
+        profileFetchingRef.current = false;
         setLoading(false);
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Token was refreshed silently — update user in case metadata changed
+        setUser(currentUser);
       }
     });
 
-    // Safety net: stop spinner after 15s without error message
+    // Hard fallback: if onAuthStateChange never fires (e.g., Supabase init fails),
+    // stop the spinner after 6s so the user isn't stuck forever
     const watchdog = setTimeout(() => {
-      setLoading(false);
-    }, 15000);
+      if (!cancelled) setLoading(false);
+    }, 6000);
 
     return () => {
       cancelled = true;
@@ -147,8 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchProfile = async (id: string, userObj?: User | null, retryCount = 0) => {
-    // Show cached profile immediately while fetching fresh data
+  const fetchProfile = async (id: string, userObj?: User | null, retryCount = 0): Promise<void> => {
+    // Serve cached profile instantly while fresh data loads
     if (retryCount === 0) {
       const cached = localStorage.getItem(`profile_${id}`);
       if (cached) {
@@ -156,51 +121,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setAuthError(null);
     try {
-      console.log(`Fetching profile for ${id} (retry: ${retryCount})`);
-      
-      // Small delay to allow schema cache to refresh if needed
       if (retryCount > 0) {
         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
 
-      // Timeout for profile fetch - increased to 15s+
-      const timeoutVal = 15000 + (retryCount * 5000);
-      const { data, error } = await withTimeout(
-        () => supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle(),
-        timeoutVal,
-        1 // Add one internal retry
-      ) as any;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
 
       if (error) {
-        // If it's a schema cache error, retry up to 3 times
-        if (error.message?.includes('schema cache') && retryCount < 3) {
-          console.warn(`Schema cache error, retrying... (${retryCount + 1}/3)`);
-          await fetchProfile(id, userObj, retryCount + 1);
-          return;
+        if (error.message?.includes('schema cache') && retryCount < 2) {
+          return fetchProfile(id, userObj, retryCount + 1);
         }
-        
-        if (error.code !== 'PGRST116') {
-          throw error;
-        }
+        if (error.code !== 'PGRST116') throw error;
       }
 
       if (data) {
-        console.log('Profile found:', data.email);
         setProfile(data as UserProfile);
-        // Update cache
         localStorage.setItem(`profile_${id}`, JSON.stringify(data));
       } else {
-        console.log('Profile not found, creating new one...');
-        // Use the passed userObj or the state user
-        const targetUser = userObj || user;
-        
-        // Create profile if it doesn't exist
+        const targetUser = userObj;
         const newProfile: UserProfile = {
           id,
           email: targetUser?.email || '',
@@ -218,66 +161,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updatedAt: new Date().toISOString(),
         };
 
-        const tryInsert = async (retries = 0): Promise<any> => {
-          if (retries > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
-          }
-          const { data: created, error: createError } = await supabase
-            .from('profiles')
-            .insert([newProfile])
-            .select()
-            .single();
-          
-          if (createError) {
-            if (createError.message?.includes('schema cache') && retries < 3) {
-              console.warn(`Schema cache error on insert, retrying... (${retries + 1}/3)`);
-              return tryInsert(retries + 1);
-            }
-            // If profile already exists (race condition), just fetch it
-            if (createError.code === '23505') {
-              return await fetchProfile(id, userObj);
-            }
-            throw createError;
-          }
-          return created;
-        };
+        const { data: created, error: createError } = await supabase
+          .from('profiles')
+          .insert([newProfile])
+          .select()
+          .single();
 
-        const created = await tryInsert();
-        console.log('Profile created successfully');
-        setProfile(created as UserProfile);
-        // Update cache
-        localStorage.setItem(`profile_${id}`, JSON.stringify(created));
+        if (createError) {
+          if (createError.code === '23505') {
+            // Race condition: profile was created between our select and insert — just re-fetch once
+            const { data: existing } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', id)
+              .maybeSingle();
+            if (existing) {
+              setProfile(existing as UserProfile);
+              localStorage.setItem(`profile_${id}`, JSON.stringify(existing));
+            }
+            return;
+          }
+          if (createError.message?.includes('schema cache') && retryCount < 2) {
+            return fetchProfile(id, userObj, retryCount + 1);
+          }
+          throw createError;
+        }
+
+        if (created) {
+          setProfile(created as UserProfile);
+          localStorage.setItem(`profile_${id}`, JSON.stringify(created));
+        }
       }
     } catch (err: any) {
       console.error('Error fetching profile:', err);
-      // Auto-retry up to 2 times on timeout with backoff
-      if (err.message === 'Timeout na requisição' && retryCount < 2) {
-        const backoff = 1000 * (retryCount + 1);
-        console.log(`Retrying profile fetch after timeout in ${backoff}ms... (${retryCount + 1}/2)`);
-        await new Promise(resolve => setTimeout(resolve, backoff));
-        await fetchProfile(id, userObj, retryCount + 1);
-        return;
-      }
 
-      // If we have a cached profile, don't show error, just log it
       const cached = localStorage.getItem(`profile_${id}`);
       if (cached) {
-        console.warn('Fetch failed but using cached profile as fallback');
-        try {
-          const parsed = JSON.parse(cached);
-          setProfile(parsed as UserProfile);
-        } catch (e) {}
-        setLoading(false);
+        try { setProfile(JSON.parse(cached) as UserProfile); } catch {}
         return;
       }
 
-      if (err.message === 'Timeout na requisição') {
-        setAuthError('A conexão com o servidor demorou muito ao carregar seu perfil.');
-      } else {
-        setAuthError(err.message || 'Erro ao carregar perfil.');
+      if (retryCount < 1) {
+        return fetchProfile(id, userObj, retryCount + 1);
       }
-    } finally {
-      setLoading(false);
+
+      setAuthError('Erro ao carregar perfil. Tente recarregar a página.');
     }
   };
 
@@ -372,10 +300,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      profile, 
-      loading, 
+    <AuthContext.Provider value={{
+      user,
+      profile,
+      loading,
+      profileLoading,
       authError,
       initSession,
       signInWithGoogle, 

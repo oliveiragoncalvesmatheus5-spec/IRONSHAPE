@@ -65,20 +65,18 @@ import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 export default function App() {
-  const { user, profile, loading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile } = useAuth();
+  const { user, profile, loading, profileLoading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPricing, setShowPricing] = useState(false);
   const [initTimeout, setInitTimeout] = useState(false);
 
   useEffect(() => {
+    // Last-resort escape hatch: if loading is still true after 5s, force past it
     const timer = setTimeout(() => {
-      if (loading) {
-        console.warn('App level timeout reached: forcing advance');
-        setInitTimeout(true);
-      }
-    }, 15000);
+      setInitTimeout(true);
+    }, 5000);
     return () => clearTimeout(timer);
-  }, [loading]);
+  }, []);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -197,14 +195,19 @@ export default function App() {
     return <LoginView onLogin={signInWithGoogle} />;
   }
 
+  // Profile is still being fetched from DB — show spinner instead of flashing onboarding
+  if (!profile && profileLoading) {
+    return <LoadingScreen onRetry={() => initSession()} />;
+  }
+
   if (!profile || profile.age === 0) {
     return (
-      <OnboardingView 
-        user={user} 
-        profile={profile} 
+      <OnboardingView
+        user={user}
+        profile={profile}
         onComplete={(plan) => {
           if (plan !== 'Iniciante') setShowPricing(true);
-        }} 
+        }}
       />
     );
   }

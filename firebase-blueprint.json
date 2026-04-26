@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile data and subscription status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "weight": { "type": "number" },
+        "height": { "type": "number" },
+        "goal": { "type": "string" },
+        "plan": { "type": "string", "enum": ["Iniciante", "Pro", "Elite"] },
+        "subscriptionStatus": { "type": "string", "enum": ["active", "inactive", "canceled"] },
+        "stripeCustomerId": { "type": "string" },
+        "points": { "type": "number" },
+        "streak": { "type": "number" },
+        "lastWorkoutDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name", "plan", "subscriptionStatus"]
+    },
+    "Workout": {
+      "title": "Workout",
+      "description": "Workout routine definition",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "muscleGroup": { "type": "string" },
+        "planRequired": { "type": "string", "enum": ["Iniciante", "Pro", "Elite"] },
+        "authorUid": { "type": "string" }
+      },
+      "required": ["name", "muscleGroup", "planRequired"]
+    },
+    "Exercise": {
+      "title": "Exercise",
+      "description": "Individual exercise details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "series": { "type": "number" },
+        "reps": { "type": "string" },
+        "restTime": { "type": "string" },
+        "muscleGroup": { "type": "string" },
+        "videoUrl": { "type": "string" }
+      },
+      "required": ["name", "series", "reps"]
+    },
+    "WorkoutLog": {
+      "title": "Workout Log",
+      "description": "Record of a completed workout",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userUid": { "type": "string" },
+        "workoutId": { "type": "string" },
+        "workoutName": { "type": "string" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number" }
+      },
+      "required": ["userUid", "workoutId", "completedAt"]
+    },
+    "NutritionPlan": {
+      "title": "Nutrition Plan",
+      "description": "Daily nutrition and meal plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userUid": { "type": "string" },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "carbs": { "type": "number" },
+        "fat": { "type": "number" },
+        "planRequired": { "type": "string", "enum": ["Iniciante", "Pro", "Elite"] }
+      },
+      "required": ["userUid", "calories", "planRequired"]
+    },
+    "ProgressLog": {
+      "title": "Progress Log",
+      "description": "Body measurements and weight tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userUid": { "type": "string" },
+        "weight": { "type": "number" },
+        "chest": { "type": "number" },
+        "waist": { "type": "number" },
+        "biceps": { "type": "number" },
+        "thigh": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userUid", "weight", "date"]
+    },
+    "Post": {
+      "title": "Community Post",
+      "description": "Post in the community feed",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userUid": { "type": "string" },
+        "userName": { "type": "string" },
+        "content": { "type": "string" },
+        "likes": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userUid", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/workouts/{workoutId}": {
+      "schema": "Workout",
+      "description": "Global and custom workout routines"
+    },
+    "/workouts/{workoutId}/exercises/{exerciseId}": {
+      "schema": "Exercise",
+      "description": "Exercises within a workout"
+    },
+    "/workout_logs/{logId}": {
+      "schema": "WorkoutLog",
+      "description": "History of completed workouts"
+    },
+    "/nutrition_plans/{planId}": {
+      "schema": "NutritionPlan",
+      "description": "Nutrition plans for users"
+    },
+    "/progress_logs/{logId}": {
+      "schema": "ProgressLog",
+      "description": "User progress tracking"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Community feed posts"
+    }
+  }
+}

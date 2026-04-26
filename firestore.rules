@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, name, age, weight, height, goal, plan, subscriptionStatus, points, streak, lastWorkoutDate, createdAt, updatedAt
+    //
+    // Collection: workouts
+    // Fields: id, name, description, muscleGroup, planRequired, authorUid
+    //
+    // Collection: workout_logs
+    // Fields: id, userUid, workoutId, workoutName, completedAt, duration
+    //
+    // Collection: nutrition_plans
+    // Fields: id, userUid, calories, protein, carbs, fat, planRequired
+    //
+    // Collection: progress_logs
+    // Fields: id, userUid, weight, chest, waist, biceps, thigh, date
+    //
+    // Collection: posts
+    // Fields: id, userUid, userName, content, likes, createdAt
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userUid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (
+          (request.auth.token.email == "carlosalbertojuniorourak@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.plan == 'Admin')
+        );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'plan', 'subscriptionStatus', 'role']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.plan in ['Iniciante', 'Pro', 'Elite', 'Admin', 'free'] &&
+             data.role in ['user', 'admin'] &&
+             data.subscriptionStatus in ['active', 'inactive', 'canceled'];
+    }
+
+    function isValidWorkout(data) {
+      return data.keys().hasAll(['name', 'muscleGroup', 'planRequired']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.planRequired in ['Iniciante', 'Pro', 'Elite'];
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['userUid', 'content', 'createdAt']) &&
+             data.userUid == request.auth.uid &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 1000;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && userId == request.auth.uid && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      (request.resource.data.plan == resource.data.plan || isAdmin());
+    }
+
+    match /workouts/{workoutId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      
+      match /exercises/{exerciseId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /workout_logs/{logId} {
+      allow read: if isAuthenticated() && (resource.data.userUid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userUid == request.auth.uid;
+      allow update, delete: if false; // Logs are immutable
+    }
+
+    match /nutrition_plans/{planId} {
+      allow read: if isAuthenticated() && (resource.data.userUid == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /progress_logs/{logId} {
+      allow read: if isAuthenticated() && (resource.data.userUid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userUid == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userUid == request.auth.uid;
+    }
+
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPost(request.resource.data);
+      allow update: if isAuthenticated() && 
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) || 
+                       (resource.data.userUid == request.auth.uid && isValidPost(request.resource.data)));
+      allow delete: if isAuthenticated() && (resource.data.userUid == request.auth.uid || isAdmin());
+    }
+  }
+}

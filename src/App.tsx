@@ -5,6 +5,7 @@ import { withTimeout } from './lib/utils';
 import { UserProfile, NutritionPreferences, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
+import AIChat from './AIChat';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Dumbbell, 
@@ -58,7 +59,8 @@ import {
   FileText,
   UserCheck,
   UserX,
-  Ban
+  Ban,
+  Bot
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -2171,39 +2173,45 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           />
           {selectedPlanTab === 'Pro' && (
             <>
-              <SubTabButton 
-                active={activeSubTab === 'ia'} 
-                onClick={() => setActiveSubTab('ia')} 
-                label="IA Adaptativa" 
-                icon={<Zap size={14} />} 
+              <SubTabButton
+                active={activeSubTab === 'ia'}
+                onClick={() => setActiveSubTab('ia')}
+                label="IA Adaptativa"
+                icon={<Zap size={14} />}
               />
-              <SubTabButton 
-                active={activeSubTab === 'history'} 
-                onClick={() => setActiveSubTab('history')} 
-                label="Histórico" 
-                icon={<Calendar size={14} />} 
+              <SubTabButton
+                active={activeSubTab === 'history'}
+                onClick={() => setActiveSubTab('history')}
+                label="Histórico"
+                icon={<Calendar size={14} />}
               />
-              <SubTabButton 
-                active={activeSubTab === 'ranking'} 
-                onClick={() => setActiveSubTab('ranking')} 
-                label="Ranking" 
-                icon={<Trophy size={14} />} 
+              <SubTabButton
+                active={activeSubTab === 'ranking'}
+                onClick={() => setActiveSubTab('ranking')}
+                label="Ranking"
+                icon={<Trophy size={14} />}
               />
             </>
           )}
           {selectedPlanTab === 'Elite' && (
             <>
-              <SubTabButton 
-                active={activeSubTab === 'spreadsheet'} 
-                onClick={() => setActiveSubTab('spreadsheet')} 
-                label="Planilha Atleta" 
-                icon={<Calculator size={14} />} 
+              <SubTabButton
+                active={activeSubTab === 'ia'}
+                onClick={() => setActiveSubTab('ia')}
+                label="IA Adaptativa"
+                icon={<Zap size={14} />}
               />
-              <SubTabButton 
-                active={activeSubTab === 'early'} 
-                onClick={() => setActiveSubTab('early')} 
-                label="Acesso Antecipado" 
-                icon={<Flame size={14} />} 
+              <SubTabButton
+                active={activeSubTab === 'spreadsheet'}
+                onClick={() => setActiveSubTab('spreadsheet')}
+                label="Planilha Atleta"
+                icon={<Calculator size={14} />}
+              />
+              <SubTabButton
+                active={activeSubTab === 'early'}
+                onClick={() => setActiveSubTab('early')}
+                label="Acesso Antecipado"
+                icon={<Flame size={14} />}
               />
             </>
           )}
@@ -2319,7 +2327,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               </>
             )}
 
-            {activeSubTab === 'ia' && <IAAdaptativaView />}
+            {activeSubTab === 'ia' && <IAAdaptativaView profile={profile} onUpgrade={onUpgrade} />}
             {activeSubTab === 'history' && <WorkoutHistoryView userUid={user?.id || ''} />}
             {activeSubTab === 'ranking' && <GlobalRankingView />}
             {activeSubTab === 'spreadsheet' && <AthleteSpreadsheetView onSelectWorkout={setSelectedWorkout} />}
@@ -5421,50 +5429,21 @@ function PlanSimulator({ currentPlan, onPlanChange }: { currentPlan: Plan, onPla
   );
 }
 
-function IAAdaptativaView() {
+function IAAdaptativaView({ profile, onUpgrade }: { profile: UserProfile; onUpgrade: () => void }) {
   return (
-    <div className="space-y-8">
-      <div className="bg-gradient-to-br from-primary/20 to-transparent p-8 rounded-[40px] border border-primary/20 space-y-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-            <Zap className="text-text-primary" size={24} />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black uppercase tracking-tight">IA Adaptativa</h2>
-            <p className="text-text-secondary text-sm">Sugestões inteligentes baseadas no seu desempenho.</p>
-          </div>
+    <div className="space-y-6">
+      <div className="bg-gradient-to-br from-primary/20 to-transparent p-6 rounded-[40px] border border-primary/20 flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
+          <Zap className="text-text-primary" size={24} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black uppercase tracking-tight">IA Adaptativa</h2>
+          <p className="text-text-secondary text-sm">Seu personal trainer inteligente, disponível 24h.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-surface p-8 rounded-[40px] border border-white/5 space-y-6">
-          <h3 className="text-lg font-black uppercase tracking-widest text-primary">Recomendação do Dia</h3>
-          <div className="space-y-4">
-            <p className="text-text-secondary leading-relaxed">
-              Com base nos seus últimos treinos de <span className="text-text-primary font-bold">Peito</span> e <span className="text-text-primary font-bold">Costas</span>, sugerimos focar em <span className="text-text-primary font-bold">Pernas</span> hoje para manter o equilíbrio muscular.
-            </p>
-            <div className="p-6 bg-white/5 rounded-3xl border border-white/5 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-text-muted uppercase font-black">Protocolo Sugerido</p>
-                <p className="font-bold">Leg Day Pro</p>
-              </div>
-              <ArrowRight size={20} className="text-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface p-8 rounded-[40px] border border-white/5 space-y-6">
-          <h3 className="text-lg font-black uppercase tracking-widest text-primary">Ajuste de Carga</h3>
-          <div className="space-y-4">
-            <p className="text-text-secondary leading-relaxed">
-              Você completou o último treino com facilidade. A IA sugere aumentar a carga em <span className="text-success font-bold">10%</span> no próximo treino de força.
-            </p>
-            <div className="flex items-center gap-3 text-success text-sm font-bold">
-              <TrendingUp size={18} />
-              Evolução detectada!
-            </div>
-          </div>
-        </div>
+      <div className="bg-surface rounded-[40px] border border-white/5 p-6 h-[600px] flex flex-col">
+        <AIChat profile={profile} onUpgrade={onUpgrade} />
       </div>
     </div>
   );

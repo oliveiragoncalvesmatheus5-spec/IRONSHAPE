@@ -5654,32 +5654,23 @@ function AthleteSpreadsheetView({ onSelectWorkout }: { onSelectWorkout: (w: Work
   );
 }
 
-function EarlyAccessView({ onSelectWorkout }: { onSelectWorkout: (w: Workout) => void }) {
-  const newWorkouts = ALL_WORKOUTS.filter(w => w.planRequired === 'Elite').slice(0, 2);
-
+function EarlyAccessView({ onSelectWorkout: _onSelectWorkout }: { onSelectWorkout: (w: Workout) => void }) {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl font-black uppercase tracking-tight">Acesso Antecipado</h2>
         <span className="flex items-center gap-1 px-3 py-1 bg-flame/20 text-flame text-[10px] font-black rounded-full uppercase tracking-widest animate-pulse">
           <Flame size={12} />
-          Novos Protocolos
+          Em Breve
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {newWorkouts.map((workout) => (
-          <div key={workout.id} className="relative group">
-            <div className="absolute -top-3 -right-3 z-10 bg-flame text-text-primary text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-flame/30">
-              NOVO
-            </div>
-            <WorkoutCard 
-              workout={workout} 
-              isCompleted={false} 
-              onClick={() => onSelectWorkout(workout)} 
-            />
-          </div>
-        ))}
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center bg-surface rounded-[40px] border border-white/5">
+        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
+          <Flame size={28} className="text-text-muted" />
+        </div>
+        <p className="text-text-primary font-bold">Novos protocolos chegando em breve</p>
+        <p className="text-text-muted text-sm max-w-xs">Os treinos exclusivos de acesso antecipado serão disponibilizados aqui em breve.</p>
       </div>
     </div>
   );

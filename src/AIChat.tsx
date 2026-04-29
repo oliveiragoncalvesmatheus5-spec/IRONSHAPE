@@ -452,16 +452,18 @@ function UpgradePrompt({ onUpgrade }: { onUpgrade: () => void }) {
 export default function AIChat({
   profile,
   onUpgrade,
+  isAdmin = false,
 }: {
   profile: UserProfile | null;
   onUpgrade: () => void;
+  isAdmin?: boolean;
 }) {
   const [aiProfile, setAIProfile] = useState<AIProfile | null>(null);
   const [history, setHistory] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isPro = profile?.plano === 'Pro' || profile?.plano === 'Elite';
+  const isPro = profile?.plano === 'Pro' || profile?.plano === 'Elite' || isAdmin;
 
   // Load persisted profile and history
   useEffect(() => {

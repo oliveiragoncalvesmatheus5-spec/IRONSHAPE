@@ -2327,7 +2327,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               </>
             )}
 
-            {activeSubTab === 'ia' && <IAAdaptativaView profile={profile} onUpgrade={onUpgrade} />}
+            {activeSubTab === 'ia' && <IAAdaptativaView profile={profile} onUpgrade={onUpgrade} isAdmin={isAdmin} />}
             {activeSubTab === 'history' && <WorkoutHistoryView userUid={user?.id || ''} />}
             {activeSubTab === 'ranking' && <GlobalRankingView />}
             {activeSubTab === 'spreadsheet' && <AthleteSpreadsheetView onSelectWorkout={setSelectedWorkout} />}
@@ -5429,7 +5429,7 @@ function PlanSimulator({ currentPlan, onPlanChange }: { currentPlan: Plan, onPla
   );
 }
 
-function IAAdaptativaView({ profile, onUpgrade }: { profile: UserProfile; onUpgrade: () => void }) {
+function IAAdaptativaView({ profile, onUpgrade, isAdmin = false }: { profile: UserProfile; onUpgrade: () => void; isAdmin?: boolean }) {
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-br from-primary/20 to-transparent p-6 rounded-[40px] border border-primary/20 flex items-center gap-4">
@@ -5443,7 +5443,7 @@ function IAAdaptativaView({ profile, onUpgrade }: { profile: UserProfile; onUpgr
       </div>
 
       <div className="bg-surface rounded-[40px] border border-white/5 p-6 h-[600px] flex flex-col">
-        <AIChat profile={profile} onUpgrade={onUpgrade} />
+        <AIChat profile={profile} onUpgrade={onUpgrade} isAdmin={isAdmin} />
       </div>
     </div>
   );

@@ -4165,28 +4165,32 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
               </button>
             </div>
 
-            <div className="bg-surface p-6 sm:p-10 rounded-[32px] sm:rounded-[48px] border border-white/5 flex flex-col justify-between shadow-2xl relative overflow-hidden min-h-[300px]">
+            <div className="bg-surface p-6 sm:p-8 rounded-[32px] sm:rounded-[48px] border border-white/5 flex flex-col gap-6 shadow-2xl relative overflow-hidden min-h-[300px]">
               <div className="absolute -right-10 -bottom-10 opacity-5">
                 <Stethoscope size={200} />
               </div>
-              <div className="relative z-10 space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                    <Stethoscope size={20} />
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-black tracking-tight uppercase">Acompanhamento Profissional</h3>
+              {/* Header */}
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10 text-primary flex-shrink-0">
+                  <Stethoscope size={20} />
                 </div>
-                <div className="p-6 sm:p-8 bg-primary/5 rounded-[24px] sm:rounded-[32px] border border-primary/10 text-center space-y-4 sm:space-y-6 backdrop-blur-sm">
-                  <div className="inline-block px-4 py-1.5 bg-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-[0.3em]">
-                    EM BREVE
-                  </div>
-                  <p className="text-text-secondary text-base sm:text-lg leading-relaxed font-medium">
-                    Integração direta com nutricionistas parceiros para ajustes em tempo real e consultoria personalizada via chat.
-                  </p>
-                  <button className="w-full py-4 bg-primary/10 text-primary rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest cursor-not-allowed opacity-50">
-                    NOTIFICAR-ME NO LANÇAMENTO
-                  </button>
+                <h3 className="text-base font-black tracking-tight uppercase leading-tight">
+                  Acompanhamento<br />Profissional
+                </h3>
+              </div>
+              {/* Content */}
+              <div className="relative z-10 flex-1 flex flex-col gap-4 bg-primary/5 rounded-[24px] border border-primary/10 p-5">
+                <div className="inline-flex">
+                  <span className="px-3 py-1 bg-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-[0.25em]">
+                    Em Breve
+                  </span>
                 </div>
+                <p className="text-text-secondary text-sm leading-relaxed">
+                  Integração direta com nutricionistas parceiros para ajustes em tempo real e consultoria personalizada via chat.
+                </p>
+                <button className="mt-auto w-full py-3 bg-primary/10 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed opacity-50">
+                  Notificar-me no Lançamento
+                </button>
               </div>
             </div>
           </div>

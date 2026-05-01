@@ -73,6 +73,10 @@ export default function App() {
   const [initTimeout, setInitTimeout] = useState(false);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
+
+  useEffect(() => {
     // Last-resort escape hatch: if loading is still true after 5s, force past it
     const timer = setTimeout(() => {
       setInitTimeout(true);

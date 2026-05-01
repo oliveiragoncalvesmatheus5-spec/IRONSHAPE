@@ -5748,7 +5748,7 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
       return;
     }
     if (plan === 'Pro') {
-      window.open('https://app.abacatepay.com/pay/bill_PMmn4JmemZC5MdCMrpjkZwdk', '_blank');
+      window.open('https://app.abacatepay.com/pay/bill_qcpZwfDkagE0js0dcQrLWTjq', '_blank');
       return;
     }
     if (plan === currentPlan) return;

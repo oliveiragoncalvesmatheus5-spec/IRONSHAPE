@@ -5744,7 +5744,7 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
 
   const handleUpgrade = async (plan: Plan) => {
     if (plan === 'Elite') {
-      window.open('https://app.abacatepay.com/pay/bill_xnCyrzR4mdf4Yg4wThbkWFmS', '_blank');
+      window.open('https://app.abacatepay.com/pay/bill_0mR4kgjeGnp5du3QSD5naMCU', '_blank');
       return;
     }
     if (plan === 'Pro') {

@@ -1530,42 +1530,50 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   const [weeklyCount, setWeeklyCount] = useState(0);
   const [nextWorkout, setNextWorkout] = useState<{ name: string; muscleGroup: string } | null>(null);
 
+  const resolvePlanWorkouts = (plan: string) =>
+    ALL_WORKOUTS.filter(w =>
+      w.planRequired === plan ||
+      (plan === 'free' && w.planRequired === 'Iniciante') ||
+      (plan === 'Admin' && w.planRequired === 'Elite')
+    );
+
+  const pickNextWorkout = (trainedWorkoutIds: string[], plan: string) => {
+    const planWorkouts = resolvePlanWorkouts(plan);
+    if (planWorkouts.length === 0) return null;
+    const trainedGroups = new Set(
+      ALL_WORKOUTS.filter(w => trainedWorkoutIds.includes(w.id)).map(w => w.muscleGroup)
+    );
+    return planWorkouts.find(w => !trainedGroups.has(w.muscleGroup)) ?? planWorkouts[0];
+  };
+
   useEffect(() => {
+    // Fallback imediato — mostra o primeiro treino do plano sem esperar o fetch
+    const fallback = resolvePlanWorkouts(effectivePlan)[0];
+    if (fallback) setNextWorkout({ name: fallback.name, muscleGroup: fallback.muscleGroup });
+
     if (!user) return;
+
     const now = new Date();
     const dayOfWeek = now.getDay();
     const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
     const monday = new Date(now);
     monday.setDate(now.getDate() + diffToMonday);
     monday.setHours(0, 0, 0, 0);
+
     supabase
       .from('workout_logs')
       .select('id, workoutId, completedAt', { count: 'exact' })
       .eq('userUid', user.id)
       .gte('completedAt', monday.toISOString())
       .order('completedAt', { ascending: false })
-      .then(({ data, count }) => {
+      .then(({ data, count, error }) => {
+        if (error) return; // mantém o fallback
         if (count !== null) setWeeklyCount(count);
-        if (!data || data.length === 0) {
-          // Nenhum treino esta semana — sugere o primeiro do plano
-          const planWorkouts = ALL_WORKOUTS.filter(w => w.planRequired === effectivePlan || (effectivePlan === 'free' && w.planRequired === 'Iniciante'));
-          if (planWorkouts.length > 0) setNextWorkout({ name: planWorkouts[0].name, muscleGroup: planWorkouts[0].muscleGroup });
-          return;
-        }
-        // Descobre grupos musculares já treinados esta semana
-        const trainedIds = new Set(data.map((l: any) => l.workoutId));
-        const trainedGroups = new Set(
-          ALL_WORKOUTS.filter(w => trainedIds.has(w.id)).map(w => w.muscleGroup)
-        );
-        // Filtra treinos do plano do usuário
-        const planWorkouts = ALL_WORKOUTS.filter(w =>
-          w.planRequired === effectivePlan || (effectivePlan === 'free' && w.planRequired === 'Iniciante')
-        );
-        // Próximo = primeiro grupo não treinado ainda
-        const next = planWorkouts.find(w => !trainedGroups.has(w.muscleGroup))
-          ?? planWorkouts[0]; // se todos foram treinados, recomeça do início
+        const trainedIds = (data ?? []).map((l: any) => l.workoutId);
+        const next = pickNextWorkout(trainedIds, effectivePlan);
         if (next) setNextWorkout({ name: next.name, muscleGroup: next.muscleGroup });
-      });
+      })
+      .then(undefined, () => {}); // mantém o fallback em caso de erro de rede
   }, [user, effectivePlan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const WEEKLY_TARGET = 5;

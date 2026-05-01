@@ -5925,7 +5925,9 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
                 onClick={() => handleUpgrade(plan.id)}
                 disabled={(plan.id !== 'Elite' && plan.id !== 'Pro') && currentPlan === plan.id}
                 className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
-                  plan.highlight
+                  plan.buttonText === 'Plano Atual'
+                    ? 'bg-white text-black border border-white cursor-default'
+                    : plan.highlight
                     ? 'bg-primary text-text-primary shadow-xl shadow-primary/20 hover:bg-primary-hover'
                     : 'bg-white/5 text-text-primary border border-white/10 hover:bg-white/10'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}

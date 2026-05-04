@@ -1,10 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { UserProfile, Workout } from '../types';
-
-const client = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
 
 export interface AIProfile {
   trainingDays: number;
@@ -67,23 +61,25 @@ export async function sendMessage(
   history: Message[],
   userMessage: string
 ): Promise<string> {
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
-    system: [
-      {
-        type: 'text',
-        text: buildSystemPrompt(profile, aiProfile, workouts),
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    messages: [
-      ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user', content: userMessage },
-    ],
+  const messages = [
+    ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    { role: 'user' as const, content: userMessage },
+  ];
+
+  const response = await fetch('/.netlify/functions/iron-coach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemPrompt: buildSystemPrompt(profile, aiProfile, workouts),
+      messages,
+    }),
   });
 
-  const block = response.content[0];
-  if (block.type !== 'text') throw new Error('Resposta inesperada da IA');
-  return block.text;
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Erro ao conectar com o Iron Coach');
+  }
+
+  return data.text;
 }

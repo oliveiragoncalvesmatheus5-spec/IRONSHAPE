@@ -269,6 +269,27 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     }
   });
 
+  // Workout GIF proxy — ExerciseDB via RapidAPI
+  app.get("/api/workout-gif", async (req, res) => {
+    const name = req.query.name as string;
+    if (!name) return res.status(400).json({ error: "name é obrigatório" });
+    if (!process.env.RAPIDAPI_KEY) return res.status(500).json({ error: "RAPIDAPI_KEY não configurada" });
+
+    try {
+      const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(name)}?limit=1&offset=0`;
+      const response = await fetch(url, {
+        headers: {
+          'x-rapidapi-host': 'exercisedb.p.rapidapi.com',
+          'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+        },
+      });
+      const data = await response.json();
+      return res.status(response.status).json(data);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
   // Iron Coach chat endpoint
   app.post("/api/iron-coach", async (req, res) => {
     if (!process.env.ANTHROPIC_API_KEY) {

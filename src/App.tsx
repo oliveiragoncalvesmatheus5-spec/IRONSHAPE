@@ -5,6 +5,7 @@ import { withTimeout } from './lib/utils';
 import { UserProfile, NutritionPreferences, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
+import { searchExercisesByName } from './services/workoutxApi';
 import AIChat from './AIChat';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -2723,6 +2724,28 @@ function ExerciseCard({
 }) {
   const [isResting, setIsResting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [gifUrl, setGifUrl] = useState<string | null>(null);
+  const [gifLoading, setGifLoading] = useState(false);
+
+  const handleToggleDetails = async () => {
+    if (showDetails) {
+      setShowDetails(false);
+      return;
+    }
+    setShowDetails(true);
+    if (gifUrl) return;
+    setGifLoading(true);
+    try {
+      const results = await searchExercisesByName(exercise.name);
+      if (Array.isArray(results) && results.length > 0) {
+        setGifUrl(results[0].gifUrl ?? null);
+      }
+    } catch {
+      // silently fall back to videoUrl
+    } finally {
+      setGifLoading(false);
+    }
+  };
 
   return (
     <div className={`bg-surface rounded-[32px] md:rounded-[40px] border transition-all duration-500 overflow-hidden group ${
@@ -2762,7 +2785,7 @@ function ExerciseCard({
 
             {!isEditing && (
               <button
-                onClick={() => setShowDetails(v => !v)}
+                onClick={handleToggleDetails}
                 className="flex items-center gap-2 text-primary hover:text-primary-hover transition-colors group/btn pt-2 min-h-[44px]"
               >
                 <div className="p-2 rounded-lg bg-primary/10 group-hover/btn:bg-primary/20 transition-all">
@@ -2839,9 +2862,20 @@ function ExerciseCard({
             className="overflow-hidden border-t border-white/5"
           >
             <div className="flex flex-col lg:flex-row">
-              {/* Video */}
+              {/* GIF / Video */}
               <div className="lg:w-1/2 bg-black aspect-video lg:aspect-auto min-h-[220px] flex items-center justify-center relative">
-                {exercise.videoUrl ? (
+                {gifLoading ? (
+                  <div className="flex flex-col items-center gap-4 text-text-muted">
+                    <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Carregando...</p>
+                  </div>
+                ) : gifUrl ? (
+                  <img
+                    src={gifUrl}
+                    alt={exercise.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : exercise.videoUrl ? (
                   <video
                     src={exercise.videoUrl}
                     autoPlay

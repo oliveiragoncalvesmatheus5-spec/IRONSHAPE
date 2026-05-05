@@ -9,11 +9,10 @@ export const handler = async (event: any) => {
   }
 
   try {
-    const url = `https://edb-with-videos-and-images-by-ascendapi.p.rapidapi.com/api/v1/exercises/search?search=${encodeURIComponent(name)}`;
+    const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(name)}?limit=1&offset=0`;
     const res = await fetch(url, {
       headers: {
-        'Content-Type': 'application/json',
-        'x-rapidapi-host': 'edb-with-videos-and-images-by-ascendapi.p.rapidapi.com',
+        'x-rapidapi-host': 'exercisedb.p.rapidapi.com',
         'x-rapidapi-key': process.env.RAPIDAPI_KEY,
       },
     });

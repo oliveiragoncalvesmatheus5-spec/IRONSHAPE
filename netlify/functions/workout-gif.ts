@@ -4,16 +4,17 @@ export const handler = async (event: any) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'name é obrigatório' }) };
   }
 
-  if (!process.env.WORKOUTX_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'WORKOUTX_KEY não configurada' }) };
+  if (!process.env.RAPIDAPI_KEY) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'RAPIDAPI_KEY não configurada' }) };
   }
 
   try {
-    const url = `https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(name)}`;
+    const url = `https://edb-with-videos-and-images-by-ascendapi.p.rapidapi.com/api/v1/exercises/search?search=${encodeURIComponent(name)}`;
     const res = await fetch(url, {
       headers: {
-        'X-WorkoutX-Key': process.env.WORKOUTX_KEY,
         'Content-Type': 'application/json',
+        'x-rapidapi-host': 'edb-with-videos-and-images-by-ascendapi.p.rapidapi.com',
+        'x-rapidapi-key': process.env.RAPIDAPI_KEY,
       },
     });
 

@@ -2737,8 +2737,9 @@ function ExerciseCard({
     setGifLoading(true);
     try {
       const results = await searchExercisesByName(exercise.name);
-      if (Array.isArray(results) && results.length > 0) {
-        setGifUrl(results[0].gifUrl ?? null);
+      const list = Array.isArray(results) ? results : results?.data;
+      if (Array.isArray(list) && list.length > 0) {
+        setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
       }
     } catch {
       // silently fall back to videoUrl

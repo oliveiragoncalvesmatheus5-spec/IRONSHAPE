@@ -32,11 +32,10 @@ export function getExercisesByTarget(muscle) {
 
 export async function searchExercisesByName(name) {
   const nameEn = translateExerciseName(name);
-  const headers = getHeaders();
-  const res = await fetch(`${BASE_URL}/exercises/name/${encodeURIComponent(nameEn)}`, { headers });
+  const res = await fetch(`/.netlify/functions/workout-gif?name=${encodeURIComponent(nameEn)}`);
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || `Erro ${res.status}: /exercises/name/${nameEn}`);
+    throw new Error(error.message || `Erro ${res.status}`);
   }
   return res.json();
 }

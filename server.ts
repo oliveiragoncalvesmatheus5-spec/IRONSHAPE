@@ -49,7 +49,7 @@ async function runMigrations() {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 8080;
 
   // Middleware for JSON bodies
   app.use((req, res, next) => {

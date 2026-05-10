@@ -6,7 +6,9 @@ import Stripe from "stripe";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
 
@@ -101,6 +103,7 @@ async function startServer() {
 
   // Stripe Checkout Session
   app.post("/api/create-checkout-session", async (req, res) => {
+    if (!stripe) return res.status(500).json({ error: "STRIPE_SECRET_KEY não configurada" });
     const { priceId, customerEmail, userId } = req.body;
 
     try {
@@ -122,6 +125,7 @@ async function startServer() {
 
   // Stripe Webhook
   app.post("/api/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+    if (!stripe) return res.status(500).json({ error: "STRIPE_SECRET_KEY não configurada" });
     const sig = req.headers['stripe-signature'];
     let event;
 

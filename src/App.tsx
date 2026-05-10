@@ -61,7 +61,9 @@ import {
   UserCheck,
   UserX,
   Ban,
-  Bot
+  Bot,
+  Ruler,
+  Scale
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -225,6 +227,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background text-text-primary font-sans selection:bg-primary/30">
+      {isAdmin && (
+        <PlanSimulator
+          currentPlan={effectivePlan}
+          onPlanChange={setSimulatedPlan}
+        />
+      )}
       {/* Sidebar / Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-2xl border-t border-white/5 z-50 md:top-0 md:bottom-0 md:left-0 md:w-24 md:flex-col md:border-r md:border-t-0 flex md:items-center">
         {/* Branding - Desktop Only */}
@@ -238,6 +246,7 @@ export default function App() {
           <NavItem icon={<TrendingUp size={20} />} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} label="Início" />
           <NavItem icon={<Dumbbell size={20} />} active={activeTab === 'workouts'} onClick={() => setActiveTab('workouts')} label="Treinos" />
           <NavItem icon={<Apple size={20} />} active={activeTab === 'nutrition'} onClick={() => setActiveTab('nutrition')} label="Dieta" />
+          <NavItem icon={<Ruler size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label="Progresso" />
           <NavItem icon={<Users size={20} />} active={activeTab === 'community'} onClick={() => setActiveTab('community')} label="Social" />
           <NavItem icon={<Wallet size={20} />} active={activeTab === 'affiliates'} onClick={() => setActiveTab('affiliates')} label="Afiliados" />
           <div className="md:hidden flex-1 flex justify-center">
@@ -269,12 +278,6 @@ export default function App() {
 
       {/* Main Content */}
       <main className="pb-24 md:pl-24 md:pb-0 min-h-screen">
-        {isAdmin && (
-          <PlanSimulator 
-            currentPlan={effectivePlan} 
-            onPlanChange={setSimulatedPlan} 
-          />
-        )}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -282,7 +285,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="p-4 md:p-8 max-w-7xl mx-auto"
+            className={`p-4 md:p-8 max-w-7xl mx-auto${isAdmin ? ' pt-16 md:pt-16' : ''}`}
           >
             {activeTab === 'dashboard' && (
               <DashboardView 
@@ -294,6 +297,7 @@ export default function App() {
             )}
             {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => setShowPricing(true)} /></ViewErrorBoundary>}
             {activeTab === 'nutrition' && <NutritionView profile={profile} onUpgrade={() => setShowPricing(true)} updateProfile={updateProfile} />}
+            {activeTab === 'progress' && <BodyProgressView userId={profile.id} />}
             {activeTab === 'community' && <CommunityView profile={profile} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} />}
             {activeTab === 'settings' && <SettingsView profile={profile} logout={logout} onUpgrade={() => setShowPricing(true)} />}
@@ -2082,6 +2086,7 @@ class ViewErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan: Plan = (isAdmin && simulatedPlan) ? simulatedPlan : (profile.plano as Plan) || 'Iniciante';
+  const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || isAdmin;
   const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(
     (effectivePlan === 'free' || !effectivePlan) ? 'Iniciante' : effectivePlan
   );
@@ -2089,7 +2094,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [selectedLevel, setSelectedLevel] = useState<Level>(initialLevel);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'Todos'>('Todos');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early'>('workouts');
+  const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early' | 'registro'>('workouts');
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
@@ -2214,9 +2219,15 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           {selectedPlanTab === 'Pro' && (
             <>
               <SubTabButton
+                active={activeSubTab === 'registro'}
+                onClick={() => setActiveSubTab('registro')}
+                label="Registro"
+                icon={<BarChart3 size={14} />}
+              />
+              <SubTabButton
                 active={activeSubTab === 'ia'}
                 onClick={() => setActiveSubTab('ia')}
-                label="IA Adaptativa"
+                label="Iron Coach"
                 icon={<Zap size={14} />}
               />
               <SubTabButton
@@ -2236,9 +2247,15 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           {selectedPlanTab === 'Elite' && (
             <>
               <SubTabButton
+                active={activeSubTab === 'registro'}
+                onClick={() => setActiveSubTab('registro')}
+                label="Registro"
+                icon={<BarChart3 size={14} />}
+              />
+              <SubTabButton
                 active={activeSubTab === 'ia'}
                 onClick={() => setActiveSubTab('ia')}
-                label="IA Adaptativa"
+                label="Iron Coach"
                 icon={<Zap size={14} />}
               />
               <SubTabButton
@@ -2367,7 +2384,12 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               </>
             )}
 
-            {activeSubTab === 'ia' && <IAAdaptativaView profile={profile} onUpgrade={onUpgrade} isAdmin={isAdmin} />}
+            {activeSubTab === 'registro' && <LoadTrackerView userId={user?.id || ''} />}
+            {activeSubTab === 'ia' && (
+              hasPro
+                ? <IAAdaptativaView profile={profile} onUpgrade={onUpgrade} isAdmin={isAdmin} />
+                : <LockedFeatureOverlay onUpgrade={onUpgrade} plan="Pro" title="Iron Coach IA" description="Seu personal trainer inteligente disponível 24h. Exclusivo para assinantes Pro e Elite." />
+            )}
             {activeSubTab === 'history' && <WorkoutHistoryView userUid={user?.id || ''} />}
             {activeSubTab === 'ranking' && <GlobalRankingView />}
             {activeSubTab === 'spreadsheet' && <AthleteSpreadsheetView onSelectWorkout={setSelectedWorkout} />}
@@ -2959,145 +2981,112 @@ function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, can
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-12 pb-24"
+      className="space-y-6 pb-32"
     >
       <AnimatePresence>
         {selectedExerciseForVideo && (
-          <ExecutionModal 
-            exercise={selectedExerciseForVideo} 
-            onClose={() => setSelectedExerciseForVideo(null)} 
+          <ExecutionModal
+            exercise={selectedExerciseForVideo}
+            onClose={() => setSelectedExerciseForVideo(null)}
           />
         )}
       </AnimatePresence>
 
-      <header className="relative space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <button 
+      {/* Header compacto */}
+      <header className="space-y-4">
+        <div className="flex items-center justify-between">
+          <button
             onClick={onBack}
             className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors group"
           >
             <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-all">
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} />
             </div>
-            <span className="text-sm font-black uppercase tracking-widest">Voltar para Treinos</span>
+            <span className="text-xs font-black uppercase tracking-widest">Treinos</span>
           </button>
 
-          <div className="flex items-center gap-4">
-            {canEdit && (
-              <button 
-                onClick={() => setIsEditing(!isEditing)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                  isEditing ? 'bg-primary text-text-primary' : 'bg-surface border border-white/10 text-text-muted hover:text-text-primary'
-                }`}
-              >
-                <Edit3 size={16} />
-                {isEditing ? 'Salvar Ajustes' : 'Ajuste Manual'}
-              </button>
-            )}
-            <button 
-              onClick={onToggleComplete}
-              className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                isCompleted ? 'bg-success text-text-primary' : 'bg-primary text-text-primary shadow-xl shadow-primary/20'
+          {canEdit && (
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                isEditing ? 'bg-primary text-white' : 'bg-white/5 border border-white/10 text-text-muted hover:text-white'
               }`}
             >
-              {isCompleted ? <CheckCircle2 size={18} /> : <Play size={18} />}
-              {isCompleted ? 'Concluído' : 'Iniciar Treino'}
+              <Edit3 size={13} />
+              {isEditing ? 'Salvar' : 'Editar'}
             </button>
-          </div>
+          )}
         </div>
 
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-3">
-            <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20">
-              {workout.muscleGroup.toUpperCase()}
+        {/* Tags + título */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20">
+              {workout.muscleGroup}
             </span>
-            <span className="px-4 py-1.5 rounded-full bg-white/5 text-text-secondary text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">
-              {workout.level.toUpperCase()}
+            <span className="px-3 py-1 rounded-full bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">
+              {workout.level}
             </span>
             {isCompleted && (
-              <span className="px-4 py-1.5 rounded-full bg-success/10 text-success text-[10px] font-black uppercase tracking-[0.2em] border border-success/20 flex items-center gap-2">
-                <CheckCircle2 size={12} /> CONCLUÍDO
+              <span className="px-3 py-1 rounded-full bg-success/10 text-success text-[10px] font-black uppercase tracking-[0.2em] border border-success/20 flex items-center gap-1">
+                <CheckCircle2 size={10} /> Concluído
               </span>
             )}
           </div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">{workout.name}</h1>
-          <p className="text-text-secondary text-xl max-w-3xl leading-relaxed font-medium">{workout.description}</p>
-          
-          <div className="flex flex-wrap gap-8 pt-4">
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-white/5 text-primary border border-white/5">
-                <Clock size={24} />
-              </div>
-              <div>
-                <div className="text-[10px] text-text-muted uppercase font-black tracking-widest mb-1">Duração</div>
-                <div className="text-xl font-black">{workout.duration}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-white/5 text-primary border border-white/5">
-                <Zap size={24} />
-              </div>
-              <div>
-                <div className="text-[10px] text-text-muted uppercase font-black tracking-widest mb-1">Carga</div>
-                <div className="text-xl font-black">{workout.carga}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-white/5 text-primary border border-white/5">
-                <Dumbbell size={24} />
-              </div>
-              <div>
-                <div className="text-[10px] text-text-muted uppercase font-black tracking-widest mb-1">Exercícios</div>
-                <div className="text-xl font-black">{workout.exercises.length}</div>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">{workout.name}</h1>
+        </div>
+
+        {/* Métricas inline e compactas */}
+        <div className="flex items-center gap-4 text-sm">
+          <span className="flex items-center gap-1.5 text-text-muted">
+            <Clock size={14} className="text-primary" />
+            <span className="font-bold">{workout.duration}</span>
+          </span>
+          <span className="w-px h-4 bg-white/10" />
+          <span className="flex items-center gap-1.5 text-text-muted">
+            <Zap size={14} className="text-primary" />
+            <span className="font-bold">{workout.carga}</span>
+          </span>
+          <span className="w-px h-4 bg-white/10" />
+          <span className="flex items-center gap-1.5 text-text-muted">
+            <Dumbbell size={14} className="text-primary" />
+            <span className="font-bold">{workout.exercises.length} exercícios</span>
+          </span>
         </div>
       </header>
 
-      <div className="space-y-8">
-        <div className="flex items-center gap-6">
-          <h2 className="text-3xl font-black tracking-tight uppercase">Protocolo de Exercícios</h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
-        </div>
-        
-        <div className="grid grid-cols-1 gap-6">
-          {exercises.map((exercise, index) => (
-            <ExerciseCard 
-              key={exercise.id}
-              exercise={exercise}
-              index={index}
-              isEditing={isEditing}
-              onUpdate={(field, value) => updateExercise(index, field, value)}
-              onShowExecution={() => setSelectedExerciseForVideo(exercise)}
-            />
-          ))}
-        </div>
+      {/* Exercícios — direto, sem heading extra */}
+      <div className="grid grid-cols-1 gap-4">
+        {exercises.map((exercise, index) => (
+          <ExerciseCard
+            key={exercise.id}
+            exercise={exercise}
+            index={index}
+            isEditing={isEditing}
+            onUpdate={(field, value) => updateExercise(index, field, value)}
+            onShowExecution={() => setSelectedExerciseForVideo(exercise)}
+          />
+        ))}
       </div>
 
-      <div className="pt-8">
+      {/* CTA fixo no rodapé */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/80 backdrop-blur-xl border-t border-white/5">
         <button
           onClick={onToggleComplete}
-          className={`w-full py-6 rounded-[32px] font-black text-xl shadow-2xl transition-all duration-500 active:scale-[0.98] flex items-center justify-center gap-4 ${
+          className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 ${
             isCompleted
-              ? 'bg-success text-text-primary shadow-success/20'
-              : 'bg-primary text-text-primary shadow-primary/30 hover:bg-primary-hover hover:scale-[1.02]'
+              ? 'bg-success text-white shadow-success/20'
+              : 'bg-primary text-white shadow-primary/30 hover:bg-orange-400'
           }`}
         >
           {isCompleted ? (
-            <>
-              <CheckCircle2 size={28} />
-              TREINO CONCLUÍDO
-            </>
+            <><CheckCircle2 size={18} /> Treino Concluído</>
           ) : (
-            <>
-              CONCLUIR TREINO DE HOJE
-              <ArrowRight size={28} />
-            </>
+            <><Play size={18} /> Concluir Treino de Hoje</>
           )}
         </button>
       </div>
@@ -3173,6 +3162,251 @@ function CustomSelect({
     </div>
   );
 }
+
+// ─── Body Progress ───────────────────────────────────────────────────────────
+
+interface BodyMeasurement {
+  date: string;
+  weight?: number;
+  bodyFat?: number;
+  waist?: number;
+  hip?: number;
+  chest?: number;
+  arm?: number;
+  thigh?: number;
+}
+
+const MEASURE_FIELDS: { key: keyof Omit<BodyMeasurement, 'date'>; label: string; unit: string; placeholder: string }[] = [
+  { key: 'weight',  label: 'Peso',    unit: 'kg', placeholder: '70.5' },
+  { key: 'bodyFat', label: '% Gordura', unit: '%', placeholder: '18' },
+  { key: 'waist',   label: 'Cintura', unit: 'cm', placeholder: '80' },
+  { key: 'hip',     label: 'Quadril', unit: 'cm', placeholder: '95' },
+  { key: 'chest',   label: 'Peito',   unit: 'cm', placeholder: '100' },
+  { key: 'arm',     label: 'Braço',   unit: 'cm', placeholder: '35' },
+  { key: 'thigh',   label: 'Coxa',    unit: 'cm', placeholder: '55' },
+];
+
+function BodyProgressView({ userId }: { userId: string }) {
+  const storageKey = `body_measurements_${userId}`;
+  const todayKey = new Date().toISOString().split('T')[0];
+
+  const readData = (): BodyMeasurement[] => {
+    try { return JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch { return []; }
+  };
+
+  const [measurements, setMeasurements] = useState<BodyMeasurement[]>(readData);
+  const [form, setForm] = useState<Partial<Record<keyof Omit<BodyMeasurement, 'date'>, string>>>({});
+  const [saved, setSaved] = useState(false);
+  const [chartMetric, setChartMetric] = useState<keyof Omit<BodyMeasurement, 'date'>>('weight');
+
+  const todayEntry = measurements.find(m => m.date === todayKey);
+
+  const updateField = (key: string, value: string) =>
+    setForm(prev => ({ ...prev, [key]: value }));
+
+  const saveMeasurement = () => {
+    const entry: BodyMeasurement = { date: todayKey };
+    let hasValue = false;
+    for (const f of MEASURE_FIELDS) {
+      const v = parseFloat(form[f.key] || '');
+      if (!isNaN(v) && v > 0) { (entry as any)[f.key] = v; hasValue = true; }
+    }
+    if (!hasValue) return;
+
+    const updated = measurements.filter(m => m.date !== todayKey);
+    updated.push(entry);
+    updated.sort((a, b) => a.date.localeCompare(b.date));
+    setMeasurements(updated);
+    try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch { /* ignore */ }
+    setForm({});
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const chartData = measurements
+    .filter(m => m[chartMetric] !== undefined)
+    .map(m => ({
+      date: new Date(m.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+      value: m[chartMetric] as number,
+    }));
+
+  const latest = measurements.length > 0 ? measurements[measurements.length - 1] : null;
+  const previous = measurements.length > 1 ? measurements[measurements.length - 2] : null;
+
+  const diff = (key: keyof Omit<BodyMeasurement, 'date'>) => {
+    if (!latest?.[key] || !previous?.[key]) return null;
+    return ((latest[key] as number) - (previous[key] as number));
+  };
+
+  const fieldMeta = MEASURE_FIELDS.find(f => f.key === chartMetric)!;
+
+  return (
+    <div className="space-y-8 pb-12">
+      <header className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
+          <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase">Progresso Corporal</h1>
+        </div>
+        <p className="text-text-secondary text-base ml-4">Acompanhe suas medidas e evolução ao longo do tempo.</p>
+      </header>
+
+      {/* Register today */}
+      <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+            {todayEntry ? 'Atualizar medidas de hoje' : 'Registrar medidas de hoje'}
+          </span>
+          <span className="text-[10px] text-text-muted font-bold">
+            {new Date(todayKey + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {MEASURE_FIELDS.map(f => (
+            <div key={f.key} className="space-y-1">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+                {f.label} <span className="text-primary/70">({f.unit})</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder={todayEntry?.[f.key] !== undefined ? String(todayEntry[f.key]) : f.placeholder}
+                  value={form[f.key] || ''}
+                  onChange={e => updateField(f.key, e.target.value)}
+                  className="w-full bg-background border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-primary outline-none transition-all pr-10"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-text-muted">{f.unit}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={saveMeasurement}
+          className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+        >
+          {saved ? <><Check size={14} /> Medidas Salvas!</> : <><Scale size={14} /> Salvar Medidas</>}
+        </button>
+      </div>
+
+      {/* Comparison latest vs previous */}
+      {latest && (
+        <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Última Medição</span>
+            <span className="text-[10px] text-text-muted font-bold">
+              {new Date(latest.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {MEASURE_FIELDS.filter(f => latest[f.key] !== undefined).map(f => {
+              const d = diff(f.key);
+              const isGood = f.key === 'weight' || f.key === 'waist' || f.key === 'hip' ? d !== null && d <= 0 : d !== null && d >= 0;
+              return (
+                <div key={f.key} className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <div className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1">{f.label}</div>
+                  <div className="text-xl font-black">{latest[f.key]}<span className="text-[11px] text-text-muted ml-1">{f.unit}</span></div>
+                  {d !== null && (
+                    <div className={`text-[10px] font-black mt-1 ${isGood ? 'text-green-400' : 'text-red-400'}`}>
+                      {d > 0 ? '+' : ''}{d.toFixed(1)} {f.unit}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Chart */}
+      {chartData.length >= 2 && (
+        <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Evolução</span>
+            <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+              {MEASURE_FIELDS.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setChartMetric(f.key)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                    chartMetric === f.key ? 'bg-primary text-text-primary' : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FF6A00" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#FF6A00" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+              <Tooltip
+                contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12, fontWeight: 700 }}
+                formatter={(v: number) => [`${v} ${fieldMeta.unit}`, fieldMeta.label]}
+              />
+              <Area type="monotone" dataKey="value" stroke="#FF6A00" strokeWidth={2} fill="url(#bodyGrad)" dot={{ fill: '#FF6A00', strokeWidth: 0, r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* History table */}
+      {measurements.length > 0 && (
+        <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Histórico Completo</span>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="text-left text-[10px] font-black text-text-muted uppercase tracking-widest pb-3 pr-4">Data</th>
+                  {MEASURE_FIELDS.map(f => (
+                    <th key={f.key} className="text-right text-[10px] font-black text-text-muted uppercase tracking-widest pb-3 px-2 whitespace-nowrap">
+                      {f.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...measurements].reverse().map((m, i) => (
+                  <tr key={m.date} className={`border-b border-white/5 ${i === 0 ? 'text-text-primary' : 'text-text-secondary'}`}>
+                    <td className="py-3 pr-4 font-black text-[11px] whitespace-nowrap">
+                      {new Date(m.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                      {i === 0 && <span className="ml-2 text-[9px] text-primary font-black">HOJE</span>}
+                    </td>
+                    {MEASURE_FIELDS.map(f => (
+                      <td key={f.key} className="py-3 px-2 text-right font-bold text-[12px]">
+                        {m[f.key] !== undefined ? `${m[f.key]}${f.unit}` : <span className="text-white/20">—</span>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {measurements.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-text-muted">
+            <Ruler size={32} />
+          </div>
+          <p className="text-xl font-bold">Nenhuma medida registrada ainda</p>
+          <p className="text-text-muted">Registre suas medidas acima para acompanhar sua evolução.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserProfile, onUpgrade: () => void, updateProfile: (u: Partial<UserProfile>) => Promise<void> }) {
   const { isAdmin, simulatedPlan } = useAuth();
@@ -3433,8 +3667,18 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
   const [aiError, setAiError] = useState('');
   const [aiResult, setAiResult] = useState<{ name: string; calories: number; protein: number; carbs: number; fat: number } | null>(null);
 
+  const AI_FREE_LIMIT = 3;
+  const _todayKey = new Date().toISOString().split('T')[0];
+  const aiAnalysisKey = `ai_food_analyses_${profile.id}_${_todayKey}`;
+  const [aiAnalysesUsed, setAiAnalysesUsed] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem(`ai_food_analyses_${profile.id}_${new Date().toISOString().split('T')[0]}`) || '0', 10); } catch { return 0; }
+  });
+  const isFreePlan = effectivePlan === 'Iniciante' || effectivePlan === 'free' || !effectivePlan;
+  const aiLimitReached = isFreePlan && aiAnalysesUsed >= AI_FREE_LIMIT;
+
   const analyzeWithAI = async () => {
     if (!aiFood.trim() || !aiQty.trim()) return;
+    if (aiLimitReached) return;
     setAiAnalyzing(true);
     setAiError('');
     setAiResult(null);
@@ -3453,6 +3697,11 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
         carbs: Math.round(data.carboidratos_g),
         fat: Math.round(data.gorduras_g)
       });
+      if (isFreePlan) {
+        const newCount = aiAnalysesUsed + 1;
+        setAiAnalysesUsed(newCount);
+        try { localStorage.setItem(aiAnalysisKey, newCount.toString()); } catch { /* ignore */ }
+      }
     } catch (e: any) {
       setAiError(e.message || 'Erro ao analisar. Verifique a chave da API.');
     } finally {
@@ -3720,7 +3969,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
               <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
                 <Activity size={24} />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Tracker de Macros</h2>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Analisador de Alimentos</h2>
             </div>
             <span className="self-start sm:self-auto px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
               CONTROLE DIÁRIO
@@ -3889,26 +4138,48 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                       </button>
                     </div>
                   </div>
+                ) : aiLimitReached ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">Limite diário atingido</span>
+                      <span className="text-[10px] font-black text-primary">{AI_FREE_LIMIT}/{AI_FREE_LIMIT} análises</span>
+                    </div>
+                    <button
+                      onClick={onUpgrade}
+                      className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                    >
+                      <Zap size={14} />
+                      Fazer Upgrade para Pro — Análises Ilimitadas
+                    </button>
+                  </div>
                 ) : (
-                  <button
-                    onClick={analyzeWithAI}
-                    disabled={aiAnalyzing || !aiFood.trim() || !aiQty.trim()}
-                    className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {aiAnalyzing ? (
-                      <>
-                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                          <RefreshCw size={14} />
-                        </motion.div>
-                        Analisando...
-                      </>
-                    ) : (
-                      <>
-                        <Zap size={14} />
-                        Analisar com IA
-                      </>
+                  <div className="space-y-3">
+                    {isFreePlan && (
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">Análises hoje</span>
+                        <span className="text-[10px] font-black text-text-muted">{aiAnalysesUsed}/{AI_FREE_LIMIT}</span>
+                      </div>
                     )}
-                  </button>
+                    <button
+                      onClick={analyzeWithAI}
+                      disabled={aiAnalyzing || !aiFood.trim() || !aiQty.trim()}
+                      className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {aiAnalyzing ? (
+                        <>
+                          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                            <RefreshCw size={14} />
+                          </motion.div>
+                          Analisando...
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={14} />
+                          Analisar com IA
+                        </>
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -5543,6 +5814,257 @@ function IAAdaptativaView({ profile, onUpgrade, isAdmin = false }: { profile: Us
       <div className="bg-surface rounded-[40px] border border-white/5 p-6 h-[600px] flex flex-col">
         <AIChat profile={profile} onUpgrade={onUpgrade} isAdmin={isAdmin} />
       </div>
+    </div>
+  );
+}
+
+type LoadSet = { reps: number; weight: number };
+type LoadSession = { date: string; sets: LoadSet[] };
+type LoadData = Record<string, LoadSession[]>;
+
+function LoadTrackerView({ userId }: { userId: string }) {
+  const storageKey = `load_tracker_${userId}`;
+  const todayKey = new Date().toISOString().split('T')[0];
+
+  const readData = (): LoadData => {
+    try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+  };
+
+  const allExercises = [...new Set(ALL_WORKOUTS.flatMap(w => w.exercises.map((e: Exercise) => e.name)))].sort() as string[];
+
+  const [data, setData] = useState<LoadData>(readData);
+  const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sets, setSets] = useState<{ reps: string; weight: string }[]>([{ reps: '', weight: '' }]);
+  const [saved, setSaved] = useState(false);
+
+  const filteredExercises = allExercises.filter(e =>
+    e.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const maxWeight = (s: LoadSession) => Math.max(...s.sets.map(x => x.weight));
+
+  // All exercises logged today (accumulated session)
+  const todayEntries = Object.entries(data)
+    .map(([name, sessions]) => ({ name, session: sessions.find(s => s.date === todayKey) }))
+    .filter((e): e is { name: string; session: LoadSession } => !!e.session);
+
+  // History for selected exercise (excluding today, last 5)
+  const history: LoadSession[] = selectedExercise
+    ? [...(data[selectedExercise] || [])].filter(s => s.date !== todayKey).reverse().slice(0, 5)
+    : [];
+
+  const lastSession = [...(data[selectedExercise] || [])].filter(s => s.date !== todayKey).slice(-1)[0];
+
+  const progressDiff = (() => {
+    const sessions = (data[selectedExercise] || []).filter(s => s.date !== todayKey);
+    if (sessions.length < 2) return null;
+    return maxWeight(sessions[sessions.length - 1]) - maxWeight(sessions[sessions.length - 2]);
+  })();
+
+  const addSet = () => setSets(prev => [...prev, { reps: '', weight: '' }]);
+  const removeSet = (i: number) => setSets(prev => prev.filter((_, idx) => idx !== i));
+  const updateSet = (i: number, field: 'reps' | 'weight', value: string) =>
+    setSets(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+
+  const saveSession = () => {
+    if (!selectedExercise) return;
+    const validSets = sets
+      .filter(s => s.reps && s.weight)
+      .map(s => ({ reps: parseInt(s.reps), weight: parseFloat(s.weight) }));
+    if (validSets.length === 0) return;
+
+    const newData = { ...data };
+    const sessions = [...(newData[selectedExercise] || [])];
+    const todayIdx = sessions.findIndex(s => s.date === todayKey);
+    if (todayIdx >= 0) sessions[todayIdx] = { date: todayKey, sets: validSets };
+    else sessions.push({ date: todayKey, sets: validSets });
+    newData[selectedExercise] = sessions;
+
+    setData(newData);
+    try { localStorage.setItem(storageKey, JSON.stringify(newData)); } catch { /* ignore */ }
+    setSaved(true);
+    // Reset for next exercise
+    setTimeout(() => {
+      setSaved(false);
+      setSets([{ reps: '', weight: '' }]);
+      setSelectedExercise('');
+      setSearchQuery('');
+    }, 1500);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-gradient-to-br from-primary/20 to-transparent p-6 rounded-[40px] border border-primary/20 flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
+          <BarChart3 className="text-text-primary" size={24} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black uppercase tracking-tight">Registro de Cargas</h2>
+          <p className="text-text-secondary text-sm">Registre seus pesos e acompanhe sua evolução.</p>
+        </div>
+      </div>
+
+      {/* Exercise selector */}
+      <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-3">
+        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Exercício</span>
+        <input
+          type="text"
+          placeholder="Buscar exercício..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
+        />
+        {searchQuery && (
+          <div className="max-h-48 overflow-y-auto space-y-1 border border-white/5 rounded-2xl p-2">
+            {filteredExercises.length === 0 ? (
+              <p className="text-[10px] text-text-muted font-bold px-3 py-2">Nenhum exercício encontrado</p>
+            ) : filteredExercises.map(ex => (
+              <button
+                key={ex}
+                onClick={() => { setSelectedExercise(ex); setSearchQuery(''); setSets([{ reps: '', weight: '' }]); setSaved(false); }}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  selectedExercise === ex ? 'bg-primary/10 text-primary' : 'hover:bg-white/5 text-text-secondary'
+                }`}
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        )}
+        {selectedExercise && !searchQuery && (
+          <div className="flex items-center justify-between px-1">
+            <span className="text-sm font-black">{selectedExercise}</span>
+            {progressDiff !== null && (
+              <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${progressDiff >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <TrendingUp size={12} />
+                {progressDiff >= 0 ? '+' : ''}{progressDiff}kg vs sessão anterior
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Sets input */}
+      {selectedExercise && (
+        <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Séries — {selectedExercise}</span>
+            {lastSession && (
+              <span className="text-[10px] text-text-muted font-bold">
+                Anterior: {lastSession.sets.length}x · Máx {maxWeight(lastSession)}kg
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="grid grid-cols-[28px_1fr_1fr_32px] gap-2 px-1">
+              <span className="text-[10px] font-black text-text-muted uppercase tracking-widest text-center">#</span>
+              <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Reps</span>
+              <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Peso (kg)</span>
+              <span />
+            </div>
+            {sets.map((set, i) => (
+              <div key={i} className="grid grid-cols-[28px_1fr_1fr_32px] gap-2 items-center">
+                <span className="text-[10px] font-black text-text-muted text-center">{i + 1}</span>
+                <input
+                  type="number"
+                  placeholder="12"
+                  value={set.reps}
+                  onChange={(e) => updateSet(i, 'reps', e.target.value)}
+                  className="bg-background border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-primary outline-none transition-all"
+                />
+                <input
+                  type="number"
+                  placeholder="20.0"
+                  step="0.5"
+                  value={set.weight}
+                  onChange={(e) => updateSet(i, 'weight', e.target.value)}
+                  className="bg-background border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-primary outline-none transition-all"
+                />
+                <button
+                  onClick={() => removeSet(i)}
+                  disabled={sets.length === 1}
+                  className="p-1.5 text-text-muted hover:text-red-400 transition-colors disabled:opacity-30"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={addSet}
+            className="w-full py-2.5 border border-dashed border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-text-muted hover:border-primary/40 hover:text-primary transition-all flex items-center justify-center gap-2"
+          >
+            <Plus size={12} /> Adicionar Série
+          </button>
+
+          <button
+            onClick={saveSession}
+            className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+          >
+            {saved ? <><Check size={14} /> Salvo! Próximo exercício...</> : <><BarChart3 size={14} /> Salvar e Adicionar Próximo</>}
+          </button>
+        </div>
+      )}
+
+      {/* Today's accumulated session */}
+      {todayEntries.length > 0 && (
+        <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Sessão de Hoje</span>
+            <span className="text-[10px] font-black text-primary">{todayEntries.length} exercício{todayEntries.length > 1 ? 's' : ''}</span>
+          </div>
+          <div className="space-y-2">
+            {todayEntries.map((entry) => (
+              <div
+                key={entry.name}
+                className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/15"
+              >
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">{entry.name}</div>
+                  <div className="text-sm font-black">
+                    {entry.session.sets.map(s => `${s.reps}x${s.weight}kg`).join(' · ')}
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  <div className="text-[9px] font-black text-text-muted uppercase tracking-widest">Máx</div>
+                  <div className="text-primary font-black text-xl leading-none mt-0.5">{maxWeight(entry.session)}kg</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* History for selected exercise */}
+      {history.length > 0 && selectedExercise && (
+        <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Histórico — {selectedExercise}</span>
+          <div className="space-y-2">
+            {history.map((session, i) => (
+              <div
+                key={session.date}
+                className={`flex items-center justify-between p-4 rounded-2xl border ${i === 0 ? 'bg-white/5 border-white/10' : 'bg-white/[0.03] border-white/5'}`}
+              >
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                    {new Date(session.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                  <div className="text-sm font-black mt-1">
+                    {session.sets.map(s => `${s.reps}x${s.weight}kg`).join(' · ')}
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  <div className="text-[9px] font-black text-text-muted uppercase tracking-widest">Máx</div>
+                  <div className="text-primary font-black text-xl leading-none mt-0.5">{maxWeight(session)}kg</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -63,11 +63,12 @@ import {
   Ban,
   Bot,
   Ruler,
-  Scale
+  Scale,
+  ChevronDown
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
 
 export default function App() {
   const { user, profile, loading, profileLoading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile } = useAuth();
@@ -1526,12 +1527,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     return fullName.split(' ')[0].toUpperCase();
   };
 
-  const [weightLogs, setWeightLogs] = useState<ProgressLog[]>([]);
-  const [weightPeriod, setWeightPeriod] = useState<'7D' | '1M' | '6M'>('7D');
-  const [addingWeight, setAddingWeight] = useState(false);
-  const [newWeight, setNewWeight] = useState('');
-  const [savingWeight, setSavingWeight] = useState(false);
-  const [weightSaveError, setWeightSaveError] = useState<string | null>(null);
+  const [weeklyCalData, setWeeklyCalData] = useState<{ day: string; date: string; calories: number; protein: number; carbs: number; fat: number; isToday: boolean; isFuture: boolean }[]>([]);
   const [weeklyCount, setWeeklyCount] = useState(0);
 
   const resolveWorkoutsByPlan = (plan: string | undefined) => {
@@ -1588,67 +1584,58 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   const WEEKLY_TARGET = 5;
   const weeklyPercent = Math.min(100, Math.round((weeklyCount / WEEKLY_TARGET) * 100));
 
-  const fetchWeightLogs = async () => {
-    if (!user) return;
-    let retryCount = 0;
-    const maxRetries = 2;
-    const tryFetch = async () => {
+  const calorieGoal = (() => {
+    const w = profile.weight || 70;
+    const h = profile.height || 175;
+    const a = profile.age || 25;
+    const bmr = (10 * w) + (6.25 * h) - (5 * a) + 5;
+    const tdee = bmr * 1.55;
+    const g = (profile.goal || '').toLowerCase();
+    if (g.includes('emagrec') || g.includes('perd') || g.includes('defin')) return Math.round(tdee - 500);
+    if (g.includes('ganho') || g.includes('mass') || g.includes('hipert')) return Math.round(tdee + 300);
+    return Math.round(tdee);
+  })();
+
+  useEffect(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const dow = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const weekDates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d.toISOString().split('T')[0];
+    });
+    type DayLog = { calories: number; protein: number; carbs: number; fat: number };
+    const build = (logMap: Map<string, DayLog>) =>
+      setWeeklyCalData(weekDates.map((date, i) => {
+        const log = logMap.get(date);
+        return {
+          day: labels[i], date,
+          calories: log?.calories ?? 0,
+          protein: log?.protein ?? 0,
+          carbs: log?.carbs ?? 0,
+          fat: log?.fat ?? 0,
+          isToday: date === todayStr,
+          isFuture: date > todayStr,
+        };
+      }));
+    const fetchCals = async () => {
+      if (!profile.id || !isSupabaseConfigured) { build(new Map()); return; }
       try {
-        const logs = await dataService.getProgressLogs(user.id);
-        setWeightLogs(logs);
-      } catch (err: any) {
-        console.error('Error fetching progress logs:', err);
-        if (err.message === 'Timeout na requisição' && retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(tryFetch, 1000 * retryCount);
-        }
-      }
+        const { data } = await supabase
+          .from('nutrition_logs')
+          .select('date, calories, protein, carbs, fat')
+          .eq('user_id', profile.id)
+          .gte('date', weekDates[0])
+          .lte('date', weekDates[6]);
+        build(new Map((data ?? []).map((l: any) => [l.date, { calories: l.calories, protein: l.protein, carbs: l.carbs, fat: l.fat }])));
+      } catch { build(new Map()); }
     };
-    tryFetch();
-  };
-
-  useEffect(() => { fetchWeightLogs(); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleAddWeight = async () => {
-    const w = parseFloat(newWeight.replace(',', '.'));
-    if (!user || isNaN(w) || w <= 0) return;
-    setSavingWeight(true);
-    setWeightSaveError(null);
-    try {
-      const { error } = await supabase
-        .from('progress_logs')
-        .insert([{ userUid: user.id, weight: w, date: new Date().toISOString() }]);
-      if (error) throw error;
-      setNewWeight('');
-      setAddingWeight(false);
-      const { data } = await supabase
-        .from('progress_logs')
-        .select('*')
-        .eq('userUid', user.id)
-        .order('date', { ascending: true });
-      if (data) setWeightLogs(data as ProgressLog[]);
-    } catch (err: any) {
-      console.error('Error adding weight log:', err);
-      setWeightSaveError(err?.message || 'Erro ao salvar peso.');
-    } finally {
-      setSavingWeight(false);
-    }
-  };
-
-  const periodDays = weightPeriod === '7D' ? 7 : weightPeriod === '1M' ? 30 : 180;
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - periodDays);
-
-  const filteredLogs = weightLogs
-    .filter(l => new Date(l.date) >= cutoff)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const weightData = filteredLogs.map(log => ({
-    name: weightPeriod === '7D'
-      ? new Date(log.date).toLocaleDateString('pt-BR', { weekday: 'short' })
-      : new Date(log.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-    weight: log.weight,
-  }));
+    fetchCals();
+  }, [profile.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-10 pb-12">
@@ -1778,184 +1765,157 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Progress Chart */}
-        <div className="lg:col-span-2 bg-surface p-8 rounded-[40px] border border-white/5 space-y-8">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h3 className="text-xl font-black tracking-tight uppercase">Evolução de Peso</h3>
-              <p className="text-sm text-text-muted">
-                {weightPeriod === '7D' ? 'Últimos 7 dias' : weightPeriod === '1M' ? 'Último mês' : 'Últimos 6 meses'}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setAddingWeight(v => !v)}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
-              >
-                + Registrar
-              </button>
-              <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
-                {(['7D', '1M', '6M'] as const).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setWeightPeriod(p)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      weightPeriod === p
-                        ? 'bg-primary text-text-primary shadow-lg shadow-primary/20'
-                        : 'text-text-muted hover:text-text-secondary'
-                    }`}
-                  >{p}</button>
-                ))}
-              </div>
-            </div>
+        {/* Calorias da Semana */}
+        <div className="lg:col-span-2 bg-surface p-8 rounded-[40px] border border-white/5 space-y-6">
+          <div>
+            <h3 className="text-xl font-black tracking-tight uppercase">Calorias da semana</h3>
+            <p className="text-sm text-text-muted">Meta: {calorieGoal.toLocaleString('pt-BR')} kcal/dia</p>
           </div>
 
-          {addingWeight && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/10">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="20"
-                  max="300"
-                  value={newWeight}
-                  onChange={e => { setNewWeight(e.target.value); setWeightSaveError(null); }}
-                  placeholder="Peso em kg (ex: 72.5)"
-                  className="flex-1 bg-background border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors"
-                />
-                <button
-                  onClick={handleAddWeight}
-                  disabled={savingWeight || !newWeight}
-                  className="bg-primary text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider disabled:opacity-50 transition-all hover:bg-primary/90"
-                >
-                  {savingWeight ? '...' : 'Salvar'}
-                </button>
-                <button
-                  onClick={() => { setAddingWeight(false); setNewWeight(''); setWeightSaveError(null); }}
-                  className="text-text-muted hover:text-text-primary text-xs px-2 py-2 transition-colors"
-                >
-                  ✕
-                </button>
+          <div className="h-[280px] w-full relative">
+            {weeklyCalData.every(d => d.calories === 0) && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <p className="text-sm text-text-muted font-bold text-center px-4">Registre suas refeições para ver o gráfico</p>
               </div>
-              {weightSaveError && (
-                <p className="text-xs text-red-400 px-2">{weightSaveError}</p>
-              )}
-            </div>
-          )}
-
-          <div className="h-[320px] w-full relative">
-            {weightData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minHeight={320}>
-                <AreaChart data={weightData}>
-                <defs>
-                  <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF6A00" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#FF6A00" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
+            )}
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyCalData} margin={{ top: 28, right: 4, left: -20, bottom: 0 }} barSize={36}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                 <XAxis
-                  dataKey="name"
+                  dataKey="day"
                   stroke="#6F6F6F"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                   dy={10}
                 />
-                <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
+                <YAxis
+                  stroke="#6F6F6F"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => v === 0 ? '' : `${v}`}
+                  domain={[0, (dataMax: number) => Math.max(dataMax, calorieGoal) * 1.15]}
+                />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#121212',
-                    border: '1px solid #ffffff10',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                  contentStyle={{ backgroundColor: '#121212', border: '1px solid #ffffff10', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  formatter={(value: number, _: string, props: any) => {
+                    if (props.payload?.isFuture || value === 0) return ['Sem registro', 'Calorias'];
+                    return [`${value.toLocaleString('pt-BR')} kcal`, 'Calorias'];
                   }}
-                  itemStyle={{ color: '#FF6A00', fontWeight: 'bold' }}
-                  cursor={{ stroke: '#FF6A00', strokeWidth: 1, strokeDasharray: '4 4' }}
-                  formatter={(value: number) => [`${value} kg`, 'Peso']}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="#FF6A00"
-                  strokeWidth={4}
-                  fillOpacity={1}
-                  fill="url(#colorWeight)"
-                  animationDuration={2000}
-                />
-              </AreaChart>
+                <ReferenceLine y={calorieGoal} stroke="#FF6A00" strokeDasharray="5 4" strokeOpacity={0.45} strokeWidth={1.5} />
+                <Bar dataKey="calories" radius={[6, 6, 0, 0]}>
+                  {weeklyCalData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.isFuture || entry.calories === 0 ? '#2a2a2a' : entry.calories > calorieGoal ? '#E24B4A' : '#E05A00'}
+                      fillOpacity={entry.isFuture ? 0.5 : 1}
+                    />
+                  ))}
+                  <LabelList
+                    dataKey="calories"
+                    position="top"
+                    content={(props: any) => {
+                      const { x, y, width, value, index } = props;
+                      const entry = weeklyCalData[index];
+                      if (!entry?.isToday || !value) return null;
+                      return (
+                        <text x={x + width / 2} y={y - 6} textAnchor="middle" fill="#FF6A00" fontSize={11} fontWeight={700}>
+                          {value.toLocaleString('pt-BR')}
+                        </text>
+                      );
+                    }}
+                  />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-text-muted">
-                <TrendingUp size={32} className="opacity-30" />
-                <p className="text-sm">Nenhum registro neste período.</p>
-                <button
-                  onClick={() => setAddingWeight(true)}
-                  className="text-primary text-xs font-bold hover:underline"
-                >
-                  Registrar primeiro peso
-                </button>
-              </div>
-            )}
           </div>
+
+          {weeklyCalData.some(d => d.calories > 0 && !d.isFuture) && (() => {
+            const daysWithData = weeklyCalData.filter(d => d.calories > 0 && !d.isFuture);
+            const avg = Math.round(daysWithData.reduce((s, d) => s + d.calories, 0) / daysWithData.length);
+            const best = Math.max(...daysWithData.map(d => d.calories));
+            return (
+              <div className="flex gap-8 pt-4 border-t border-white/5">
+                <div>
+                  <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Média da semana</p>
+                  <p className="text-base font-black mt-0.5">{avg.toLocaleString('pt-BR')} <span className="text-text-muted text-xs font-bold">kcal</span></p>
+                </div>
+                <div className="w-px bg-white/5" />
+                <div>
+                  <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Melhor dia</p>
+                  <p className="text-base font-black mt-0.5">{best.toLocaleString('pt-BR')} <span className="text-text-muted text-xs font-bold">kcal</span></p>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Nutrition Preview */}
-        <div className="bg-surface p-8 rounded-[40px] border border-white/5 space-y-8">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black tracking-tight uppercase">Nutrição</h3>
-            <button 
-              onClick={onViewNutrition}
-              className="text-primary text-xs font-black uppercase tracking-widest hover:text-primary-hover transition-colors"
-            >
-              Ver Tudo
-            </button>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                <span className="text-text-muted">Calorias</span>
-                <span className="text-text-primary">1.840 / 2.400 kcal</span>
+        {(() => {
+          const todayLog = weeklyCalData.find(d => d.isToday);
+          const todayCals = todayLog?.calories ?? 0;
+          const calPct = calorieGoal > 0 ? Math.min(100, Math.round((todayCals / calorieGoal) * 100)) : 0;
+          return (
+            <div className="bg-surface p-8 rounded-[40px] border border-white/5 space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black tracking-tight uppercase">Nutrição</h3>
+                <button
+                  onClick={onViewNutrition}
+                  className="text-primary text-xs font-black uppercase tracking-widest hover:text-primary-hover transition-colors"
+                >
+                  Ver Tudo
+                </button>
               </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: '76%' }}
-                  className="h-full bg-primary"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                <div className="text-[10px] text-text-muted font-black uppercase mb-1">Prot</div>
-                <div className="text-sm font-black">142g</div>
-              </div>
-              <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                <div className="text-[10px] text-text-muted font-black uppercase mb-1">Carb</div>
-                <div className="text-sm font-black">185g</div>
-              </div>
-              <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                <div className="text-[10px] text-text-muted font-black uppercase mb-1">Gord</div>
-                <div className="text-sm font-black-sm">54g</div>
-              </div>
-            </div>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                    <span className="text-text-muted">Calorias</span>
+                    <span className="text-text-primary">
+                      {todayCals > 0 ? todayCals.toLocaleString('pt-BR') : '—'} / {calorieGoal.toLocaleString('pt-BR')} kcal
+                    </span>
+                  </div>
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${calPct}%` }}
+                      className="h-full bg-primary"
+                    />
+                  </div>
+                </div>
 
-            <div className="pt-4 space-y-4">
-              <h4 className="text-xs font-black text-text-muted uppercase tracking-widest">Próxima Refeição</h4>
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <Utensils size={24} />
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { label: 'Prot', value: todayLog?.protein ?? 0, unit: 'g' },
+                    { label: 'Carb', value: todayLog?.carbs ?? 0, unit: 'g' },
+                    { label: 'Gord', value: todayLog?.fat ?? 0, unit: 'g' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                      <div className="text-[10px] text-text-muted font-black uppercase mb-1">{label}</div>
+                      <div className="text-sm font-black">{value > 0 ? `${value}g` : '—'}</div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <div className="text-sm font-bold">Almoço</div>
-                  <div className="text-[10px] text-text-muted">Frango, Arroz e Salada</div>
+
+                <div className="pt-4 space-y-4">
+                  <h4 className="text-xs font-black text-text-muted uppercase tracking-widest">Próxima Refeição</h4>
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Utensils size={24} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-text-muted">Registre refeições</div>
+                      <div className="text-[10px] text-text-muted">no módulo de Nutrição</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
     </div>
@@ -3220,14 +3180,31 @@ function BodyProgressView({ userId }: { userId: string }) {
   };
 
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>(readData);
-  const [form, setForm] = useState<Partial<Record<keyof Omit<BodyMeasurement, 'date'>, string>>>({});
   const [saved, setSaved] = useState(false);
+  const [showOptional, setShowOptional] = useState(false);
   const [chartMetric, setChartMetric] = useState<keyof Omit<BodyMeasurement, 'date'>>('weight');
+
+  const lastEntry = measurements.length > 0 ? measurements[measurements.length - 1] : null;
+
+  const [form, setForm] = useState<Partial<Record<keyof Omit<BodyMeasurement, 'date'>, string>>>(() => {
+    if (!lastEntry) return {};
+    const init: Partial<Record<keyof Omit<BodyMeasurement, 'date'>, string>> = {};
+    for (const f of MEASURE_FIELDS) {
+      if (lastEntry[f.key] !== undefined) init[f.key] = String(lastEntry[f.key]);
+    }
+    return init;
+  });
 
   const todayEntry = measurements.find(m => m.date === todayKey);
 
   const updateField = (key: string, value: string) =>
     setForm(prev => ({ ...prev, [key]: value }));
+
+  const stepField = (key: keyof Omit<BodyMeasurement, 'date'>, step: number) => {
+    const current = parseFloat(form[key] || '0') || 0;
+    const next = Math.round((current + step) * 10) / 10;
+    if (next >= 0) updateField(key, String(next));
+  };
 
   const saveMeasurement = () => {
     const entry: BodyMeasurement = { date: todayKey };
@@ -3243,7 +3220,6 @@ function BodyProgressView({ userId }: { userId: string }) {
     updated.sort((a, b) => a.date.localeCompare(b.date));
     setMeasurements(updated);
     try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch { /* ignore */ }
-    setForm({});
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -3265,6 +3241,44 @@ function BodyProgressView({ userId }: { userId: string }) {
 
   const fieldMeta = MEASURE_FIELDS.find(f => f.key === chartMetric)!;
 
+  const primaryFields = MEASURE_FIELDS.filter(f => f.key === 'weight' || f.key === 'bodyFat');
+  const optionalFields = MEASURE_FIELDS.filter(f => f.key !== 'weight' && f.key !== 'bodyFat');
+
+  const StepperControl = ({ field, step }: { field: typeof MEASURE_FIELDS[0], step: number }) => (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+        {field.label} <span className="text-primary/70">({field.unit})</span>
+      </label>
+      <div className="flex items-center bg-background border border-white/10 rounded-2xl overflow-hidden focus-within:border-primary transition-all">
+        <button
+          type="button"
+          onClick={() => stepField(field.key, -step)}
+          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
+        >
+          −
+        </button>
+        <div className="flex-1 flex items-center justify-center gap-1.5">
+          <input
+            type="number"
+            step={step}
+            value={form[field.key] || ''}
+            onChange={e => updateField(field.key, e.target.value)}
+            placeholder={field.placeholder}
+            className="w-20 bg-transparent text-center text-2xl font-black outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="text-sm font-black text-text-muted">{field.unit}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => stepField(field.key, step)}
+          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-8 pb-12">
       <header className="flex flex-col gap-2">
@@ -3285,29 +3299,45 @@ function BodyProgressView({ userId }: { userId: string }) {
             {new Date(todayKey + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {MEASURE_FIELDS.map(f => (
-            <div key={f.key} className="space-y-1">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
-                {f.label} <span className="text-primary/70">({f.unit})</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder={todayEntry?.[f.key] !== undefined ? String(todayEntry[f.key]) : f.placeholder}
-                  value={form[f.key] || ''}
-                  onChange={e => updateField(f.key, e.target.value)}
-                  className="w-full bg-background border border-white/10 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-primary outline-none transition-all pr-10"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-text-muted">{f.unit}</span>
-              </div>
-            </div>
+
+        {/* Primary fields - Peso e % Gordura com stepper */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {primaryFields.map(f => (
+            <StepperControl key={f.key} field={f} step={f.key === 'weight' ? 0.1 : 0.5} />
           ))}
         </div>
+
+        {/* Toggle medidas corporais opcionais */}
+        <button
+          type="button"
+          onClick={() => setShowOptional(v => !v)}
+          className="flex items-center gap-2 text-[10px] font-black text-text-muted uppercase tracking-widest hover:text-text-secondary transition-colors"
+        >
+          <ChevronDown size={14} className={`transition-transform duration-300 ${showOptional ? 'rotate-180' : ''}`} />
+          {showOptional ? 'Ocultar medidas corporais' : 'Adicionar medidas corporais'}
+        </button>
+
+        <AnimatePresence>
+          {showOptional && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                {optionalFields.map(f => (
+                  <StepperControl key={f.key} field={f} step={0.5} />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <button
           onClick={saveMeasurement}
-          className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
         >
           {saved ? <><Check size={14} /> Medidas Salvas!</> : <><Scale size={14} /> Salvar Medidas</>}
         </button>

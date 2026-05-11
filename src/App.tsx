@@ -3171,6 +3171,49 @@ const MEASURE_FIELDS: { key: keyof Omit<BodyMeasurement, 'date'>; label: string;
   { key: 'thigh',   label: 'Coxa',    unit: 'cm', placeholder: '55' },
 ];
 
+function StepperControl({ field, step, value, onChange, onStep }: {
+  field: typeof MEASURE_FIELDS[0];
+  step: number;
+  value: string;
+  onChange: (key: string, val: string) => void;
+  onStep: (key: string, step: number) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+        {field.label} <span className="text-primary/70">({field.unit})</span>
+      </label>
+      <div className="flex items-center bg-background border border-white/10 rounded-2xl overflow-hidden focus-within:border-primary transition-all">
+        <button
+          type="button"
+          onClick={() => onStep(field.key, -step)}
+          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
+        >
+          −
+        </button>
+        <div className="flex-1 flex items-center justify-center gap-1.5">
+          <input
+            type="number"
+            step={step}
+            value={value}
+            onChange={e => onChange(field.key, e.target.value)}
+            placeholder={field.placeholder}
+            className="w-20 bg-transparent text-center text-2xl font-black outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="text-sm font-black text-text-muted">{field.unit}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onStep(field.key, step)}
+          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BodyProgressView({ userId }: { userId: string }) {
   const storageKey = `body_measurements_${userId}`;
   const todayKey = new Date().toISOString().split('T')[0];
@@ -3200,8 +3243,8 @@ function BodyProgressView({ userId }: { userId: string }) {
   const updateField = (key: string, value: string) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
-  const stepField = (key: keyof Omit<BodyMeasurement, 'date'>, step: number) => {
-    const current = parseFloat(form[key] || '0') || 0;
+  const stepField = (key: string, step: number) => {
+    const current = parseFloat(form[key as keyof typeof form] || '0') || 0;
     const next = Math.round((current + step) * 10) / 10;
     if (next >= 0) updateField(key, String(next));
   };
@@ -3244,41 +3287,6 @@ function BodyProgressView({ userId }: { userId: string }) {
   const primaryFields = MEASURE_FIELDS.filter(f => f.key === 'weight' || f.key === 'bodyFat');
   const optionalFields = MEASURE_FIELDS.filter(f => f.key !== 'weight' && f.key !== 'bodyFat');
 
-  const StepperControl = ({ field, step }: { field: typeof MEASURE_FIELDS[0], step: number }) => (
-    <div className="space-y-2">
-      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
-        {field.label} <span className="text-primary/70">({field.unit})</span>
-      </label>
-      <div className="flex items-center bg-background border border-white/10 rounded-2xl overflow-hidden focus-within:border-primary transition-all">
-        <button
-          type="button"
-          onClick={() => stepField(field.key, -step)}
-          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
-        >
-          −
-        </button>
-        <div className="flex-1 flex items-center justify-center gap-1.5">
-          <input
-            type="number"
-            step={step}
-            value={form[field.key] || ''}
-            onChange={e => updateField(field.key, e.target.value)}
-            placeholder={field.placeholder}
-            className="w-20 bg-transparent text-center text-2xl font-black outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-          <span className="text-sm font-black text-text-muted">{field.unit}</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => stepField(field.key, step)}
-          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-8 pb-12">
       <header className="flex flex-col gap-2">
@@ -3303,7 +3311,7 @@ function BodyProgressView({ userId }: { userId: string }) {
         {/* Primary fields - Peso e % Gordura com stepper */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {primaryFields.map(f => (
-            <StepperControl key={f.key} field={f} step={f.key === 'weight' ? 0.1 : 0.5} />
+            <StepperControl key={f.key} field={f} step={f.key === 'weight' ? 0.1 : 0.5} value={form[f.key] || ''} onChange={updateField} onStep={stepField} />
           ))}
         </div>
 
@@ -3328,7 +3336,7 @@ function BodyProgressView({ userId }: { userId: string }) {
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
                 {optionalFields.map(f => (
-                  <StepperControl key={f.key} field={f} step={0.5} />
+                  <StepperControl key={f.key} field={f} step={0.5} value={form[f.key] || ''} onChange={updateField} onStep={stepField} />
                 ))}
               </div>
             </motion.div>

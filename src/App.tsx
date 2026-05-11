@@ -3341,6 +3341,64 @@ function BodyProgressView({ userId }: { userId: string }) {
         </button>
       </div>
 
+      {/* Sua evolução */}
+      <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">Sua evolução</p>
+            <p className="text-[11px] text-text-secondary font-bold mt-0.5">
+              {MEASURE_FIELDS.find(f => f.key === chartMetric)?.label ?? 'Peso'} ao longo do tempo
+            </p>
+          </div>
+          {measurements.length >= 2 && (
+            <div className="flex gap-1 p-1 bg-white/5 rounded-xl flex-wrap">
+              {MEASURE_FIELDS.filter(f => measurements.some(m => m[f.key] !== undefined)).map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setChartMetric(f.key)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                    chartMetric === f.key ? 'bg-primary text-text-primary' : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {chartData.length >= 2 ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FF6A00" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#FF6A00" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+              <Tooltip
+                contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12, fontWeight: 700 }}
+                formatter={(v: number) => [`${v} ${fieldMeta.unit}`, fieldMeta.label]}
+              />
+              <Area type="monotone" dataKey="value" stroke="#FF6A00" strokeWidth={2} fill="url(#bodyGrad)" dot={{ fill: '#FF6A00', strokeWidth: 0, r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-14 text-center space-y-3">
+            <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center text-text-muted">
+              <Ruler size={28} />
+            </div>
+            <p className="text-sm font-bold text-text-secondary">
+              {measurements.length === 0 ? 'Nenhuma medida registrada ainda' : 'Registre pelo menos 2 datas para ver o gráfico'}
+            </p>
+            <p className="text-[11px] text-text-muted">Registre suas medidas acima para acompanhar sua evolução.</p>
+          </div>
+        )}
+      </div>
+
       {/* Comparison latest vs previous */}
       {latest && (
         <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
@@ -3367,46 +3425,6 @@ function BodyProgressView({ userId }: { userId: string }) {
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* Chart */}
-      {chartData.length >= 2 && (
-        <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Evolução</span>
-            <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
-              {MEASURE_FIELDS.map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setChartMetric(f.key)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                    chartMetric === f.key ? 'bg-primary text-text-primary' : 'text-text-muted hover:text-text-secondary'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FF6A00" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#FF6A00" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
-              <Tooltip
-                contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12, fontWeight: 700 }}
-                formatter={(v: number) => [`${v} ${fieldMeta.unit}`, fieldMeta.label]}
-              />
-              <Area type="monotone" dataKey="value" stroke="#FF6A00" strokeWidth={2} fill="url(#bodyGrad)" dot={{ fill: '#FF6A00', strokeWidth: 0, r: 4 }} />
-            </AreaChart>
-          </ResponsiveContainer>
         </div>
       )}
 
@@ -3446,15 +3464,6 @@ function BodyProgressView({ userId }: { userId: string }) {
         </div>
       )}
 
-      {measurements.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-text-muted">
-            <Ruler size={32} />
-          </div>
-          <p className="text-xl font-bold">Nenhuma medida registrada ainda</p>
-          <p className="text-text-muted">Registre suas medidas acima para acompanhar sua evolução.</p>
-        </div>
-      )}
     </div>
   );
 }

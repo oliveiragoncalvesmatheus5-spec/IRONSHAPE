@@ -324,7 +324,7 @@ function NavItem({ icon, active, onClick, label }: { icon: React.ReactNode, acti
           />
         )}
       </div>
-      <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.15em] transition-all duration-500 ${active ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 md:group-hover:opacity-100 md:group-hover:translate-y-0'}`}>
+      <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.15em] transition-all duration-500 ${active ? 'opacity-100' : 'opacity-50'}`}>
         {label}
       </span>
       {active && (

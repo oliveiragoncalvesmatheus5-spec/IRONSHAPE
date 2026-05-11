@@ -3325,23 +3325,13 @@ function BodyProgressView({ userId }: { userId: string }) {
           {showOptional ? 'Ocultar medidas corporais' : 'Adicionar medidas corporais'}
         </button>
 
-        <AnimatePresence>
-          {showOptional && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
-                {optionalFields.map(f => (
-                  <StepperControl key={f.key} field={f} step={0.5} value={form[f.key] || ''} onChange={updateField} onStep={stepField} />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className={`overflow-hidden transition-all duration-300 ${showOptional ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+            {optionalFields.map(f => (
+              <StepperControl key={f.key} field={f} step={0.5} value={form[f.key] || ''} onChange={updateField} onStep={stepField} />
+            ))}
+          </div>
+        </div>
 
         <button
           onClick={saveMeasurement}

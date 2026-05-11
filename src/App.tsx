@@ -2618,21 +2618,40 @@ function RestTimer({ restTime, onStateChange }: { restTime: string, onStateChang
   );
 }
 
-function ExecutionModal({ 
-  exercise, 
-  onClose 
-}: { 
-  exercise: Exercise, 
-  onClose: () => void 
+function ExecutionModal({
+  exercise,
+  onClose
+}: {
+  exercise: Exercise,
+  onClose: () => void
 }) {
+  const [gifUrl, setGifUrl] = useState<string | null>(null);
+  const [gifLoading, setGifLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setGifLoading(true);
+    searchExercisesByName(exercise.name)
+      .then((results: any) => {
+        if (cancelled) return;
+        const list = Array.isArray(results) ? results : results?.data;
+        if (Array.isArray(list) && list.length > 0) {
+          setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setGifLoading(false); });
+    return () => { cancelled = true; };
+  }, [exercise.name]);
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 bg-background/80 backdrop-blur-xl"
     >
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -2640,12 +2659,18 @@ function ExecutionModal({
       >
         {/* Video Area */}
         <div className="lg:flex-1 bg-black relative aspect-video lg:aspect-auto">
-          {exercise.videoUrl ? (
-            <video 
-              src={exercise.videoUrl} 
-              autoPlay 
-              loop 
-              muted 
+          {gifLoading ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          ) : gifUrl ? (
+            <img src={gifUrl} alt={exercise.name} className="w-full h-full object-contain" />
+          ) : exercise.videoUrl ? (
+            <video
+              src={exercise.videoUrl}
+              autoPlay
+              loop
+              muted
               playsInline
               className="w-full h-full object-cover"
             />

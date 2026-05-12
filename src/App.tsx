@@ -64,7 +64,8 @@ import {
   Bot,
   Ruler,
   Scale,
-  ChevronDown
+  ChevronDown,
+  MoreHorizontal
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -75,10 +76,22 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPricing, setShowPricing] = useState(false);
   const [initTimeout, setInitTimeout] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawerOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [drawerOpen]);
 
   useEffect(() => {
     // Last-resort escape hatch: if loading is still true after 5s, force past it
@@ -235,31 +248,29 @@ export default function App() {
         />
       )}
       {/* Sidebar / Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-2xl border-t border-white/5 z-50 md:top-0 md:bottom-0 md:left-0 md:w-24 md:flex-col md:border-r md:border-t-0 flex md:items-center">
-        {/* Branding - Desktop Only */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 md:top-0 md:bottom-0 md:left-0 md:right-auto md:w-24 md:flex md:flex-col md:items-center md:border-r md:border-white/5 md:bg-surface/90 md:backdrop-blur-2xl"
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+      >
+        {/* ── Desktop Branding ── */}
         <div className="hidden md:flex items-center justify-center h-24 w-full border-b border-white/5 mb-8">
           <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 rotate-3 hover:rotate-0 transition-transform duration-500">
             <Dumbbell className="text-text-primary" size={28} />
           </div>
         </div>
 
-        <div className="flex justify-around items-center h-20 w-full md:flex-col md:h-auto md:gap-8 md:py-4">
+        {/* ── Desktop Nav Items ── */}
+        <div className="hidden md:flex md:flex-col md:gap-8 md:py-4 w-full items-center">
           <NavItem icon={<TrendingUp size={20} />} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} label="Início" />
           <NavItem icon={<Dumbbell size={20} />} active={activeTab === 'workouts'} onClick={() => setActiveTab('workouts')} label="Treinos" />
           <NavItem icon={<Apple size={20} />} active={activeTab === 'nutrition'} onClick={() => setActiveTab('nutrition')} label="Dieta" />
-          <NavItem icon={<Ruler size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label="Progresso" />
+          <NavItem icon={<BarChart3 size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label="Progresso" />
           <NavItem icon={<Users size={20} />} active={activeTab === 'community'} onClick={() => setActiveTab('community')} label="Social" />
           <NavItem icon={<Wallet size={20} />} active={activeTab === 'affiliates'} onClick={() => setActiveTab('affiliates')} label="Afiliados" />
-          <div className="md:hidden flex-1 flex justify-center">
-            <NavItem icon={<Settings size={20} />} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label="Ajustes" />
-          </div>
-          {isAdmin && (
-            <NavItem icon={<ShieldCheck size={20} />} active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} label="Admin" />
-          )}
         </div>
 
         <div className="hidden md:flex md:flex-col md:gap-8 md:mt-auto md:mb-12 w-full items-center">
-          <button 
+          <button
             onClick={() => setShowPricing(true)}
             className={`p-3 rounded-2xl transition-all duration-300 ${effectivePlan === 'free' ? 'text-primary bg-primary/10 animate-pulse' : 'text-text-muted hover:text-primary hover:bg-primary/10'}`}
             title="Planos"
@@ -267,7 +278,8 @@ export default function App() {
             <Zap size={24} />
           </button>
           <NavItem icon={<Settings size={24} />} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label="Ajustes" />
-          <button 
+          {isAdmin && <NavItem icon={<ShieldCheck size={20} />} active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} label="Admin" />}
+          <button
             onClick={logout}
             className="p-3 rounded-2xl text-text-muted hover:text-error hover:bg-error/10 transition-all duration-300"
             title="Sair"
@@ -275,10 +287,136 @@ export default function App() {
             <LogOut size={24} />
           </button>
         </div>
+
+        {/* ── Mobile Bottom Bar (5 slots) ── */}
+        <div
+          className="md:hidden flex items-center w-full"
+          style={{
+            height: 'calc(76px + env(safe-area-inset-bottom))',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            background: 'rgba(13,13,15,0.96)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <MobileNavItem icon={<TrendingUp size={23} />} label="Início"    active={activeTab === 'dashboard'}  onClick={() => { setDrawerOpen(false); setActiveTab('dashboard'); }} />
+          <MobileNavItem icon={<Dumbbell size={23} />}   label="Treinos"   active={activeTab === 'workouts'}   onClick={() => { setDrawerOpen(false); setActiveTab('workouts'); }} />
+          <MobileNavItem icon={<Apple size={23} />}      label="Dieta"     active={activeTab === 'nutrition'}  onClick={() => { setDrawerOpen(false); setActiveTab('nutrition'); }} />
+          <MobileNavItem icon={<BarChart3 size={23} />}  label="Progresso" active={activeTab === 'progress'}   onClick={() => { setDrawerOpen(false); setActiveTab('progress'); }} />
+          {/* "Mais" slot */}
+          <button
+            onClick={() => setDrawerOpen(v => !v)}
+            className="flex-1 flex flex-col items-center justify-center gap-[5px] relative h-full"
+            aria-label={drawerOpen ? 'Fechar menu' : 'Mais opções'}
+          >
+            {drawerOpen && (
+              <span
+                className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-full"
+                style={{ width: 28, height: 3, background: '#ff6b1a' }}
+              />
+            )}
+            <span
+              className="transition-transform duration-300"
+              style={{
+                display: 'flex',
+                color: drawerOpen ? '#ff6b1a' : '#8a8a92',
+                transform: drawerOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+              }}
+            >
+              {drawerOpen ? <X size={23} /> : <MoreHorizontal size={23} />}
+            </span>
+            <span
+              className="text-[11px] font-bold leading-none"
+              style={{ color: drawerOpen ? '#ff6b1a' : '#8a8a92', fontWeight: drawerOpen ? 700 : 500 }}
+            >
+              {drawerOpen ? 'Fechar' : 'Mais'}
+            </span>
+          </button>
+        </div>
       </nav>
 
+      {/* ── Drawer Overlay (mobile only) ── */}
+      <div
+        className="md:hidden fixed inset-0 z-40 pointer-events-none"
+        style={{
+          bottom: 'calc(76px + env(safe-area-inset-bottom))',
+          background: 'rgba(0,0,0,0.45)',
+          backdropFilter: drawerOpen ? 'blur(4px)' : 'none',
+          WebkitBackdropFilter: drawerOpen ? 'blur(4px)' : 'none',
+          opacity: drawerOpen ? 1 : 0,
+          transition: 'opacity .35s cubic-bezier(.32,.72,.32,1)',
+          pointerEvents: drawerOpen ? 'auto' : 'none',
+        }}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* ── Drawer Sheet (mobile only) ── */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mais opções"
+        className="md:hidden fixed left-0 right-0 z-40"
+        style={{
+          bottom: 'calc(76px + env(safe-area-inset-bottom))',
+          background: '#16161a',
+          borderRadius: '24px 24px 0 0',
+          boxShadow: '0 -20px 40px -10px rgba(0,0,0,0.5)',
+          transform: drawerOpen ? 'translateY(0)' : 'translateY(110%)',
+          transition: 'transform .35s cubic-bezier(.32,.72,.32,1)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+        onTouchStart={(e) => { (e.currentTarget as any)._ty = e.touches[0].clientY; }}
+        onTouchMove={(e) => {
+          const delta = e.touches[0].clientY - ((e.currentTarget as any)._ty ?? 0);
+          if (delta > 60) setDrawerOpen(false);
+        }}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="rounded-full" style={{ width: 44, height: 4, background: 'rgba(255,255,255,0.18)' }} />
+        </div>
+
+        <div className="px-5 pt-3 pb-6 space-y-5">
+          {/* Header */}
+          <div>
+            <p className="text-base font-bold text-text-primary">Mais opções</p>
+            <p className="text-[11.5px] mt-0.5" style={{ color: '#8a8a92' }}>Acessos secundários e configurações</p>
+          </div>
+
+          {/* Grid of items */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { tab: 'community',  icon: <Users size={20} />,      label: 'Social',    desc: 'Feed e comunidade' },
+              { tab: 'affiliates', icon: <Wallet size={20} />,     label: 'Afiliados', desc: 'Comissões e links' },
+              { tab: 'settings',   icon: <Settings size={20} />,   label: 'Ajustes',   desc: 'Conta e preferências' },
+              ...(isAdmin ? [{ tab: 'admin', icon: <ShieldCheck size={20} />, label: 'Admin', desc: 'Painel de administrador' }] : []),
+            ].map(item => (
+              <button
+                key={item.tab}
+                onClick={() => { setActiveTab(item.tab); setDrawerOpen(false); }}
+                className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all active:scale-95"
+                style={{ background: 'rgba(255,255,255,0.04)', border: activeTab === item.tab ? '1px solid rgba(255,107,26,0.4)' : '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.05)', color: activeTab === item.tab ? '#ff6b1a' : '#8a8a92' }}>
+                  {item.icon}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13.5px] font-bold text-text-primary truncate">{item.label}</span>
+                    {activeTab === item.tab && <span className="flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: '#ff6b1a' }} />}
+                  </div>
+                  <p className="text-[10.5px] truncate" style={{ color: '#8a8a92' }}>{item.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="pb-24 md:pl-24 md:pb-0 min-h-screen">
+      <main className="md:pl-24 md:pb-0 min-h-screen" style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -338,6 +476,30 @@ function NavItem({ icon, active, onClick, label }: { icon: React.ReactNode, acti
   );
 }
 
+
+function MobileNavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 flex flex-col items-center justify-center gap-[5px] relative h-full"
+      style={{ minHeight: 44 }}
+    >
+      {active && (
+        <span
+          className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-full"
+          style={{ width: 28, height: 3, background: '#ff6b1a' }}
+        />
+      )}
+      <span style={{ color: active ? '#ff6b1a' : '#8a8a92' }}>{icon}</span>
+      <span
+        className="text-[11px] leading-none"
+        style={{ color: active ? '#ff6b1a' : '#8a8a92', fontWeight: active ? 700 : 500 }}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
 
 function AffiliateView({ profile }: { profile: UserProfile | null }) {
   const [affiliate, setAffiliate] = useState<Affiliate | null>(null);

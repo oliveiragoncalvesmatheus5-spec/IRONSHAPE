@@ -181,10 +181,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             return;
           }
-          if (createError.message?.includes('schema cache') && retryCount < 2) {
+          if ((createError.message?.includes('schema cache') || createError.message?.includes('network')) && retryCount < 3) {
             return fetchProfile(id, userObj, retryCount + 1);
           }
-          throw createError;
+          // Insert failed but user is authenticated — use the new profile object in memory
+          // so the app opens normally; next visit will retry persisting it
+          setProfile(newProfile as UserProfile);
+          return;
         }
 
         if (created) {
@@ -201,11 +204,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (retryCount < 1) {
+      if (retryCount < 2) {
         return fetchProfile(id, userObj, retryCount + 1);
       }
 
-      setAuthError('Erro ao carregar perfil. Tente recarregar a página.');
+      // User is authenticated but profile couldn't be loaded/created.
+      // Use a fallback from Google metadata so the app opens instead of showing an error screen.
+      if (userObj) {
+        const fallback: UserProfile = {
+          id: userObj.id,
+          email: userObj.email || '',
+          name: userObj.user_metadata?.full_name || userObj.user_metadata?.name || 'Usuário',
+          age: 0,
+          weight: 0,
+          height: 0,
+          goal: '',
+          plano: 'free',
+          role: 'user',
+          subscriptionStatus: 'inactive',
+          points: 0,
+          streak: 0,
+          criado_em: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setProfile(fallback);
+      } else {
+        setAuthError('Erro ao carregar perfil. Tente recarregar a página.');
+      }
     }
   };
 
@@ -213,7 +238,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+        skipBrowserRedirect: false,
       }
     });
     if (error) throw error;

@@ -2824,9 +2824,11 @@ function ExecutionModal({
         const list = Array.isArray(results) ? results : results?.data;
         if (Array.isArray(list) && list.length > 0) {
           setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
+        } else {
+          console.warn('[ExerciseModal] No GIF found for:', exercise.name, results);
         }
       })
-      .catch(() => {})
+      .catch((err: any) => { console.error('[ExerciseModal] GIF fetch error:', err?.message); })
       .finally(() => { if (!cancelled) setGifLoading(false); });
     return () => { cancelled = true; };
   }, [exercise.name]);
@@ -2974,9 +2976,11 @@ function ExerciseCard({
       const list = Array.isArray(results) ? results : results?.data;
       if (Array.isArray(list) && list.length > 0) {
         setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
+      } else {
+        console.warn('[ActiveExercise] No GIF found for:', exercise.name, results);
       }
-    } catch {
-      // silently fall back to videoUrl
+    } catch (err: any) {
+      console.error('[ActiveExercise] GIF fetch error:', err?.message);
     } finally {
       setGifLoading(false);
     }

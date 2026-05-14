@@ -279,17 +279,42 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
     if (!process.env.RAPIDAPI_KEY) return res.status(500).json({ error: "RAPIDAPI_KEY não configurada" });
 
-    try {
-      const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(name)}?limit=1&offset=0`;
-      const response = await fetch(url, {
-        headers: {
-          'x-rapidapi-host': 'exercisedb.p.rapidapi.com',
-          'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-        },
-      });
+    const rapidApiKey = process.env.RAPIDAPI_KEY;
+    const rapidHeaders = {
+      'x-rapidapi-host': 'exercisedb.p.rapidapi.com',
+      'x-rapidapi-key': rapidApiKey,
+    };
+
+    const searchExerciseDB = async (searchName: string) => {
+      const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchName)}?limit=5&offset=0`;
+      console.log(`[workout-gif] Searching ExerciseDB for: "${searchName}"`);
+      const response = await fetch(url, { headers: rapidHeaders });
       const data = await response.json();
-      return res.status(response.status).json(data);
+      console.log(`[workout-gif] Status: ${response.status}, Results: ${Array.isArray(data) ? data.length : JSON.stringify(data).slice(0, 200)}`);
+      if (Array.isArray(data) && data.length > 0) return { status: response.status, data };
+      return null;
+    };
+
+    try {
+      // Try full name first
+      let result = await searchExerciseDB(name);
+
+      // Fallback: try first two words (e.g. "barbell bench press" → "barbell bench")
+      if (!result && name.includes(' ')) {
+        const twoWords = name.split(' ').slice(0, 2).join(' ');
+        result = await searchExerciseDB(twoWords);
+      }
+
+      // Fallback: try first word only (e.g. "barbell")
+      if (!result && name.includes(' ')) {
+        const oneWord = name.split(' ')[0];
+        result = await searchExerciseDB(oneWord);
+      }
+
+      if (result) return res.status(result.status).json(result.data);
+      return res.json([]);
     } catch (error: any) {
+      console.error(`[workout-gif] Error for "${name}":`, error.message);
       return res.status(500).json({ error: error.message });
     }
   });

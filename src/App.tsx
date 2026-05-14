@@ -1553,19 +1553,33 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
     setError(null);
     setIsSubmitting(true);
     try {
-      // Small delay as requested to handle potential schema cache issues
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      await updateProfile({
-        ...formData,
-        updatedAt: new Date().toISOString()
-      } as any);
-      if (onComplete) {
-        onComplete(formData.plano);
+      const { plano, ...rest } = formData;
+      try {
+        await updateProfile({ ...formData, updatedAt: new Date().toISOString() } as any);
+      } catch (firstErr: any) {
+        const msg = firstErr?.message || '';
+        if (msg.includes('schema cache') || msg.includes('plano')) {
+          // Coluna 'plano' não existe no banco ainda — salva o restante e guarda plano localmente
+          try {
+            await updateProfile({ ...rest, updatedAt: new Date().toISOString() } as any);
+          } catch {
+            // Se ainda falhar, salva pelo menos no localStorage para o usuário entrar
+          }
+          if (user) localStorage.setItem(`pending_plan_${user.id}`, plano);
+        } else {
+          throw firstErr;
+        }
       }
+      if (onComplete) onComplete(plano);
     } catch (err: any) {
       console.error("Error creating profile:", err);
-      setError(err.message || "Erro ao salvar perfil. Verifique sua conexão.");
+      const msg = err?.message || '';
+      if (msg.includes('schema cache') || msg.includes('column')) {
+        setError('Erro de configuração no banco de dados. Contacte o suporte.');
+      } else {
+        setError(msg || 'Erro ao salvar perfil. Verifique sua conexão.');
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -6064,10 +6064,12 @@ function LoadTrackerView({ userId }: { userId: string }) {
   const [sets, setSets] = useState<{ reps: string; weight: string }[]>([{ reps: '', weight: '' }]);
   const [saved, setSaved] = useState(false);
 
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
   const filteredExercises = allExercisesWithGroup
     .filter(([name, group]) => {
-      const q = searchQuery.toLowerCase();
-      return name.toLowerCase().includes(q) || group.toLowerCase().includes(q);
+      const q = norm(searchQuery);
+      return norm(name).includes(q) || norm(group).includes(q);
     })
     .map(([name]) => name);
 

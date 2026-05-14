@@ -140,6 +140,16 @@ export const exerciseTranslations = {
   "tríceps testa com barra ez":                      "ez bar skull crusher",
   "martelo alternado":                               "alternating hammer curl",
 
+  // Elite
+  "rosca direta com barra (carga máxima)":           "barbell curl",
+  "rosca inclinada com halteres (cadência lenta)":   "incline dumbbell curl",
+  "rosca 21s com barra ez":                          "barbell curl",
+  "rosca no cabo com drop-set":                      "cable curl",
+  "tríceps testa com barra ez (pausa 2s)":           "ez bar skull crusher",
+  "extensão de tríceps por cima com halter (cabeça longa)": "dumbbell triceps overhead extension",
+  "supino fechado com barra (close-grip)":           "close grip barbell bench press",
+  "mergulho com peso (dips) — cadência controlada":  "dips",
+
   // ─── ABDÔMEN ─────────────────────────────────────────────
   // Free
   "abdominal supra":                                 "crunch",
@@ -160,6 +170,18 @@ export const exerciseTranslations = {
   "roda abdominal (ab wheel)":                       "ab wheel rollout",
   "bicicleta abdominal":                             "bicycle crunch",
 
+  // ─── PERNAS (extras) ─────────────────────────────────────
+  "leg press 45°":                                   "leg press",
+  "leg press 45 (alta carga)":                       "leg press",
+  "avanço com halteres":                             "dumbbell lunge",
+
+  // ─── OMBROS (extras) ─────────────────────────────────────
+  "elevação lateral com cabo":                       "cable lateral raise",
+  "face pull":                                       "face pull",
+
+  // ─── COSTAS (extras) ─────────────────────────────────────
+  "remada curvada com barra (carga máxima)":         "barbell bent over row",
+
   // ─── FULL BODY ────────────────────────────────────────────
   // Free
   "agachamento sumô":                                "sumo squat",
@@ -179,15 +201,25 @@ function normalize(str) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
+    .replace(/[°–—]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 export function translateExerciseName(namePt) {
   const key = normalize(namePt);
 
+  // 1. Exact match
   for (const [ptKey, enVal] of Object.entries(exerciseTranslations)) {
     if (normalize(ptKey) === key) return enVal;
   }
 
-  return namePt;
+  // 2. Partial match — chave contida no nome ou vice-versa (pega variações com sufixo)
+  for (const [ptKey, enVal] of Object.entries(exerciseTranslations)) {
+    const nk = normalize(ptKey);
+    if (key.startsWith(nk) || nk.startsWith(key)) return enVal;
+  }
+
+  // 3. Fallback: retorna as primeiras 3 palavras em inglês-friendly para a API tentar
+  return key.split(" ").slice(0, 3).join(" ");
 }

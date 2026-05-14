@@ -1597,11 +1597,12 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
             </div>
             <div>
               <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Idade</label>
-              <input 
-                type="number" 
-                value={formData.age}
+              <input
+                type="number"
+                placeholder="Ex: 25"
+                value={formData.age || ''}
                 onChange={(e) => setFormData({...formData, age: parseInt(e.target.value) || 0})}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
               />
             </div>
             <button 
@@ -1619,20 +1620,22 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Peso (kg)</label>
-                <input 
-                  type="number" 
-                  value={formData.weight}
+                <input
+                  type="number"
+                  placeholder="Ex: 70"
+                  value={formData.weight || ''}
                   onChange={(e) => setFormData({...formData, weight: parseInt(e.target.value) || 0})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
                 />
               </div>
               <div>
                 <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Altura (cm)</label>
-                <input 
-                  type="number" 
-                  value={formData.height}
+                <input
+                  type="number"
+                  placeholder="Ex: 175"
+                  value={formData.height || ''}
                   onChange={(e) => setFormData({...formData, height: parseInt(e.target.value) || 0})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
                 />
               </div>
             </div>
@@ -4700,37 +4703,37 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
               <div className="space-y-4 sm:space-y-6">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
                   <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Calorias Totais</span>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
-                    value={manualMacros.calories}
+                    value={manualMacros.calories || ''}
                     onChange={(e) => setManualMacros({...manualMacros, calories: parseInt(e.target.value) || 0})}
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
                   <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Proteínas (g)</span>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
-                    value={manualMacros.protein}
+                    value={manualMacros.protein || ''}
                     onChange={(e) => setManualMacros({...manualMacros, protein: parseInt(e.target.value) || 0})}
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
                   <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Carboidratos (g)</span>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
-                    value={manualMacros.carbs}
+                    value={manualMacros.carbs || ''}
                     onChange={(e) => setManualMacros({...manualMacros, carbs: parseInt(e.target.value) || 0})}
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
                   <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Gorduras (g)</span>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
-                    value={manualMacros.fat}
+                    value={manualMacros.fat || ''}
                     onChange={(e) => setManualMacros({...manualMacros, fat: parseInt(e.target.value) || 0})}
                   />
                 </div>

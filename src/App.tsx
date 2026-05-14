@@ -6054,7 +6054,9 @@ function LoadTrackerView({ userId }: { userId: string }) {
     try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
   };
 
-  const allExercises = [...new Set(ALL_WORKOUTS.flatMap(w => w.exercises.map((e: Exercise) => e.name)))].sort() as string[];
+  const allExercisesWithGroup = [...new Map(
+    ALL_WORKOUTS.flatMap(w => w.exercises.map((e: Exercise) => [e.name, e.muscleGroup] as [string, string]))
+  ).entries()].sort((a, b) => a[0].localeCompare(b[0]));
 
   const [data, setData] = useState<LoadData>(readData);
   const [selectedExercise, setSelectedExercise] = useState<string>('');
@@ -6062,9 +6064,12 @@ function LoadTrackerView({ userId }: { userId: string }) {
   const [sets, setSets] = useState<{ reps: string; weight: string }[]>([{ reps: '', weight: '' }]);
   const [saved, setSaved] = useState(false);
 
-  const filteredExercises = allExercises.filter(e =>
-    e.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredExercises = allExercisesWithGroup
+    .filter(([name, group]) => {
+      const q = searchQuery.toLowerCase();
+      return name.toLowerCase().includes(q) || group.toLowerCase().includes(q);
+    })
+    .map(([name]) => name);
 
   const maxWeight = (s: LoadSession) => Math.max(...s.sets.map(x => x.weight));
 

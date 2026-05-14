@@ -4198,6 +4198,232 @@ export const ELITE_WORKOUTS: Workout[] = [
     ]
   },
   {
+    id: "elite-bracos-1",
+    name: "Bíceps",
+    muscleGroup: "Braços",
+    level: "Avançado",
+    duration: "60 min",
+    carga: "Alta",
+    description: "Protocolo de sobrecarga máxima e técnicas avançadas para bíceps de atleta.",
+    planRequired: "Elite",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-elite-b1-1",
+        name: "Rosca Direta com Barra (Carga Máxima)",
+        series: 5,
+        reps: "5-6",
+        restTime: "150s",
+        muscleGroup: "Braços",
+        description: "Força máxima nos bíceps com barra e carga progressiva.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162587/pexels-photo-4162587.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Pegue a barra com pegada supinada na largura dos ombros.",
+          "Mantenha os cotovelos fixos ao lado do corpo durante todo o movimento.",
+          "Suba a barra em 1 segundo, segure 1 segundo no topo e desça em 3 segundos.",
+          "Use a carga máxima que permita completar as 5-6 reps com técnica perfeita."
+        ],
+        proTips: [
+          "Cadência 1-1-3 maximiza o tempo sob tensão e o recrutamento de fibras.",
+          "Na última série, empurre os cotovelos ligeiramente para a frente no topo para maior pico."
+        ],
+        commonErrors: [
+          "Balançar o tronco para auxiliar no movimento.",
+          "Não completar a amplitude total — encurtar a descida reduz os resultados."
+        ]
+      },
+      {
+        id: "ex-elite-b1-2",
+        name: "Rosca Inclinada com Halteres (Cadência Lenta)",
+        series: 4,
+        reps: "8",
+        restTime: "120s",
+        muscleGroup: "Braços",
+        description: "Estira a cabeça longa do bíceps em amplitude máxima — pico de hipertrofia.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Incline o banco a 45-60 graus e sente-se com halteres pendendo ao lado.",
+          "Execute a rosca mantendo a posição inclinada — sem levantar o tronco.",
+          "Suba em 2 segundos, segure no topo e desça em 4 segundos.",
+          "A amplitude extra estira a cabeça longa do bíceps — mantenha até o fim."
+        ],
+        proTips: [
+          "Cadência 2-1-4 = 7 segundos por rep — dano muscular máximo.",
+          "Supine completamente o punho no topo para contração total."
+        ],
+        commonErrors: [
+          "Levantar o tronco do banco para ganhar impulso.",
+          "Encurtar a amplitude na descida, perdendo o alongamento."
+        ]
+      },
+      {
+        id: "ex-elite-b1-3",
+        name: "Rosca 21s com Barra EZ",
+        series: 4,
+        reps: "21",
+        restTime: "90s",
+        muscleGroup: "Braços",
+        description: "Método de 21 repetições para exaustão completa do bíceps em três amplitudes.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "7 reps na metade inferior (da posição baixa até o meio).",
+          "7 reps na metade superior (do meio até o pico).",
+          "7 reps em amplitude completa sem pausa entre as fases.",
+          "Sem descanso entre as três fases — 21 reps contínuas."
+        ],
+        proTips: [
+          "Use carga que permita completar as 21 reps sem comprometer a técnica.",
+          "Mantenha os cotovelos fixos — o único movimento deve ser a flexão do cotovelo."
+        ],
+        commonErrors: [
+          "Usar carga excessiva que obriga a trapacear no movimento.",
+          "Deixar os cotovelos se moverem para frente durante o exercício."
+        ]
+      },
+      {
+        id: "ex-elite-b1-4",
+        name: "Rosca no Cabo com Drop-set",
+        series: 3,
+        reps: "12+10+8",
+        restTime: "90s",
+        muscleGroup: "Braços",
+        description: "Drop-set triplo para exaustão total do bíceps com tensão constante do cabo.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Execute 12 reps na carga inicial com técnica perfeita.",
+          "Reduza 25% da carga imediatamente sem descanso — execute mais 10 reps.",
+          "Reduza outros 25% imediatamente — execute mais 8 reps até a falha.",
+          "Descanse 90 segundos e repita."
+        ],
+        proTips: [
+          "O cabo mantém tensão constante em todo o arco — diferente dos halteres.",
+          "Foque na contração no topo de cada rep antes de descer."
+        ],
+        commonErrors: [
+          "Não reduzir a carga rápido suficiente entre as fases do drop-set.",
+          "Perder a técnica nas últimas reps — prefira parar do que trapacear."
+        ]
+      }
+    ]
+  },
+  {
+    id: "elite-bracos-2",
+    name: "Tríceps",
+    muscleGroup: "Braços",
+    level: "Avançado",
+    duration: "60 min",
+    carga: "Alta",
+    description: "Protocolo de máxima ativação das três cabeças do tríceps com técnicas avançadas.",
+    planRequired: "Elite",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-elite-b2-1",
+        name: "Tríceps Testa com Barra EZ (Pausa 2s)",
+        series: 5,
+        reps: "6-8",
+        restTime: "150s",
+        muscleGroup: "Braços",
+        description: "Força máxima na cabeça longa do tríceps com pausa para eliminar o impulso.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162587/pexels-photo-4162587.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Deite no banco reto com a barra EZ — pegada com as mãos na largura dos ombros.",
+          "Desça a barra em direção à testa em 3 segundos, mantendo os cotovelos fixos.",
+          "Faça uma pausa de 2 segundos na posição mais baixa sem tocar a barra na testa.",
+          "Estenda completamente os cotovelos na subida."
+        ],
+        proTips: [
+          "A pausa de 2s elimina o impulso e recruta fibras de força máxima.",
+          "Cotovelos apontando para o teto durante todo o movimento."
+        ],
+        commonErrors: [
+          "Deixar os cotovelos abrirem para os lados.",
+          "Não fazer a pausa completa — reduz significativamente a eficiência."
+        ]
+      },
+      {
+        id: "ex-elite-b2-2",
+        name: "Extensão de Tríceps por Cima com Halter (Cabeça Longa)",
+        series: 4,
+        reps: "10-12",
+        restTime: "90s",
+        muscleGroup: "Braços",
+        description: "Posição acima da cabeça — máxima ativação da cabeça longa do tríceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Sente-se no banco e segure o halter com as duas mãos acima da cabeça.",
+          "Desça o halter atrás da cabeça flexionando os cotovelos lentamente.",
+          "Estenda completamente os cotovelos na subida, segurando 1 segundo no topo.",
+          "Mantenha os cotovelos apontados para cima durante todo o movimento."
+        ],
+        proTips: [
+          "Braços acima da cabeça = cabeça longa em máximo pré-estiramento = maior ativação.",
+          "Cadência lenta na descida (3-4 segundos) para maior dano muscular."
+        ],
+        commonErrors: [
+          "Deixar os cotovelos se abrirem para os lados.",
+          "Não completar a amplitude total na subida e na descida."
+        ]
+      },
+      {
+        id: "ex-elite-b2-3",
+        name: "Supino Fechado com Barra (Close-Grip)",
+        series: 4,
+        reps: "8",
+        restTime: "120s",
+        muscleGroup: "Braços",
+        description: "Força máxima no tríceps com movimento composto — permite carga muito alta.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Deite no banco reto e pegue a barra com as mãos afastadas 15-20cm.",
+          "Desça a barra em direção à parte inferior do peito mantendo os cotovelos junto ao corpo.",
+          "Empurre a barra para cima estendendo completamente os cotovelos.",
+          "Concentre-se em sentir o trabalho nos tríceps, não no peito."
+        ],
+        proTips: [
+          "Pegada fechada transfere a carga do peito para os tríceps.",
+          "Cotovelos colados ao corpo durante a descida — não deixe abrir."
+        ],
+        commonErrors: [
+          "Usar pegada muito fechada, o que causa desconforto nos punhos.",
+          "Deixar os cotovelos abrirem e ativar o peito em vez do tríceps."
+        ]
+      },
+      {
+        id: "ex-elite-b2-4",
+        name: "Mergulho com Peso (Dips) — Cadência Controlada",
+        series: 4,
+        reps: "8-10",
+        restTime: "120s",
+        muscleGroup: "Braços",
+        description: "Dips pesados com cadência 3-1-1 para força e hipertrofia máximas no tríceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-push-ups-23444-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Adicione peso com um cinto de lastro ou segure um halter entre as pernas.",
+          "Desça em 3 segundos, mantenha cotovelos junto ao corpo para foco no tríceps.",
+          "Pausa de 1 segundo na posição mais baixa antes de empurrar.",
+          "Suba explosivamente em 1 segundo até a extensão completa dos cotovelos."
+        ],
+        proTips: [
+          "Tronco mais vertical = mais foco nos tríceps. Inclinado = mais peito.",
+          "Cadência 3-1-1 cria altíssimo tempo sob tensão excêntrico."
+        ],
+        commonErrors: [
+          "Não usar peso adicional no nível Elite — o peso corporal já não é suficiente.",
+          "Descer muito além do limite articular confortável nos ombros."
+        ]
+      }
+    ]
+  },
+  {
     id: "elite-full-1",
     name: "Full Body Atleta",
     muscleGroup: "Full Body",

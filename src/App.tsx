@@ -1100,7 +1100,7 @@ function AuthCallback() {
 
 function LoginView({ onLogin }: { onLogin: () => void }) {
   const { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, resendConfirmationEmail } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'email-sent'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1157,8 +1157,7 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
       } else {
         const data = await signUpWithEmail(email, password, name);
         if (data?.user && !data?.session) {
-          setSuccess('Conta criada! Por favor, verifique seu email para confirmar e depois faça login.');
-          setMode('login');
+          setMode('email-sent');
         } else {
           setSuccess('Conta criada com sucesso! Redirecionando...');
         }
@@ -1169,10 +1168,10 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
       
       if (message.includes('rate limit exceeded')) {
         setError('Limite de tentativas excedido. Por favor, aguarde alguns minutos antes de tentar novamente.');
-      } else if (message.includes('Email not confirmed')) {
-        setError('Seu email ainda não foi confirmado. Por favor, verifique sua caixa de entrada (e a pasta de spam) para o link de confirmação.');
+      } else if (message.includes('Email not confirmed') || err.code === 'email_not_confirmed') {
+        setMode('email-sent');
       } else if (message.includes('Invalid login credentials')) {
-        setError('Email ou senha incorretos.');
+        setError('Email ou senha incorretos. Se você acabou de criar sua conta, confirme o email antes de entrar.');
       } else {
         setError(message || 'Ocorreu um erro ao processar sua solicitação.');
       }
@@ -1231,14 +1230,61 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
         </div>
 
         <div className="bg-surface p-8 rounded-[40px] border border-white/5 shadow-2xl">
+          {mode === 'email-sent' ? (
+            <div className="text-center py-2">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-primary/20">
+                <Mail className="text-primary" size={32} />
+              </div>
+              <h3 className="text-xl font-black mb-2">Confirme seu Email</h3>
+              <p className="text-text-muted text-sm mb-1 leading-relaxed">Enviamos um link de confirmação para</p>
+              <p className="font-bold text-sm mb-6 text-text-primary">{email}</p>
+              <p className="text-text-muted text-xs mb-8 leading-relaxed">
+                Abra o email e clique no link para ativar sua conta. Verifique também a pasta de spam.
+              </p>
+              {error && (
+                <p className="text-error text-xs font-medium mb-4 p-3 bg-error/10 rounded-xl border border-error/20">{error}</p>
+              )}
+              {success && (
+                <p className="text-success text-xs font-medium mb-4 p-3 bg-success/10 rounded-xl border border-success/20">{success}</p>
+              )}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    setError(null);
+                    setSuccess(null);
+                    await resendConfirmationEmail(email);
+                    setSuccess('Email reenviado com sucesso!');
+                  } catch (err: any) {
+                    setError(err.message || 'Erro ao reenviar email.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="w-full bg-white/5 text-text-primary font-bold py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/5 mb-3 disabled:opacity-50"
+              >
+                {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : 'Reenviar Email'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setError(null); setSuccess(null); }}
+                className="w-full bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all shadow-xl shadow-primary/20"
+              >
+                Já confirmei — Entrar
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="flex gap-4 mb-8 p-1 bg-white/5 rounded-2xl">
-            <button 
+            <button
               onClick={() => setMode('login')}
               className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mode === 'login' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-secondary'}`}
             >
               Entrar
             </button>
-            <button 
+            <button
               onClick={() => setMode('signup')}
               className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mode === 'signup' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-secondary'}`}
             >
@@ -1378,7 +1424,7 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
             </div>
           </div>
 
-          <button 
+          <button
             onClick={handleGoogleLogin}
             disabled={loading || googleLoading}
             className="w-full bg-white/5 text-text-primary font-bold py-4 px-8 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all border border-white/5 disabled:opacity-50"
@@ -1392,6 +1438,8 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
               </>
             )}
           </button>
+          </>
+          )}
         </div>
       </motion.div>
 

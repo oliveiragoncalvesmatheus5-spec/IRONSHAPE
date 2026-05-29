@@ -66,7 +66,7 @@ export async function sendMessage(
     { role: 'user' as const, content: userMessage },
   ];
 
-  const response = await fetch('/.netlify/functions/iron-coach', {
+  const response = await fetch('/api/iron-coach', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

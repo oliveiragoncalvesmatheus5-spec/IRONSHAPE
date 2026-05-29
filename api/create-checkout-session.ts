@@ -1,5 +1,20 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import Stripe from 'stripe';
+
+type PaidPlan = 'Pro' | 'Elite';
+
+const ABACATEPAY_API_URL = 'https://api.abacatepay.com/v2';
+const PLAN_CONFIG: Record<PaidPlan, { productEnv: string; fallbackUrlEnv: string; defaultUrl: string }> = {
+  Pro: {
+    productEnv: 'ABACATEPAY_PRODUCT_PRO_ID',
+    fallbackUrlEnv: 'ABACATEPAY_CHECKOUT_PRO_URL',
+    defaultUrl: 'https://app.abacatepay.com/pay/bill_qcpZwfDkagE0js0dcQrLWTjq',
+  },
+  Elite: {
+    productEnv: 'ABACATEPAY_PRODUCT_ELITE_ID',
+    fallbackUrlEnv: 'ABACATEPAY_CHECKOUT_ELITE_URL',
+    defaultUrl: 'https://app.abacatepay.com/pay/bill_0mR4kgjeGnp5du3QSD5naMCU',
+  },
+};
 
 function json(res: ServerResponse, status: number, data: object) {
   res.setHeader('Content-Type', 'application/json');
@@ -19,34 +34,53 @@ function readBody(req: IncomingMessage): Promise<any> {
   });
 }
 
+function isPaidPlan(plan: string): plan is PaidPlan {
+  return plan === 'Pro' || plan === 'Elite';
+}
+
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.method === 'OPTIONS') return json(res, 200, {});
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
-
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return json(res, 500, { error: 'STRIPE_SECRET_KEY não configurada' });
-  }
 
   let body: any;
   try { body = await readBody(req); }
   catch { return json(res, 400, { error: 'Body inválido' }); }
 
-  const { priceId, customerEmail, userId } = body;
+  const { plan, customerEmail, userId, referralCode } = body;
+  if (!isPaidPlan(plan)) return json(res, 400, { error: 'Plano inválido para pagamento.' });
+
+  const config = PLAN_CONFIG[plan];
+  const productId = process.env[config.productEnv];
+  const fallbackUrl = process.env[config.fallbackUrlEnv] || config.defaultUrl;
+
+  if (!process.env.ABACATEPAY_API_KEY || !productId) {
+    return json(res, 200, { url: fallbackUrl, provider: 'abacatepay', mode: 'static-link' });
+  }
 
   try {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: 'subscription',
-      success_url: `${appUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/settings`,
-      customer_email: customerEmail,
-      metadata: { userId },
+    const externalId = `ironshape:${userId}:${plan}:${referralCode || 'no-ref'}:${Date.now()}`;
+    const response = await fetch(`${ABACATEPAY_API_URL}/subscriptions/create`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.ABACATEPAY_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        items: [{ id: productId, quantity: 1 }],
+        externalId,
+        returnUrl: `${appUrl}/settings`,
+        completionUrl: `${appUrl}/dashboard?payment=success&plan=${plan}`,
+        methods: ['CARD'],
+        metadata: { userId, plan, customerEmail, referralCode: referralCode || null },
+      }),
     });
-    return json(res, 200, { id: session.id });
+    const data = await response.json();
+    if (!response.ok || !data?.success || !data?.data?.url) {
+      return json(res, 500, { error: data?.error || 'Erro ao criar checkout na AbacatePay.' });
+    }
+    return json(res, 200, { url: data.data.url, id: data.data.id, provider: 'abacatepay', mode: 'api' });
   } catch (e: any) {
-    return json(res, 500, { error: e.message });
+    return json(res, 500, { error: e.message || 'Erro ao criar pagamento.' });
   }
 }

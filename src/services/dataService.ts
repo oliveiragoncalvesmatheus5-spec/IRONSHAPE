@@ -121,6 +121,20 @@ export const dataService = {
     }, 15000, 2);
   },
 
+  getNutritionLogs: async (userUid: string, limit = 7): Promise<NutritionLog[]> => {
+    return withTimeout(async () => {
+      const { data, error } = await supabase
+        .from('nutrition_logs')
+        .select('*')
+        .eq('user_id', userUid)
+        .order('date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data as NutritionLog[];
+    }, 15000, 2);
+  },
+
   updateNutritionLog: async (log: Omit<NutritionLog, 'id'>): Promise<NutritionLog> => {
     return withTimeout(async () => {
       const { data, error } = await supabase

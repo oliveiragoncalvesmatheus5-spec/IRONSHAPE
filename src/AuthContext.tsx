@@ -317,7 +317,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     await updateProfile({ 
       plano, 
-      subscriptionStatus: plano === 'free' ? 'inactive' : 'active' 
+      subscriptionStatus: plano === 'free' || plano === 'Iniciante' ? 'inactive' : 'active'
     });
   };
 

@@ -2,15 +2,89 @@ import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import Stripe from "stripe";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
-
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY)
-  : null;
+import {
+  ABACATEPAY_API_URL,
+  DEFAULT_ABACATEPAY_SIGNATURE_KEY,
+  buildExternalId,
+  extractWebhookMetadata,
+  getCheckoutConfig,
+  isActivationEvent,
+  isCancellationEvent,
+  isPaidPlan,
+  shouldUseStaticCheckout,
+  validateCreatePaymentBody,
+  verifyAbacateSignature,
+  type PaidPlan,
+} from "./src/server/payment";
 
 const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
+
+async function updateProfilePlanFromPayment(event: any) {
+  const url = process.env.VITE_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) throw new Error("Supabase service role não configurado.");
+
+  const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+  const { customer, payment, subscription, userId, plan, referralCode } = extractWebhookMetadata(event);
+  const eventName = String(event?.event || "");
+  const isCancellation = isCancellationEvent(eventName);
+  const isActivation = isActivationEvent(eventName);
+
+  if (!isCancellation && (!isActivation || !isPaidPlan(String(plan)))) {
+    console.log("[abacatepay] Ignoring event:", eventName, "plan:", plan);
+    return;
+  }
+
+  const updatePayload = isCancellation
+    ? { plano: "free", subscriptionStatus: "canceled", updatedAt: new Date().toISOString() }
+    : { plano: plan as PaidPlan, subscriptionStatus: "active", updatedAt: new Date().toISOString() };
+
+  let updateQuery = admin.from("profiles").update(updatePayload);
+  if (userId) {
+    updateQuery = updateQuery.eq("id", userId);
+  } else if (customer?.email) {
+    updateQuery = updateQuery.eq("email", customer.email);
+  } else {
+    throw new Error("Webhook sem userId ou email para localizar o perfil.");
+  }
+
+  const { error } = await updateQuery;
+  if (error) throw error;
+
+  if (!isActivation || !referralCode || !userId || !isPaidPlan(String(plan))) return;
+
+  const { data: affiliate } = await admin
+    .from("affiliates")
+    .select("id")
+    .eq("codigo_afiliado", referralCode)
+    .maybeSingle();
+
+  if (!affiliate) return;
+
+  const { data: existing } = await admin
+    .from("affiliate_conversions")
+    .select("id")
+    .eq("affiliate_id", affiliate.id)
+    .eq("user_id", userId)
+    .eq("plano", plan)
+    .limit(1);
+
+  if (existing && existing.length > 0) return;
+
+  const valorAssinatura = ((payment?.paidAmount || payment?.amount || subscription?.amount || 0) as number) / 100;
+  const valorOriginal = plan === "Pro" ? 19.9 : 29.9;
+
+  await admin.from("affiliate_conversions").insert([{
+    affiliate_id: affiliate.id,
+    user_id: userId,
+    plano: plan,
+    valor_assinatura: valorAssinatura || valorOriginal,
+    valor_comissao: valorOriginal * 0.35,
+    status_pagamento: "pendente",
+  }]);
+}
 
 async function runMigrations() {
   const url = process.env.VITE_SUPABASE_URL;
@@ -49,11 +123,11 @@ async function runMigrations() {
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 8080;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Middleware for JSON bodies
   app.use((req, res, next) => {
-    if (req.originalUrl === '/api/webhook') {
+    if (req.path === "/api/payment-webhook") {
       next();
     } else {
       express.json()(req, res, next);
@@ -101,49 +175,90 @@ async function startServer() {
     }
   });
 
-  // Stripe Checkout Session
-  app.post("/api/create-checkout-session", async (req, res) => {
-    if (!stripe) return res.status(500).json({ error: "STRIPE_SECRET_KEY não configurada" });
-    const { priceId, customerEmail, userId } = req.body;
+  // AbacatePay subscription checkout
+  app.post("/api/create-payment", async (req, res) => {
+    const parsed = validateCreatePaymentBody(req.body);
+    if (parsed.ok === false) return res.status(400).json({ error: parsed.error });
+    const { plan, customerEmail, userId, referralCode } = parsed.value;
+
+    const config = getCheckoutConfig(plan);
+
+    if (shouldUseStaticCheckout(plan)) {
+      return res.json({ url: config.fallbackUrl, provider: "abacatepay", mode: "static-link" });
+    }
 
     try {
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        line_items: [{ price: priceId, quantity: 1 }],
-        mode: "subscription",
-        success_url: `${process.env.APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.APP_URL}/settings`,
-        customer_email: customerEmail,
-        metadata: { userId },
+      const appUrl = process.env.APP_URL || "http://localhost:3000";
+      const externalId = buildExternalId({ userId, plan, referralCode });
+      const response = await fetch(`${ABACATEPAY_API_URL}/subscriptions/create`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.ABACATEPAY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: [{ id: config.productId, quantity: 1 }],
+          externalId,
+          returnUrl: `${appUrl}/settings`,
+          completionUrl: `${appUrl}/dashboard?payment=success&plan=${plan}`,
+          methods: ["CARD"],
+          metadata: {
+            userId,
+            plan,
+            customerEmail,
+            referralCode: referralCode || null,
+          },
+        }),
       });
 
-      res.json({ id: session.id });
+      const data = await response.json();
+      if (!response.ok || !data?.success || !data?.data?.url) {
+        return res.status(500).json({ error: data?.error || "Erro ao criar checkout na AbacatePay." });
+      }
+
+      return res.json({ url: data.data.url, id: data.data.id, provider: "abacatepay", mode: "api" });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message || "Erro ao criar pagamento." });
     }
   });
 
-  // Stripe Webhook
-  app.post("/api/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
-    if (!stripe) return res.status(500).json({ error: "STRIPE_SECRET_KEY não configurada" });
-    const sig = req.headers['stripe-signature'];
-    let event;
+  app.post("/api/create-checkout-session", (req, res) => {
+    res.status(410).json({ error: "Checkout antigo removido. Use /api/create-payment para AbacatePay." });
+  });
 
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        sig as string,
-        process.env.STRIPE_WEBHOOK_SECRET || ""
-      );
-    } catch (err: any) {
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+  // AbacatePay webhook. Configure it as:
+  // https://ironshape.online/api/payment-webhook?webhookSecret=...
+  app.post("/api/payment-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const expectedSecret = process.env.ABACATEPAY_WEBHOOK_SECRET;
+    if (!expectedSecret) {
+      return res.status(500).json({ error: "ABACATEPAY_WEBHOOK_SECRET não configurado." });
+    }
+    if (req.query.webhookSecret !== expectedSecret) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Handle the event (e.g., checkout.session.completed)
-    // In a real app, you'd update Firestore here
-    console.log('Stripe Event:', event.type);
+    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : String(req.body || "");
+    const signature = req.headers["x-webhook-signature"];
+    if (!signature) {
+      return res.status(400).json({ error: "Assinatura ausente." });
+    }
+    const signatureKey = process.env.ABACATEPAY_WEBHOOK_SIGNATURE_KEY || DEFAULT_ABACATEPAY_SIGNATURE_KEY;
+    if (!verifyAbacateSignature(rawBody, signature, signatureKey)) {
+      return res.status(400).json({ error: "Assinatura inválida." });
+    }
 
-    res.json({ received: true });
+    try {
+      const event = JSON.parse(rawBody || "{}");
+      await updateProfilePlanFromPayment(event);
+      return res.json({ received: true });
+    } catch (error: any) {
+      console.error("[abacatepay webhook] error:", error.message);
+      return res.status(500).json({ error: error.message || "Erro ao processar webhook." });
+    }
+  });
+
+  app.post("/api/webhook", (req, res) => {
+    res.status(410).json({ error: "Webhook antigo removido. Use /api/payment-webhook para AbacatePay." });
   });
 
   // AI Meal Plan Generation endpoint
@@ -273,42 +388,147 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     }
   });
 
-  // Workout GIF proxy — ExerciseDB via RapidAPI
+  // Workout media proxy — EDB with videos/images by AscendAPI via RapidAPI.
   app.get("/api/workout-gif", async (req, res) => {
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
     if (!process.env.RAPIDAPI_KEY) return res.status(500).json({ error: "RAPIDAPI_KEY não configurada" });
 
     const rapidApiKey = process.env.RAPIDAPI_KEY;
+    const rapidHost = process.env.RAPIDAPI_HOST || "edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
     const rapidHeaders = {
-      'x-rapidapi-host': 'exercisedb.p.rapidapi.com',
+      'x-rapidapi-host': rapidHost,
       'x-rapidapi-key': rapidApiKey,
     };
 
-    const searchExerciseDB = async (searchName: string) => {
-      const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchName)}?limit=5&offset=0`;
-      console.log(`[workout-gif] Searching ExerciseDB for: "${searchName}"`);
-      const response = await fetch(url, { headers: rapidHeaders });
-      const data = await response.json();
-      console.log(`[workout-gif] Status: ${response.status}, Results: ${Array.isArray(data) ? data.length : JSON.stringify(data).slice(0, 200)}`);
-      if (Array.isArray(data) && data.length > 0) return { status: response.status, data };
+    const pickArray = (payload: any): any[] => {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.data)) return payload.data;
+      if (Array.isArray(payload?.results)) return payload.results;
+      if (Array.isArray(payload?.exercises)) return payload.exercises;
+      if (Array.isArray(payload?.items)) return payload.items;
+      if (payload?.data && Array.isArray(payload.data?.exercises)) return payload.data.exercises;
+      return [];
+    };
+
+    const pickMedia = (item: any): string | null => {
+      const direct = [
+        item?.gifUrl,
+        item?.gif_url,
+        item?.gif,
+        item?.videoUrl,
+        item?.video_url,
+        item?.video,
+        item?.imageUrl,
+        item?.image_url,
+        item?.image,
+        item?.thumbnail,
+      ].find(Boolean);
+      if (typeof direct === "string") return direct;
+      const media = item?.media || item?.assets || {};
+      const nested = [media?.gifUrl, media?.gif, media?.videoUrl, media?.video, media?.imageUrl, media?.image].find(Boolean);
+      if (typeof nested === "string") return nested;
+      const images = item?.images || media?.images;
+      if (Array.isArray(images)) {
+        const first = images.find((img: any) => typeof img === "string" || img?.url || img?.src);
+        if (typeof first === "string") return first;
+        if (first?.url) return first.url;
+        if (first?.src) return first.src;
+      }
+      const videos = item?.videos || media?.videos;
+      if (Array.isArray(videos)) {
+        const first = videos.find((vid: any) => typeof vid === "string" || vid?.url || vid?.src);
+        if (typeof first === "string") return first;
+        if (first?.url) return first.url;
+        if (first?.src) return first.src;
+      }
       return null;
     };
 
-    try {
-      // Try full name first
-      let result = await searchExerciseDB(name);
+    const normalizeMediaResult = (item: any) => ({
+      ...item,
+      name: item?.name || item?.exerciseName || item?.title,
+      gifUrl: item?.gifUrl || pickMedia(item),
+      imageUrl: item?.imageUrl || item?.image_url || item?.image || pickMedia(item),
+      videoUrl: item?.videoUrl || item?.video_url || item?.video,
+    });
 
-      // Fallback: try first two words (e.g. "barbell bench press" → "barbell bench")
-      if (!result && name.includes(' ')) {
-        const twoWords = name.split(' ').slice(0, 2).join(' ');
-        result = await searchExerciseDB(twoWords);
+    const fetchExerciseDetail = async (item: any) => {
+      if (!rapidHost.includes("ascendapi") || !item?.exerciseId) return item;
+      try {
+        const url = `https://${rapidHost}/api/v1/exercises/${encodeURIComponent(item.exerciseId)}`;
+        const response = await fetch(url, { headers: rapidHeaders });
+        if (!response.ok) return item;
+        const payload = await response.json();
+        return { ...item, ...(payload?.data || payload) };
+      } catch (error: any) {
+        console.warn(`[workout-gif] Detail fetch failed for ${item.exerciseId}:`, error?.message);
+        return item;
       }
+    };
 
-      // Fallback: try first word only (e.g. "barbell")
-      if (!result && name.includes(' ')) {
-        const oneWord = name.split(' ')[0];
-        result = await searchExerciseDB(oneWord);
+    const normalizeSearchText = (value: string) =>
+      value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+
+    const scoreResult = (item: any, searchName: string) => {
+      const itemName = normalizeSearchText(String(item?.name || ""));
+      const query = normalizeSearchText(searchName);
+      const words = query.split(" ").filter(word => word.length > 2);
+      let score = 0;
+      if (itemName === query) score += 100;
+      if (itemName.includes(query)) score += 60;
+      for (const word of words) {
+        if (itemName.includes(word)) score += 12;
+      }
+      if (pickMedia(item)) score += 8;
+      if (itemName.includes("neck") && !query.includes("neck")) score -= 30;
+      if (itemName.includes("calf") && !query.includes("calf")) score -= 20;
+      return score;
+    };
+
+    const searchRapidApi = async (searchName: string) => {
+      const url = rapidHost.includes("ascendapi")
+        ? `https://${rapidHost}/api/v1/exercises/search?search=${encodeURIComponent(searchName)}`
+        : `https://${rapidHost}/exercises/name/${encodeURIComponent(searchName)}?limit=5&offset=0`;
+      console.log(`[workout-gif] Searching ${rapidHost} for: "${searchName}"`);
+      const response = await fetch(url, { headers: rapidHeaders });
+      const data = await response.json();
+      const listBase = pickArray(data)
+        .map(normalizeMediaResult)
+        .sort((a, b) => scoreResult(b, searchName) - scoreResult(a, searchName));
+      const list = (await Promise.all(listBase.slice(0, 5).map(fetchExerciseDetail)))
+        .map(normalizeMediaResult);
+      console.log(`[workout-gif] Status: ${response.status}, Results: ${list.length}`);
+      if (response.ok && list.length > 0) return { status: response.status, data: list.slice(0, 5) };
+      return null;
+    };
+
+    const fallbackQueries: Record<string, string[]> = {
+      "cable seated row": ["seated row", "lever seated row", "barbell bent over row", "dumbbell bent over row", "row"],
+      "superman": ["superman", "back extension", "hyperextension"],
+      "cable straight arm pulldown": ["straight arm pulldown", "cable pulldown", "lat pulldown", "pulldown"],
+      "chair squat": ["bodyweight squat", "squat"],
+      "wall push up": ["push up", "knee push up"],
+      "incline push up": ["push up", "knee push up"],
+      "glute bridge": ["glute bridge", "hip thrust"],
+      "dead bug": ["dead bug", "crunch"],
+      "incline plank": ["plank"],
+      "side plank": ["side plank", "plank"],
+      "resistance band row": ["seated row", "barbell bent over row", "dumbbell bent over row", "row"],
+    };
+
+    try {
+      const normalized = name.toLowerCase().trim();
+      const candidates = [
+        name,
+        ...(fallbackQueries[normalized] || []),
+        ...(name.includes(' ') ? [name.split(' ').slice(0, 2).join(' '), name.split(' ')[0]] : []),
+      ].filter((query, index, arr) => query && arr.indexOf(query) === index);
+
+      let result: Awaited<ReturnType<typeof searchRapidApi>> = null;
+      for (const query of candidates) {
+        result = await searchRapidApi(query);
+        if (result) break;
       }
 
       if (result) return res.status(result.status).json(result.data);

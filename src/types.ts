@@ -33,7 +33,7 @@ export interface UserProfile {
   plano: Plan; // Renamed from plan
   role: 'user' | 'admin';
   subscriptionStatus: 'active' | 'inactive' | 'canceled';
-  stripeCustomerId?: string;
+  paymentCustomerId?: string;
   criado_em: string; // Renamed from createdAt
   updatedAt: string;
   points: number;

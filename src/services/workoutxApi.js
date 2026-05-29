@@ -37,7 +37,11 @@ export async function searchExercisesByName(name) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.message || `Erro ${res.status}`);
   }
-  return res.json();
+  const data = await res.json();
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    return { ...data, query: nameEn };
+  }
+  return data;
 }
 
 export function getExerciseById(id) {

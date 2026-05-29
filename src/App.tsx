@@ -1,12 +1,18 @@
-import { useState, useEffect, Component, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
-import { UserProfile, NutritionPreferences, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
+import { UserProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
 import { searchExercisesByName } from './services/workoutxApi';
+import { getLocalExerciseMedia, translateExerciseName } from './utils/exerciseTranslations';
 import AIChat from './AIChat';
+import { DashboardMetricCard } from './components/dashboardCards';
+import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
+import { MobileNavItem, NavItem } from './components/navigation';
+import { PlanSimulator } from './components/PlanSimulator';
+import { PHYSICAL_LIMITATION_OPTIONS } from './data/physicalLimitations';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Dumbbell, 
@@ -71,10 +77,151 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
 
+function getEntitledPlan(profile?: Pick<UserProfile, 'plano' | 'subscriptionStatus'> | null, simulatedPlan?: Plan | null): Plan {
+  if (simulatedPlan) return simulatedPlan;
+  const plan = profile?.plano || 'free';
+  if ((plan === 'Pro' || plan === 'Elite') && profile?.subscriptionStatus !== 'active') {
+    return 'Iniciante';
+  }
+  return plan;
+}
+
+function slugifyText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function buildExercise(
+  id: string,
+  name: string,
+  muscleGroup: MuscleGroup,
+  series: number,
+  reps: string,
+  restTime: string,
+  description: string,
+  limitation?: string
+): Exercise {
+  const hasLimitation = !!limitation && limitation !== 'Nenhuma';
+  return {
+    id,
+    name,
+    muscleGroup,
+    series,
+    reps,
+    restTime,
+    description,
+    instructions: [
+      'Faça um aquecimento leve antes de começar.',
+      'Execute o movimento com controle, sem prender a respiração.',
+      hasLimitation ? `Respeite a limitação marcada: ${limitation}. Pare se sentir dor.` : 'Mantenha postura firme e amplitude confortável.',
+    ],
+    proTips: [
+      hasLimitation
+        ? 'Priorize controle e conforto articular antes de aumentar repetições.'
+        : 'Quando completar todas as séries com facilidade, aumente repetições ou tempo sob tensão.',
+    ],
+    commonErrors: [
+      'Apressar o movimento e perder alinhamento do corpo.',
+    ],
+  };
+}
+
+function buildHomeWorkouts(
+  profile: UserProfile,
+  onboarding: any,
+  plan: Plan,
+  level: Level
+): Workout[] {
+  const goal = String(profile.goal || '').toLowerCase();
+  const equipment = Array.isArray(onboarding?.homeEquipment) ? onboarding.homeEquipment : [];
+  const hasDumbbells = equipment.includes('Halteres');
+  const hasElastic = equipment.includes('Elástico');
+  const hasBar = equipment.includes('Barra fixa');
+  const hasBench = equipment.includes('Banco/cadeira');
+  const limitation = onboarding?.limitations || 'Nenhuma';
+  const hasLimitation = limitation !== 'Nenhuma';
+  const series = level === 'Avançado' ? 4 : level === 'Intermediário' ? 3 : 2;
+  const duration = level === 'Avançado' ? '45 min' : level === 'Intermediário' ? '35 min' : '25 min';
+  const carga: Workout['carga'] = level === 'Avançado' ? 'Alta' : level === 'Intermediário' ? 'Média' : 'Baixa';
+  const reps = goal.includes('emagrec') || goal.includes('condicion') ? '12-18 reps' : goal.includes('força') ? '6-10 reps' : '10-15 reps';
+  const rest = goal.includes('emagrec') || goal.includes('condicion') ? '30s' : '60s';
+  const planRequired = plan === 'free' ? 'Iniciante' : plan;
+
+  const mobilityFirst = hasLimitation
+    ? buildExercise('home-mobility-safe', 'Mobilidade leve sem dor', 'Full Body', 2, '6-8 movimentos', '30s', 'Preparação articular para treinar em casa com segurança.', limitation)
+    : buildExercise('home-mobility', 'Mobilidade dinâmica', 'Full Body', 2, '8-10 movimentos', '30s', 'Ativa quadril, tornozelo, coluna torácica e ombros antes do treino.', limitation);
+
+  const library: Record<MuscleGroup, Exercise[]> = {
+    'Peito': [
+      buildExercise('home-pushup-incline', hasBench ? 'Flexão inclinada no banco/cadeira' : 'Flexão inclinada na parede', 'Peito', series, reps, rest, 'Variação de flexão ajustável para peito, tríceps e core.', limitation),
+      buildExercise('home-pushup-control', hasLimitation ? 'Flexão parcial controlada' : 'Flexão tradicional controlada', 'Peito', series, reps, rest, 'Movimento base para ganhar força de empurrar sem máquinas.', limitation),
+      buildExercise('home-chest-squeeze', hasDumbbells ? 'Supino no chão com halteres' : 'Pressão isométrica de palmas', 'Peito', series, '10-14 reps', rest, 'Estimula peitoral com baixa necessidade de equipamento.', limitation),
+    ],
+    'Costas': [
+      buildExercise('home-row', hasElastic ? 'Remada com elástico' : hasDumbbells ? 'Remada unilateral com halter' : 'Remada isométrica com toalha', 'Costas', series, reps, rest, 'Fortalece dorsais e melhora postura para compensar o treino de empurrar.', limitation),
+      buildExercise('home-scapula', 'Retração escapular no chão', 'Costas', series, '12-15 reps', '45s', 'Ativa musculatura das costas com pouca sobrecarga na lombar.', limitation),
+      buildExercise('home-pull', hasBar ? 'Barra fixa assistida' : 'Pulldown com toalha/elástico', 'Costas', series, '6-12 reps', rest, 'Puxada vertical adaptada ao equipamento disponível.', limitation),
+    ],
+    'Pernas': [
+      buildExercise('home-squat', hasLimitation ? 'Agachamento curto na cadeira' : hasDumbbells ? 'Agachamento goblet' : 'Agachamento livre', 'Pernas', series, reps, rest, 'Base para pernas e glúteos, ajustando amplitude conforme conforto.', limitation),
+      buildExercise('home-hip-hinge', hasDumbbells ? 'Levantamento romeno com halteres' : 'Bom dia sem carga', 'Pernas', series, '10-14 reps', rest, 'Fortalece posterior de coxa e glúteos com controle de tronco.', limitation),
+      buildExercise('home-glute-bridge', 'Elevação pélvica no chão', 'Pernas', series, '12-20 reps', '45s', 'Ótima opção para glúteos e estabilidade sem impacto.', limitation),
+    ],
+    'Ombros': [
+      buildExercise('home-shoulder-press', hasDumbbells ? 'Desenvolvimento com halteres' : hasElastic ? 'Desenvolvimento com elástico' : 'Elevação frontal sem carga', 'Ombros', series, '10-14 reps', rest, 'Trabalha ombros com carga ajustável para ambiente doméstico.', limitation),
+      buildExercise('home-lateral-raise', hasDumbbells ? 'Elevação lateral com halteres' : 'Elevação lateral isométrica', 'Ombros', series, '12-16 reps', '45s', 'Foco em deltoide lateral, sem precisar de máquina.', limitation),
+      buildExercise('home-wall-slide', 'Wall slide', 'Ombros', series, '8-12 reps', '30s', 'Melhora controle escapular e mobilidade de ombros.', limitation),
+    ],
+    'Braços': [
+      buildExercise('home-curl', hasDumbbells ? 'Rosca direta com halteres' : hasElastic ? 'Rosca com elástico' : 'Rosca isométrica com toalha', 'Braços', series, '10-15 reps', rest, 'Bíceps em casa usando o equipamento disponível.', limitation),
+      buildExercise('home-triceps', hasBench ? 'Tríceps no banco com amplitude curta' : 'Tríceps testa no chão sem carga', 'Braços', series, '10-14 reps', rest, 'Tríceps com variação controlada para evitar desconforto no ombro.', limitation),
+      buildExercise('home-carry', hasDumbbells ? 'Farmer hold com halteres' : 'Aperto isométrico de toalha', 'Braços', series, '20-40s', '45s', 'Fortalece pegada, antebraço e estabilidade.', limitation),
+    ],
+    'Abdômen': [
+      buildExercise('home-plank', hasLimitation ? 'Prancha elevada' : 'Prancha frontal', 'Abdômen', series, '20-45s', '45s', 'Core anti-extensão para proteger lombar e melhorar estabilidade.', limitation),
+      buildExercise('home-dead-bug', 'Dead bug', 'Abdômen', series, '8-12 por lado', '45s', 'Controle de core com baixa sobrecarga lombar.', limitation),
+      buildExercise('home-side-plank', 'Prancha lateral adaptada', 'Abdômen', series, '15-35s por lado', '45s', 'Fortalece oblíquos e estabilidade lateral.', limitation),
+    ],
+    'Full Body': [
+      mobilityFirst,
+      buildExercise('home-circuit-squat', hasLimitation ? 'Sentar e levantar da cadeira' : 'Agachamento + alcance', 'Full Body', series, reps, rest, 'Movimento global para ativar pernas, core e coordenação.', limitation),
+      buildExercise('home-circuit-push', hasBench ? 'Flexão inclinada' : 'Flexão na parede', 'Full Body', series, reps, rest, 'Empurrar seguro para treino geral em casa.', limitation),
+      buildExercise('home-circuit-row', hasElastic ? 'Remada com elástico' : 'Retração escapular', 'Full Body', series, reps, rest, 'Puxada/postura para equilibrar o protocolo.', limitation),
+      buildExercise('home-circuit-core', 'Dead bug ou prancha elevada', 'Full Body', series, '8-12 reps', '45s', 'Finaliza com estabilidade de core.', limitation),
+    ],
+  };
+
+  const preferredGroups: MuscleGroup[] = (() => {
+    if (goal.includes('emagrec') || goal.includes('condicion')) return ['Full Body', 'Pernas', 'Abdômen', 'Costas'];
+    if (goal.includes('força')) return ['Full Body', 'Pernas', 'Peito', 'Costas'];
+    if (goal.includes('mobilidade') || goal.includes('saúde')) return ['Full Body', 'Costas', 'Abdômen', 'Pernas'];
+    return ['Full Body', 'Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen'];
+  })();
+
+  const goalLabel = profile.goal || 'Treino';
+  return preferredGroups.map((group, index) => ({
+    id: `home-${slugifyText(goalLabel)}-${slugifyText(group)}-${slugifyText(level)}`,
+    name: group === 'Full Body' ? `Casa ${goalLabel}` : `Casa ${group}`,
+    description: `Treino em casa para ${goalLabel.toLowerCase()}, adaptado ao equipamento informado e às limitações do usuário.`,
+    muscleGroup: group,
+    level,
+    duration,
+    carga,
+    exercises: library[group].slice(0, group === 'Full Body' ? 5 : 3),
+    planRequired,
+    authorUid: `home-protocol-${index}`,
+  }));
+}
+
 export default function App() {
   const { user, profile, loading, profileLoading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPricing, setShowPricing] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
   const [initTimeout, setInitTimeout] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -160,7 +307,7 @@ export default function App() {
     );
   }
 
-  const effectivePlan = simulatedPlan || profile?.plano || 'free';
+  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
   if (loading && !initTimeout) {
     return <LoadingScreen onRetry={() => initSession()} />;
@@ -229,14 +376,27 @@ export default function App() {
         user={user}
         profile={profile}
         onComplete={(plan) => {
-          if (plan !== 'Iniciante') setShowPricing(true);
+          if (plan !== 'Iniciante') {
+            setCheckoutPlan(plan);
+            setShowPricing(true);
+          }
         }}
       />
     );
   }
 
   if (showPricing) {
-    return <PricingView onBack={() => setShowPricing(false)} onUpgrade={updatePlan} currentPlan={effectivePlan} />;
+    return (
+      <PricingView
+        onBack={() => {
+          setCheckoutPlan(null);
+          setShowPricing(false);
+        }}
+        onUpgrade={updatePlan}
+        currentPlan={effectivePlan}
+        initialCheckoutPlan={checkoutPlan}
+      />
+    );
   }
 
   return (
@@ -271,7 +431,7 @@ export default function App() {
 
         <div className="hidden md:flex md:flex-col md:gap-8 md:mt-auto md:mb-12 w-full items-center">
           <button
-            onClick={() => setShowPricing(true)}
+            onClick={() => { setCheckoutPlan(null); setShowPricing(true); }}
             className={`p-3 rounded-2xl transition-all duration-300 ${effectivePlan === 'free' ? 'text-primary bg-primary/10 animate-pulse' : 'text-text-muted hover:text-primary hover:bg-primary/10'}`}
             title="Planos"
           >
@@ -366,6 +526,10 @@ export default function App() {
           transform: drawerOpen ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform .35s cubic-bezier(.32,.72,.32,1)',
           paddingBottom: 'env(safe-area-inset-bottom)',
+          maxHeight: 'min(76vh, 560px)',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          visibility: drawerOpen ? 'visible' : 'hidden',
         }}
         onTouchStart={(e) => { (e.currentTarget as any)._ty = e.touches[0].clientY; }}
         onTouchMove={(e) => {
@@ -378,7 +542,7 @@ export default function App() {
           <div className="rounded-full" style={{ width: 44, height: 4, background: 'rgba(255,255,255,0.18)' }} />
         </div>
 
-        <div className="px-5 pt-3 pb-6 space-y-5">
+        <div className="px-4 sm:px-5 pt-3 pb-6 space-y-5">
           {/* Header */}
           <div>
             <p className="text-base font-bold text-text-primary">Mais opções</p>
@@ -386,7 +550,7 @@ export default function App() {
           </div>
 
           {/* Grid of items */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
             {[
               { tab: 'community',  icon: <Users size={20} />,      label: 'Social',    desc: 'Feed e comunidade' },
               { tab: 'affiliates', icon: <Wallet size={20} />,     label: 'Afiliados', desc: 'Comissões e links' },
@@ -396,7 +560,7 @@ export default function App() {
               <button
                 key={item.tab}
                 onClick={() => { setActiveTab(item.tab); setDrawerOpen(false); }}
-                className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all active:scale-95"
+                className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all active:scale-95 min-h-[68px]"
                 style={{ background: 'rgba(255,255,255,0.04)', border: activeTab === item.tab ? '1px solid rgba(255,107,26,0.4)' : '1px solid rgba(255,255,255,0.06)' }}
               >
                 <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.05)', color: activeTab === item.tab ? '#ff6b1a' : '#8a8a92' }}>
@@ -416,7 +580,7 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <main className="md:pl-24 md:pb-0 min-h-screen" style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}>
+      <main className="md:pl-24 md:pb-0 min-h-screen overflow-x-hidden" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -424,80 +588,27 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className={`p-4 md:p-8 max-w-7xl mx-auto${isAdmin ? ' pt-16 md:pt-16' : ''}`}
+            className={`px-4 py-5 sm:p-6 md:p-8 max-w-7xl mx-auto${isAdmin ? ' pt-16 md:pt-16' : ''}`}
           >
             {activeTab === 'dashboard' && (
               <DashboardView 
                 profile={profile} 
-                onUpgrade={() => setShowPricing(true)} 
+                onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }}
                 onStartWorkout={() => setActiveTab('workouts')}
                 onViewNutrition={() => setActiveTab('nutrition')}
               />
             )}
-            {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => setShowPricing(true)} /></ViewErrorBoundary>}
-            {activeTab === 'nutrition' && <NutritionView profile={profile} onUpgrade={() => setShowPricing(true)} updateProfile={updateProfile} />}
+            {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }} /></ViewErrorBoundary>}
+            {activeTab === 'nutrition' && <NutritionView profile={profile} onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }} updateProfile={updateProfile} />}
             {activeTab === 'progress' && <BodyProgressView userId={profile.id} />}
             {activeTab === 'community' && <CommunityView profile={profile} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} />}
-            {activeTab === 'settings' && <SettingsView profile={profile} logout={logout} onUpgrade={() => setShowPricing(true)} />}
+            {activeTab === 'settings' && <SettingsView profile={profile} logout={logout} onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }} />}
             {activeTab === 'admin' && isAdmin && <AdminView />}
           </motion.div>
         </AnimatePresence>
       </main>
     </div>
-  );
-}
-
-function NavItem({ icon, active, onClick, label }: { icon: React.ReactNode, active: boolean, onClick: () => void, label: string }) {
-  return (
-    <button 
-      onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 transition-all duration-500 group relative flex-1 md:flex-none ${active ? 'text-primary' : 'text-text-muted hover:text-text-primary'}`}
-    >
-      <div className={`p-2.5 md:p-3 rounded-2xl transition-all duration-500 relative ${active ? 'bg-primary/10 shadow-[0_0_20px_rgba(255,106,0,0.1)]' : 'group-hover:bg-white/5'}`}>
-        {icon}
-        {active && (
-          <motion.div 
-            layoutId="nav-glow"
-            className="absolute inset-0 bg-primary/20 blur-xl rounded-full -z-10"
-          />
-        )}
-      </div>
-      <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.15em] transition-all duration-500 ${active ? 'opacity-100' : 'opacity-50'}`}>
-        {label}
-      </span>
-      {active && (
-        <motion.div 
-          layoutId="nav-indicator"
-          className="absolute -right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-l-full hidden md:block"
-        />
-      )}
-    </button>
-  );
-}
-
-
-function MobileNavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex-1 flex flex-col items-center justify-center gap-[5px] relative h-full"
-      style={{ minHeight: 44 }}
-    >
-      {active && (
-        <span
-          className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-full"
-          style={{ width: 28, height: 3, background: '#ff6b1a' }}
-        />
-      )}
-      <span style={{ color: active ? '#ff6b1a' : '#8a8a92' }}>{icon}</span>
-      <span
-        className="text-[11px] leading-none"
-        style={{ color: active ? '#ff6b1a' : '#8a8a92', fontWeight: active ? 700 : 500 }}
-      >
-        {label}
-      </span>
-    </button>
   );
 }
 
@@ -1546,27 +1657,128 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
     weight: (profile?.weight && profile.weight > 0) ? profile.weight : 70,
     height: (profile?.height && profile.height > 0) ? profile.height : 175,
     goal: profile?.goal || 'Hipertrofia',
-    plano: (profile?.plano && profile.plano !== 'free') ? profile.plano : 'Iniciante' as any
+    trainingPlace: 'home' as 'home' | 'gym' | 'hybrid',
+    experience: 'Iniciante',
+    daysPerWeek: 3,
+    sessionDuration: '30-45 min',
+    homeEquipment: [] as string[],
+    gymFocus: [] as string[],
+    limitations: 'Nenhuma',
+    plano: getEntitledPlan(profile) === 'free' ? 'Iniciante' : getEntitledPlan(profile) as Plan
   });
+
+  const toggleListValue = (key: 'homeEquipment' | 'gymFocus', value: string, max = 4) => {
+    setFormData(prev => {
+      const current = prev[key];
+      if (value === 'Nenhum') return { ...prev, [key]: current.includes('Nenhum') ? [] : ['Nenhum'] };
+      const cleaned = current.filter(v => v !== 'Nenhum');
+      if (cleaned.includes(value)) return { ...prev, [key]: cleaned.filter(v => v !== value) };
+      return { ...prev, [key]: [...cleaned, value].slice(0, max) };
+    });
+  };
+
+  const recommendation = (() => {
+    const home = formData.trainingPlace === 'home';
+    const hybrid = formData.trainingPlace === 'hybrid';
+    const hasEquipment = formData.homeEquipment.some(e => e !== 'Nenhum');
+    const isBeginner = formData.experience === 'Iniciante';
+    const hasLimitation = formData.limitations !== 'Nenhuma';
+    const title = home
+      ? `Protocolo Casa ${isBeginner ? 'Base' : 'Performance'}`
+      : hybrid
+      ? 'Protocolo Híbrido Inteligente'
+      : `Protocolo Academia ${formData.goal}`;
+    const weeklySplit = home
+      ? ['Mobilidade + Full Body', 'Core + Condicionamento', 'Pernas + Flexões']
+      : hybrid
+      ? ['Academia: Força Base', 'Casa: Mobilidade e Core', 'Academia: Hipertrofia', 'Casa: Cardio técnico']
+      : formData.daysPerWeek >= 5
+      ? ['Push', 'Pull', 'Legs', 'Upper', 'Braços/Core']
+      : ['Full Body A', 'Full Body B', 'Pernas + Core'];
+    const exercises = home
+      ? [
+          hasLimitation ? 'Mobilidade leve respeitando a limitação' : 'Mobilidade de quadril e tornozelo',
+          hasEquipment ? 'Agachamento goblet ou mochila' : 'Agachamento livre controlado',
+          'Flexão inclinada ou tradicional',
+          'Prancha frontal',
+          hasEquipment ? 'Remada com elástico/halter' : 'Superman + retração escapular',
+        ]
+      : [
+          hasLimitation ? 'Aquecimento articular sem dor' : 'Aquecimento articular',
+          'Exercício composto principal',
+          'Acessório para grupo prioritário',
+          'Core anti-rotação',
+          'Finalizador metabólico leve',
+        ];
+    const baseWhy = home
+      ? 'Escolhi baixo atrito, progressão por repetições e movimentos seguros para treinar sem depender de máquinas.'
+      : hybrid
+      ? 'Mistura estímulos fortes da academia com sessões em casa para manter consistência mesmo em semanas corridas.'
+      : 'A divisão prioriza volume, máquinas/cargas e recuperação para evoluir com estrutura de academia.';
+    const why = hasLimitation
+      ? `${baseWhy} Como você marcou ${formData.limitations.toLowerCase()}, o treino deve evitar dor, impacto excessivo e amplitudes desconfortáveis.`
+      : baseWhy;
+
+    return {
+      title,
+      weeklySplit: weeklySplit.slice(0, formData.daysPerWeek),
+      exercises,
+      why,
+      tags: [
+        formData.trainingPlace === 'home' ? 'Casa' : formData.trainingPlace === 'gym' ? 'Academia' : 'Híbrido',
+        formData.experience,
+        `${formData.daysPerWeek}x/semana`,
+        formData.sessionDuration,
+        ...(hasLimitation ? [formData.limitations] : []),
+      ],
+    };
+  })();
 
   const handleSubmit = async () => {
     setError(null);
     setIsSubmitting(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      const { plano, ...rest } = formData;
+      const { plano, trainingPlace, experience, daysPerWeek, sessionDuration, homeEquipment, gymFocus, limitations, ...rest } = formData;
+      const isPaidPlan = plano === 'Pro' || plano === 'Elite';
+      const activePlan: Plan = isPaidPlan ? 'Iniciante' : plano;
+      const onboardingProfile = {
+        trainingPlace,
+        experience,
+        daysPerWeek,
+        sessionDuration,
+        homeEquipment,
+        gymFocus,
+        limitations,
+        requestedPlan: plano,
+        activePlan,
+        recommendation,
+        savedAt: new Date().toISOString(),
+      };
+      if (user?.id) {
+        localStorage.setItem(`training_onboarding_${user.id}`, JSON.stringify(onboardingProfile));
+        if (isPaidPlan) localStorage.setItem(`pending_checkout_plan_${user.id}`, plano);
+      }
       try {
-        await updateProfile({ ...formData, updatedAt: new Date().toISOString() } as any);
+        await updateProfile({
+          name: formData.name,
+          age: formData.age,
+          weight: formData.weight,
+          height: formData.height,
+          goal: formData.goal,
+          plano: activePlan,
+          subscriptionStatus: 'inactive',
+          updatedAt: new Date().toISOString()
+        } as any);
       } catch (firstErr: any) {
         const msg = firstErr?.message || '';
         if (msg.includes('schema cache') || msg.includes('plano')) {
-          // Coluna 'plano' não existe no banco ainda — salva o restante e guarda plano localmente
           try {
             await updateProfile({ ...rest, updatedAt: new Date().toISOString() } as any);
           } catch {
-            // Se ainda falhar, salva pelo menos no localStorage para o usuário entrar
+            // Perfil local já tem a recomendação salva; próxima visita tenta sincronizar novamente.
           }
-          if (user) localStorage.setItem(`pending_plan_${user.id}`, plano);
+          if (user && isPaidPlan) localStorage.setItem(`pending_checkout_plan_${user.id}`, plano);
         } else {
           throw firstErr;
         }
@@ -1587,45 +1799,37 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
 
   const isStep1Valid = formData.name.trim().length > 0 && formData.age > 0;
   const isStep2Valid = formData.weight > 0 && formData.height > 0 && formData.goal.length > 0;
-  const isFormValid = isStep1Valid && isStep2Valid && formData.plano.length > 0;
+  const isStep3Valid = !!formData.trainingPlace;
+  const isStep4Valid = formData.trainingPlace === 'gym' ? formData.gymFocus.length > 0 : formData.homeEquipment.length > 0;
+  const isFormValid = isStep1Valid && isStep2Valid && isStep3Valid && isStep4Valid && formData.plano.length > 0;
+  const totalSteps = 5;
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-surface rounded-3xl p-8 border border-white/5 shadow-2xl">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold">Configure seu Perfil</h2>
-          <span className="text-primary font-mono text-sm">Passo {step}/3</span>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6">
+      <div className="max-w-2xl w-full bg-surface rounded-[32px] p-6 sm:p-8 border border-white/5 shadow-2xl max-h-[92vh] overflow-y-auto">
+        <div className="flex justify-between items-start gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Monte seu treino ideal</h2>
+            <p className="text-text-muted text-sm mt-2">Responda em menos de um minuto para receber um protocolo inicial.</p>
+          </div>
+          <span className="text-primary font-mono text-sm shrink-0">Passo {step}/{totalSteps}</span>
+        </div>
+
+        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-8">
+          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(step / totalSteps) * 100}%` }} />
         </div>
 
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <div>
               <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Nome Completo</label>
-              <input 
-                type="text" 
-                placeholder="Ex: João Silva"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
-              />
+              <input type="text" placeholder="Ex: João Silva" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary outline-none transition-all shadow-inner min-h-[56px]" />
             </div>
             <div>
               <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Idade</label>
-              <input
-                type="number"
-                placeholder="Ex: 25"
-                value={formData.age || ''}
-                onChange={(e) => setFormData({...formData, age: parseInt(e.target.value) || 0})}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
-              />
+              <input type="number" placeholder="Ex: 25" value={formData.age || ''} onChange={(e) => setFormData({...formData, age: parseInt(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary outline-none transition-all shadow-inner min-h-[56px]" />
             </div>
-            <button 
-              onClick={() => setStep(2)} 
-              disabled={!isStep1Valid}
-              className="w-full bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary/20 active:scale-[0.98]"
-            >
-              Próximo
-            </button>
+            <button onClick={() => setStep(2)} disabled={!isStep1Valid} className="w-full bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary/20 active:scale-[0.98]">Próximo</button>
           </motion.div>
         )}
 
@@ -1634,89 +1838,147 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Peso (kg)</label>
-                <input
-                  type="number"
-                  placeholder="Ex: 70"
-                  value={formData.weight || ''}
-                  onChange={(e) => setFormData({...formData, weight: parseInt(e.target.value) || 0})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
-                />
+                <input type="number" value={formData.weight || ''} onChange={(e) => setFormData({...formData, weight: parseInt(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base focus:border-primary outline-none transition-all shadow-inner min-h-[56px]" />
               </div>
               <div>
                 <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Altura (cm)</label>
-                <input
-                  type="number"
-                  placeholder="Ex: 175"
-                  value={formData.height || ''}
-                  onChange={(e) => setFormData({...formData, height: parseInt(e.target.value) || 0})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner min-h-[56px]"
-                />
+                <input type="number" value={formData.height || ''} onChange={(e) => setFormData({...formData, height: parseInt(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base focus:border-primary outline-none transition-all shadow-inner min-h-[56px]" />
               </div>
             </div>
             <div>
-              <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Seu Objetivo</label>
-              <div className="relative">
-                <select 
-                  value={formData.goal}
-                  onChange={(e) => setFormData({...formData, goal: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-text-primary text-base focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none cursor-pointer shadow-inner min-h-[56px]"
-                >
-                  <option value="Hipertrofia" className="bg-surface">Hipertrofia</option>
-                  <option value="Emagrecimento" className="bg-surface">Emagrecimento</option>
-                  <option value="Condicionamento" className="bg-surface">Condicionamento</option>
-                  <option value="Força" className="bg-surface">Força</option>
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-                  <ChevronRight size={18} className="rotate-90" />
-                </div>
+              <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Seu objetivo principal</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Hipertrofia', 'Emagrecimento', 'Condicionamento', 'Força', 'Mobilidade', 'Saúde geral'].map(goal => (
+                  <button key={goal} onClick={() => setFormData({...formData, goal})} className={`min-h-[52px] rounded-2xl border px-4 text-sm font-black transition-all ${formData.goal === goal ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}>
+                    {goal}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="flex gap-4">
               <button onClick={() => setStep(1)} className="flex-1 bg-white/5 text-text-secondary font-bold py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/5">Voltar</button>
-              <button 
-                onClick={() => setStep(3)} 
-                disabled={!isStep2Valid}
-                className="flex-1 bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary/20 active:scale-[0.98]"
-              >
-                Próximo
-              </button>
+              <button onClick={() => setStep(3)} disabled={!isStep2Valid} className="flex-1 bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary/20 active:scale-[0.98]">Próximo</button>
             </div>
           </motion.div>
         )}
 
         {step === 3 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-            <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Escolha seu Plano Inicial</label>
-            <div className="space-y-3">
-              {['Iniciante', 'Pro', 'Elite'].map((p) => (
-                <button 
-                  key={p}
-                  onClick={() => setFormData({...formData, plano: p as any})}
-                  className={`w-full p-5 rounded-2xl border transition-all text-left flex justify-between items-center group relative overflow-hidden ${formData.plano === p ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                >
-                  <div className="flex flex-col relative z-10">
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-lg">{p}</span>
-                      {p === 'Iniciante' && (
-                        <span className="bg-success/20 text-success text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">GRÁTIS</span>
-                      )}
-                      {p === 'Pro' && (
-                        <span className="bg-primary/20 text-primary text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">POPULAR</span>
-                      )}
-                    </div>
-                    <span className="text-[10px] uppercase tracking-widest opacity-60">
-                      {p === 'Iniciante' ? 'Básico • GRATUITO' : p === 'Pro' ? 'IA + Histórico • R$19,90' : 'Consultoria • R$29,90'}
-                    </span>
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-text-muted mb-3 font-bold">Onde você prefere treinar?</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { id: 'home', title: 'Em casa', desc: 'Sem depender de máquinas' },
+                  { id: 'gym', title: 'Academia', desc: 'Cargas, máquinas e evolução' },
+                  { id: 'hybrid', title: 'Os dois', desc: 'Flexível para rotina corrida' },
+                ].map(option => (
+                  <button key={option.id} onClick={() => setFormData({...formData, trainingPlace: option.id as any})} className={`p-5 rounded-2xl border text-left transition-all min-h-[132px] ${formData.trainingPlace === option.id ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}>
+                    <Dumbbell size={22} className="mb-4" />
+                    <div className="font-black text-lg">{option.title}</div>
+                    <div className="text-xs text-text-muted mt-1">{option.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Nível</label>
+                <CustomSelect value={formData.experience} onChange={(v) => setFormData({...formData, experience: v})} options={['Iniciante', 'Intermediário', 'Avançado'].map(v => ({ value: v, label: v }))} />
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Dias/semana</label>
+                <CustomSelect value={String(formData.daysPerWeek)} onChange={(v) => setFormData({...formData, daysPerWeek: parseInt(v)})} options={[3,4,5,6].map(v => ({ value: String(v), label: `${v} dias` }))} />
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Tempo</label>
+                <CustomSelect value={formData.sessionDuration} onChange={(v) => setFormData({...formData, sessionDuration: v})} options={['20-30 min', '30-45 min', '45-60 min', '60+ min'].map(v => ({ value: v, label: v }))} />
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => setStep(2)} className="flex-1 bg-white/5 text-text-secondary font-bold py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/5">Voltar</button>
+              <button onClick={() => setStep(4)} disabled={!isStep3Valid} className="flex-1 bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all disabled:opacity-30 shadow-lg shadow-primary/20">Próximo</button>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 4 && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+            {(formData.trainingPlace === 'home' || formData.trainingPlace === 'hybrid') && (
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-text-muted mb-3 font-bold">O que você tem para treinar em casa?</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {['Nenhum', 'Halteres', 'Elástico', 'Barra fixa', 'Banco/cadeira', 'Colchonete'].map(item => (
+                    <button key={item} onClick={() => toggleListValue('homeEquipment', item)} className={`min-h-[54px] rounded-2xl border px-3 text-xs font-black uppercase tracking-widest transition-all ${formData.homeEquipment.includes(item) ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}>
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(formData.trainingPlace === 'gym' || formData.trainingPlace === 'hybrid') && (
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-text-muted mb-3 font-bold">Quais grupos quer priorizar?</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen'].map(item => (
+                    <button key={item} onClick={() => toggleListValue('gymFocus', item, 3)} className={`min-h-[54px] rounded-2xl border px-3 text-xs font-black uppercase tracking-widest transition-all ${formData.gymFocus.includes(item) ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}>
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Alguma limitação física?</label>
+              <CustomSelect value={formData.limitations} onChange={(v) => setFormData({...formData, limitations: v})} options={PHYSICAL_LIMITATION_OPTIONS.map(v => ({ value: v, label: v }))} />
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => setStep(3)} className="flex-1 bg-white/5 text-text-secondary font-bold py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/5">Voltar</button>
+              <button onClick={() => setStep(5)} disabled={!isStep4Valid} className="flex-1 bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all disabled:opacity-30 shadow-lg shadow-primary/20">Ver protocolo</button>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 5 && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+            <div className="bg-primary/10 border border-primary/20 rounded-3xl p-6 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {recommendation.tags.map(tag => (
+                  <span key={tag} className="px-3 py-1 bg-background/60 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest">{tag}</span>
+                ))}
+              </div>
+              <div>
+                <h3 className="text-2xl font-black uppercase tracking-tight">{recommendation.title}</h3>
+                <p className="text-sm text-text-secondary mt-2 leading-relaxed">{recommendation.why}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {recommendation.weeklySplit.map((day, idx) => (
+                  <div key={day} className="bg-background/50 border border-white/10 rounded-2xl p-4">
+                    <div className="text-[10px] text-text-muted font-black uppercase tracking-widest">Dia {idx + 1}</div>
+                    <div className="font-black mt-1">{day}</div>
                   </div>
-                  {formData.plano === p ? (
-                    <CheckCircle2 size={24} className="text-primary relative z-10" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full border-2 border-white/10 group-hover:border-white/20 relative z-10" />
-                  )}
+                ))}
+              </div>
+              <div className="space-y-2">
+                <div className="text-[10px] text-text-muted font-black uppercase tracking-widest">Primeiros exercícios sugeridos</div>
+                {recommendation.exercises.map(ex => (
+                  <div key={ex} className="flex items-center gap-2 text-sm text-text-secondary">
+                    <CheckCircle2 size={15} className="text-primary shrink-0" />
+                    {ex}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <label className="block text-xs uppercase tracking-widest text-text-muted font-bold">Plano inicial</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {(['Iniciante', 'Pro', 'Elite'] as Plan[]).map((p) => (
+                <button key={p} onClick={() => setFormData({...formData, plano: p})} className={`p-4 rounded-2xl border transition-all text-left ${formData.plano === p ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}>
+                  <div className="font-black">{p}</div>
+                  <div className="text-[10px] uppercase tracking-widest opacity-60 mt-1">{p === 'Iniciante' ? 'Grátis' : p === 'Pro' ? 'Mais recursos' : 'Completo'}</div>
                 </button>
               ))}
             </div>
-            
+
             {error && (
               <div className="p-4 bg-error/10 border border-error/20 rounded-2xl text-error text-xs font-bold flex items-center gap-2">
                 <AlertTriangle size={16} />
@@ -1725,17 +1987,9 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
             )}
 
             <div className="flex gap-4">
-              <button onClick={() => setStep(2)} className="flex-1 bg-white/5 text-text-secondary font-bold py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/5">Voltar</button>
-              <button 
-                onClick={handleSubmit} 
-                disabled={!isFormValid || isSubmitting}
-                className="flex-1 bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  'Finalizar'
-                )}
+              <button onClick={() => setStep(4)} className="flex-1 bg-white/5 text-text-secondary font-bold py-4 rounded-2xl hover:bg-white/10 transition-all border border-white/5">Voltar</button>
+              <button onClick={handleSubmit} disabled={!isFormValid || isSubmitting} className="flex-1 bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-center gap-2">
+                {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Começar'}
               </button>
             </div>
           </motion.div>
@@ -1747,7 +2001,7 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
 
 function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: { profile: UserProfile, onUpgrade: () => void, onStartWorkout: () => void, onViewNutrition: () => void }) {
   const { isAdmin, simulatedPlan, user } = useAuth();
-  const effectivePlan = (isAdmin && simulatedPlan) ? simulatedPlan : profile.plano;
+  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
   const getFirstName = () => {
     const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || profile.name || 'Usuário';
@@ -1756,9 +2010,14 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
 
   const [weeklyCalData, setWeeklyCalData] = useState<{ day: string; date: string; calories: number; protein: number; carbs: number; fat: number; isToday: boolean; isFuture: boolean }[]>([]);
   const [weeklyCount, setWeeklyCount] = useState(0);
+  const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
 
   const resolveWorkoutsByPlan = (plan: string | undefined) => {
     const p = plan || 'Iniciante';
+    if (trainingOnboarding?.trainingPlace === 'home') {
+      const level: Level = p === 'Elite' ? 'Avançado' : p === 'Pro' ? 'Intermediário' : 'Iniciante';
+      return buildHomeWorkouts(profile, trainingOnboarding, p as Plan, level);
+    }
     const filtered = ALL_WORKOUTS.filter(w =>
       w.planRequired === p ||
       (p === 'free' && w.planRequired === 'Iniciante') ||
@@ -1806,7 +2065,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
         if (next) setNextWorkout({ name: next.name, muscleGroup: next.muscleGroup });
       })
       .then(undefined, () => {});
-  }, [user, effectivePlan]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, effectivePlan, trainingOnboarding]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const WEEKLY_TARGET = 5;
   const weeklyPercent = Math.min(100, Math.round((weeklyCount / WEEKLY_TARGET) * 100));
@@ -1822,6 +2081,15 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     if (g.includes('ganho') || g.includes('mass') || g.includes('hipert')) return Math.round(tdee + 300);
     return Math.round(tdee);
   })();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      setTrainingOnboarding(JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null'));
+    } catch {
+      setTrainingOnboarding(null);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     const today = new Date();
@@ -1889,6 +2157,38 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
             Ver Planos
           </button>
         </motion.div>
+      )}
+
+      {trainingOnboarding?.recommendation && (
+        <section className="bg-surface border border-primary/20 rounded-[32px] p-6 md:p-8 space-y-5">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {trainingOnboarding.recommendation.tags?.map((tag: string) => (
+                  <span key={tag} className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest">{tag}</span>
+                ))}
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight">{trainingOnboarding.recommendation.title}</h2>
+                <p className="text-sm text-text-secondary mt-2 max-w-3xl leading-relaxed">{trainingOnboarding.recommendation.why}</p>
+              </div>
+            </div>
+            <button
+              onClick={onStartWorkout}
+              className="bg-primary text-text-primary px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all min-h-[48px]"
+            >
+              Começar Protocolo
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {trainingOnboarding.recommendation.weeklySplit?.slice(0, 3).map((day: string, idx: number) => (
+              <div key={day} className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                <div className="text-[10px] text-text-muted font-black uppercase tracking-widest">Dia {idx + 1}</div>
+                <div className="font-black mt-1">{day}</div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       <section className="relative overflow-hidden rounded-[32px] md:rounded-[48px] bg-surface border border-white/5 p-6 md:p-12">
@@ -1978,8 +2278,8 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
         />
         <DashboardMetricCard 
           label="Calorias Diárias" 
-          value="2.400 kcal" 
-          subValue="Meta: 2.600 kcal" 
+          value={`${calorieGoal.toLocaleString('pt-BR')} kcal`}
+          subValue={profile.goal?.toLowerCase().includes('emagrec') ? 'Meta em déficit calórico' : `Meta: ${calorieGoal.toLocaleString('pt-BR')} kcal`}
           icon={<Apple size={20} />} 
           onClick={onViewNutrition}
         />
@@ -2149,130 +2449,9 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   );
 }
 
-function LoadingScreen({ onRetry }: { onRetry: () => void }) {
-  const [showRetry, setShowRetry] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowRetry(true), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-6"></div>
-      <p className="text-text-muted font-medium">Iniciando sua jornada...</p>
-      
-      {showRetry && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-8 space-y-4"
-        >
-          <p className="text-sm text-text-muted max-w-xs mx-auto">
-            Está demorando mais que o esperado. Isso pode ser devido a uma conexão lenta.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button 
-              onClick={() => {
-                try {
-                  onRetry();
-                } catch (e) {
-                  console.error('Retry failed:', e);
-                }
-              }}
-              className="text-xs font-bold text-primary hover:underline flex items-center gap-1 justify-center"
-            >
-              <RefreshCw size={14} />
-              Tentar Novamente
-            </button>
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-xs font-bold text-text-muted hover:underline flex items-center gap-1 justify-center"
-            >
-              <RefreshCw size={14} />
-              Recarregar Página
-            </button>
-          </div>
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
-function DashboardMetricCard({ label, value, subValue, icon, trend, onClick }: { label: string, value: string, subValue: string, icon: React.ReactNode, trend?: 'up' | 'down', onClick?: () => void }) {
-  return (
-    <motion.div 
-      whileHover={onClick ? { y: -5, scale: 1.02 } : {}}
-      onClick={onClick}
-      className={`bg-surface p-6 md:p-8 rounded-[32px] border border-white/5 hover:border-primary/30 transition-all duration-500 group relative overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
-    >
-      <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all duration-700">
-        {icon}
-      </div>
-      <div className="relative z-10 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">{label}</span>
-          <div className={`p-2 rounded-xl bg-white/5 text-text-muted group-hover:text-primary group-hover:bg-primary/10 transition-all duration-500`}>
-            {icon}
-          </div>
-        </div>
-        <div>
-          <div className="text-2xl md:text-3xl font-black tracking-tight group-hover:translate-x-1 transition-transform duration-500">{value}</div>
-          <div className={`mt-1 text-xs font-bold flex items-center gap-1 ${trend === 'up' ? 'text-success' : trend === 'down' ? 'text-error' : 'text-text-muted'}`}>
-            {trend === 'up' && <TrendingUp size={12} />}
-            {subValue}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function QuickAction({ icon, label, color }: { icon: React.ReactNode, label: string, color: string }) {
-  return (
-    <button className="flex items-center gap-4 p-6 bg-surface rounded-[24px] border border-white/5 hover:border-primary/30 transition-all duration-500 group relative overflow-hidden">
-      <div className={`p-3 rounded-xl ${color} text-text-primary group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-black/20`}>
-        {icon}
-      </div>
-      <span className="font-black text-xs uppercase tracking-widest">{label}</span>
-      <div className="absolute -right-2 -bottom-2 opacity-0 group-hover:opacity-5 transition-opacity duration-500">
-        {icon}
-      </div>
-    </button>
-  );
-}
-
-class ViewErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; errorMsg: string }> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false, errorMsg: '' };
-  }
-  static getDerivedStateFromError(error: Error) { return { hasError: true, errorMsg: error?.message || String(error) }; }
-  componentDidCatch(error: Error) { console.error('View render error:', error); }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 px-6">
-          <p className="text-xl font-bold">Algo deu errado ao carregar esta tela.</p>
-          {this.state.errorMsg && (
-            <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/20 rounded-xl px-4 py-2 max-w-sm break-all">{this.state.errorMsg}</p>
-          )}
-          <button
-            onClick={() => { localStorage.clear(); window.location.reload(); }}
-            className="bg-primary text-white font-bold px-6 py-3 rounded-2xl text-sm"
-          >
-            Limpar cache e recarregar
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
-  const effectivePlan: Plan = (isAdmin && simulatedPlan) ? simulatedPlan : (profile.plano as Plan) || 'Iniciante';
+  const effectivePlan: Plan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null) || 'Iniciante';
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || isAdmin;
   const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(
     (effectivePlan === 'free' || !effectivePlan) ? 'Iniciante' : effectivePlan
@@ -2282,6 +2461,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'Todos'>('Todos');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early' | 'registro'>('workouts');
+  const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
@@ -2299,7 +2479,31 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     localStorage.setItem('completedWorkouts', JSON.stringify(completedWorkouts));
   }, [completedWorkouts]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      setTrainingOnboarding(JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null'));
+    } catch {
+      setTrainingOnboarding(null);
+    }
+  }, [user?.id]);
+
   const muscleGroups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen', 'Full Body'];
+  const trainingPlace = trainingOnboarding?.trainingPlace;
+  const usesHomeProtocol = trainingPlace === 'home';
+  const usesHybridProtocol = trainingPlace === 'hybrid';
+  const homeWorkouts = buildHomeWorkouts(profile, trainingOnboarding, selectedPlanTab, selectedLevel);
+  const workoutSource = usesHomeProtocol ? homeWorkouts : ALL_WORKOUTS;
+  const visibleMuscleGroups = usesHomeProtocol
+    ? muscleGroups.filter(group => homeWorkouts.some(w => w.muscleGroup === group))
+    : muscleGroups;
+  const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
+
+  useEffect(() => {
+    if (selectedMuscleGroup !== 'Todos' && !visibleMuscleGroups.includes(selectedMuscleGroup)) {
+      setSelectedMuscleGroup('Todos');
+    }
+  }, [selectedMuscleGroup, visibleMuscleGroups]);
 
   const hasAccess = (planId: Plan) => {
     const weights = { 'free': 0, 'Iniciante': 1, 'Pro': 2, 'Elite': 3, 'Admin': 4 };
@@ -2312,7 +2516,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       alreadyDone ? prev.filter(id => id !== workoutId) : [...prev, workoutId]
     );
     if (!alreadyDone && user) {
-      const workout = ALL_WORKOUTS.find(w => w.id === workoutId);
+      const workout = workoutSource.find(w => w.id === workoutId) ?? ALL_WORKOUTS.find(w => w.id === workoutId);
       const today = new Date().toISOString().split('T')[0];
       try {
         await dataService.addWorkoutLog({
@@ -2358,7 +2562,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
             <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
             <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase">Meus Treinos</h1>
           </div>
-          <p className="text-text-secondary text-base md:text-lg">Protocolos de treinamento personalizados para sua evolução.</p>
+          <p className="text-text-secondary text-base md:text-lg">
+            Protocolos de treinamento personalizados para {placeLabel.toLowerCase()} e objetivo: <span className="text-text-primary font-bold">{profile.goal || 'evolução'}</span>.
+          </p>
         </div>
         
         <button 
@@ -2369,6 +2575,22 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           <span className="text-sm font-black uppercase tracking-widest">Planos</span>
         </button>
       </header>
+
+      {usesHomeProtocol && (
+        <section className="bg-primary/10 border border-primary/20 rounded-[28px] p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Treino em casa ativado</div>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              Montei estes treinos com base no objetivo <span className="text-text-primary font-bold">{profile.goal}</span>, nos equipamentos marcados e na limitação <span className="text-text-primary font-bold">{trainingOnboarding?.limitations || 'Nenhuma'}</span>.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(trainingOnboarding?.homeEquipment || ['Nenhum']).map((item: string) => (
+              <span key={item} className="px-3 py-1 rounded-xl bg-background/50 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary">{item}</span>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Main Plan Tabs */}
       <div className="flex flex-col gap-3">
@@ -2505,7 +2727,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                         >
                           Todos
                         </button>
-                        {muscleGroups.map((group) => (
+                        {visibleMuscleGroups.map((group) => (
                           <button
                             key={group}
                             onClick={() => setSelectedMuscleGroup(group)}
@@ -2524,8 +2746,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                 </div>
 
                 <div className="space-y-16">
-                  {muscleGroups.filter(g => selectedMuscleGroup === 'Todos' || g === selectedMuscleGroup).map((group) => {
-                    const groupWorkouts = ALL_WORKOUTS.filter(w => 
+                  {visibleMuscleGroups.filter(g => selectedMuscleGroup === 'Todos' || g === selectedMuscleGroup).map((group) => {
+                    const groupWorkouts = workoutSource.filter(w =>
                       w.planRequired === selectedPlanTab && 
                       w.level === selectedLevel && 
                       w.muscleGroup === group
@@ -2554,8 +2776,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                     );
                   })}
                   
-                  {muscleGroups.filter(g => selectedMuscleGroup === 'Todos' || g === selectedMuscleGroup).every(g => 
-                    ALL_WORKOUTS.filter(w => w.planRequired === selectedPlanTab && w.level === selectedLevel && w.muscleGroup === g).length === 0
+                  {visibleMuscleGroups.filter(g => selectedMuscleGroup === 'Todos' || g === selectedMuscleGroup).every(g =>
+                    workoutSource.filter(w => w.planRequired === selectedPlanTab && w.level === selectedLevel && w.muscleGroup === g).length === 0
                   ) && (
                     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                       <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-text-muted">
@@ -2813,19 +3035,28 @@ function ExecutionModal({
   onClose: () => void
 }) {
   const [gifUrl, setGifUrl] = useState<string | null>(null);
+  const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setGifLoading(true);
+    const localMedia = getLocalExerciseMedia(exercise.name);
+    if (localMedia) {
+      setGifUrl(localMedia);
+      setGifLoading(false);
+      return () => { cancelled = true; };
+    }
+    const searchName = translateExerciseName(exercise.name);
     searchExercisesByName(exercise.name)
       .then((results: any) => {
         if (cancelled) return;
         const list = Array.isArray(results) ? results : results?.data;
         if (Array.isArray(list) && list.length > 0) {
+          setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);
           setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
         } else {
-          console.warn('[ExerciseModal] No GIF found for:', exercise.name, results);
+          console.warn('[ExerciseModal] No GIF found for:', exercise.name, 'query:', searchName, results);
         }
       })
       .catch((err: any) => { console.error('[ExerciseModal] GIF fetch error:', err?.message); })
@@ -2852,6 +3083,16 @@ function ExecutionModal({
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
+          ) : apiVideoUrl ? (
+            <video
+              src={apiVideoUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              controls
+              className="w-full h-full object-contain"
+            />
           ) : gifUrl ? (
             <img src={gifUrl} alt={exercise.name} className="w-full h-full object-contain" />
           ) : exercise.videoUrl ? (
@@ -2864,9 +3105,16 @@ function ExecutionModal({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-4">
-              <PlayCircle size={64} className="opacity-20" />
-              <p className="font-black uppercase tracking-widest text-xs">Vídeo não disponível</p>
+            <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-5 p-8 text-center">
+              <div className="w-20 h-20 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
+                <PlayCircle size={44} className="text-primary" />
+              </div>
+              <div>
+                <p className="font-black uppercase tracking-widest text-xs text-text-primary">Guia de execução</p>
+                <p className="text-xs mt-2 max-w-xs leading-relaxed">
+                  A API não retornou GIF para este exercício. Use as instruções ao lado para executar com segurança.
+                </p>
+              </div>
             </div>
           )}
           
@@ -2961,6 +3209,7 @@ function ExerciseCard({
   const [isResting, setIsResting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [gifUrl, setGifUrl] = useState<string | null>(null);
+  const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
 
   const handleToggleDetails = async () => {
@@ -2969,15 +3218,22 @@ function ExerciseCard({
       return;
     }
     setShowDetails(true);
-    if (gifUrl) return;
+    if (gifUrl || apiVideoUrl) return;
+    const localMedia = getLocalExerciseMedia(exercise.name);
+    if (localMedia) {
+      setGifUrl(localMedia);
+      return;
+    }
+    const searchName = translateExerciseName(exercise.name);
     setGifLoading(true);
     try {
       const results = await searchExercisesByName(exercise.name);
       const list = Array.isArray(results) ? results : results?.data;
       if (Array.isArray(list) && list.length > 0) {
+        setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);
         setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
       } else {
-        console.warn('[ActiveExercise] No GIF found for:', exercise.name, results);
+        console.warn('[ActiveExercise] No GIF found for:', exercise.name, 'query:', searchName, results);
       }
     } catch (err: any) {
       console.error('[ActiveExercise] GIF fetch error:', err?.message);
@@ -3108,6 +3364,16 @@ function ExerciseCard({
                     <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Carregando...</p>
                   </div>
+                ) : apiVideoUrl ? (
+                  <video
+                    src={apiVideoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    className="w-full h-full object-contain"
+                  />
                 ) : gifUrl ? (
                   <img
                     src={gifUrl}
@@ -3124,9 +3390,16 @@ function ExerciseCard({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-4 text-text-muted">
-                    <PlayCircle size={56} className="opacity-20" />
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Vídeo não disponível</p>
+                  <div className="flex flex-col items-center gap-4 text-text-muted p-8 text-center">
+                    <div className="w-16 h-16 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
+                      <PlayCircle size={34} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-text-primary">Guia de execução</p>
+                      <p className="text-xs mt-2 max-w-xs leading-relaxed opacity-70">
+                        GIF não encontrado na API. Siga as instruções deste exercício.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -3189,6 +3462,12 @@ function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, can
   const [exercises, setExercises] = useState(workout.exercises);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedExerciseForVideo, setSelectedExerciseForVideo] = useState<Exercise | null>(null);
+
+  useEffect(() => {
+    setExercises(workout.exercises);
+    setSelectedExerciseForVideo(null);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [workout.id, workout.exercises]);
 
   const updateExercise = (index: number, field: keyof Exercise, value: any) => {
     const newExercises = [...exercises];
@@ -3703,7 +3982,7 @@ function BodyProgressView({ userId }: { userId: string }) {
 
 function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserProfile, onUpgrade: () => void, updateProfile: (u: Partial<UserProfile>) => Promise<void> }) {
   const { isAdmin, simulatedPlan } = useAuth();
-  const effectivePlan = (isAdmin && simulatedPlan) ? simulatedPlan : profile.plano;
+  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
   const localStorageKey = `nutrition_prefs_${profile.id}`;
   const localPrefs = (() => {
@@ -3735,12 +4014,22 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
     fat: number;
   } | null>(null);
 
+  const mealPlanStorageKey = `meal_plan_${profile.id}`;
+  const favoriteFoodsKey = `nutrition_favorites_${profile.id}`;
+
   const [mealPlan, setMealPlan] = useState<{
     time: string;
     name: string;
     icon: string;
-    items: { name: string, quantity: string, calories: number, protein: number, carbs: number, fat: number }[];
-  }[]>([]);
+    items: MealItem[];
+  }[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`meal_plan_${profile.id}`) || '[]'); } catch { return []; }
+  });
+
+  const [favoriteFoods, setFavoriteFoods] = useState<MealItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`nutrition_favorites_${profile.id}`) || '[]'); } catch { return []; }
+  });
+  const [nutritionHistory, setNutritionHistory] = useState<NutritionLog[]>([]);
 
   const [dailyTracker, setDailyTracker] = useState({
     calories: 0,
@@ -3760,13 +4049,59 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
     fat: ''
   });
 
+  const persistMealPlan = (nextPlan: typeof mealPlan) => {
+    setMealPlan(nextPlan);
+    try { localStorage.setItem(mealPlanStorageKey, JSON.stringify(nextPlan)); } catch { /* ignore */ }
+  };
+
+  const persistFavoriteFoods = (nextFavorites: MealItem[]) => {
+    setFavoriteFoods(nextFavorites);
+    try { localStorage.setItem(favoriteFoodsKey, JSON.stringify(nextFavorites)); } catch { /* ignore */ }
+  };
+
+  const normalizeFavoriteKey = (item: MealItem) => `${item.name.trim().toLowerCase()}|${item.quantity.trim().toLowerCase()}`;
+
+  const isFavoriteFood = (item: MealItem) => favoriteFoods.some(f => normalizeFavoriteKey(f) === normalizeFavoriteKey(item));
+
+  const toggleFavoriteFood = (item: MealItem) => {
+    const key = normalizeFavoriteKey(item);
+    const exists = favoriteFoods.some(f => normalizeFavoriteKey(f) === key);
+    persistFavoriteFoods(exists ? favoriteFoods.filter(f => normalizeFavoriteKey(f) !== key) : [item, ...favoriteFoods].slice(0, 18));
+  };
+
+  const upsertTodayHistory = (tracker: typeof dailyTracker) => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayLog: NutritionLog = {
+      id: today,
+      user_id: profile.id,
+      date: today,
+      calories: tracker.calories,
+      protein: tracker.protein,
+      carbs: tracker.carbs,
+      fat: tracker.fat,
+      meals: tracker.meals,
+    };
+    setNutritionHistory(prev => [todayLog, ...prev.filter(log => log.date !== today)].slice(0, 7));
+  };
+
+  const macroRemaining = (current: number, target: number, unit = '') => {
+    const diff = target - current;
+    if (diff > 0) return `faltam ${diff}${unit}`;
+    if (diff < 0) return `${Math.abs(diff)}${unit} acima`;
+    return 'meta batida';
+  };
+
   useEffect(() => {
     const fetchTracker = async () => {
       if (!profile.id) return;
       setIsLoadingTracker(true);
       try {
         const today = new Date().toISOString().split('T')[0];
-        const log = await dataService.getNutritionLog(profile.id, today);
+        const [log, history] = await Promise.all([
+          dataService.getNutritionLog(profile.id, today),
+          dataService.getNutritionLogs(profile.id, 7)
+        ]);
+        setNutritionHistory(history || []);
         if (log) {
           setDailyTracker({
             calories: log.calories,
@@ -3788,6 +4123,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
 
   const saveTrackerToSupabase = async (tracker: typeof dailyTracker) => {
     if (!profile.id) return;
+    upsertTodayHistory(tracker);
     try {
       const today = new Date().toISOString().split('T')[0];
       await dataService.updateNutritionLog({
@@ -3830,7 +4166,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
       }
       if (!res.ok) throw new Error(data?.error || 'Erro ao gerar cardápio');
       if (!data?.meals?.length) throw new Error('Cardápio vazio retornado. Tente novamente.');
-      setMealPlan(data.meals);
+      persistMealPlan(data.meals);
     } catch (e: any) {
       setPlanError(e.message || 'Erro ao gerar cardápio. Tente novamente.');
     } finally {
@@ -3918,6 +4254,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
       meals: [{ ...meal, timestamp: new Date().toLocaleTimeString() }, ...dailyTracker.meals]
     };
     setDailyTracker(newTracker);
+    upsertTodayHistory(newTracker);
     saveTrackerToSupabase(newTracker);
   };
 
@@ -3948,6 +4285,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
     };
 
     setDailyTracker(newTracker);
+    upsertTodayHistory(newTracker);
     await saveTrackerToSupabase(newTracker);
     
     setIsAddMealModalOpen(false);
@@ -4344,6 +4682,20 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Calorias', value: macroRemaining(dailyTracker.calories, results.calories, ' kcal'), color: dailyTracker.calories > results.calories ? 'text-error' : 'text-primary' },
+                { label: 'Proteína', value: macroRemaining(dailyTracker.protein, results.protein, 'g'), color: dailyTracker.protein >= results.protein ? 'text-success' : 'text-primary' },
+                { label: 'Carboidrato', value: macroRemaining(dailyTracker.carbs, results.carbs, 'g'), color: dailyTracker.carbs > results.carbs ? 'text-error' : 'text-text-primary' },
+                { label: 'Gordura', value: macroRemaining(dailyTracker.fat, results.fat, 'g'), color: dailyTracker.fat > results.fat ? 'text-error' : 'text-text-primary' },
+              ].map(item => (
+                <div key={item.label} className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">{item.label}</div>
+                  <div className={`text-sm font-black mt-1 ${item.color}`}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
             <div className="pt-6 border-t border-white/5">
               <div className="flex items-center justify-between mb-6">
                 <h4 className="text-xs font-black uppercase tracking-widest text-text-muted">Refeições Registradas Hoje</h4>
@@ -4355,6 +4707,34 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                   Adicionar Refeição
                 </button>
               </div>
+
+              {favoriteFoods.length > 0 && (
+                <div className="mb-6 bg-white/5 border border-white/5 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h5 className="text-[10px] font-black uppercase tracking-widest text-text-muted">Favoritos rápidos</h5>
+                      <p className="text-[10px] text-text-muted mt-1">Toque para lançar no tracker de hoje.</p>
+                    </div>
+                    <span className="text-[10px] font-black text-primary">{favoriteFoods.length}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {favoriteFoods.slice(0, 6).map((item) => (
+                      <button
+                        key={normalizeFavoriteKey(item)}
+                        onClick={() => addFoodToTracker(item)}
+                        className="text-left p-4 rounded-2xl bg-background border border-white/10 hover:border-primary/30 transition-all group"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-black text-sm truncate group-hover:text-primary transition-colors">{item.name}</span>
+                          <span className="text-[10px] text-primary font-black">{item.calories} kcal</span>
+                        </div>
+                        <div className="mt-1 text-[10px] text-text-muted font-bold">{item.quantity} • P:{item.protein}g C:{item.carbs}g G:{item.fat}g</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* AI Food Analyzer — always visible */}
               <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-4">
                 <div className="flex items-center gap-3">
@@ -4422,6 +4802,13 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                       >
                         <Plus size={14} />
                         Adicionar ao Tracker
+                      </button>
+                      <button
+                        onClick={() => toggleFavoriteFood({ ...aiResult, quantity: `${aiQty}g` })}
+                        className="px-4 py-3 bg-white/5 text-text-muted border border-white/10 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 hover:text-primary transition-all"
+                        title="Salvar favorito"
+                      >
+                        <Check size={14} />
                       </button>
                       <button
                         onClick={() => { setAiResult(null); setAiFood(''); setAiQty(''); }}
@@ -4516,6 +4903,29 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                   </div>
                 )}
               </div>
+
+              {nutritionHistory.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-text-muted">Histórico recente</h4>
+                    <span className="text-[10px] font-black text-text-muted">{nutritionHistory.length} dias</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {nutritionHistory.slice(0, 4).map((log) => (
+                      <div key={log.date} className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                            {new Date(log.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                          </span>
+                          <span className="text-[10px] font-black text-primary">{log.meals?.length || 0} itens</span>
+                        </div>
+                        <div className="text-2xl font-black">{log.calories} <span className="text-xs text-text-muted">kcal</span></div>
+                        <div className="mt-2 text-[10px] text-text-muted font-bold">P:{log.protein}g C:{log.carbs}g G:{log.fat}g</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -4533,7 +4943,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                   initial={{ opacity: 0, scale: 0.9, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-[32px] shadow-2xl overflow-hidden"
+                  className="relative w-full max-w-lg max-h-[86vh] overflow-y-auto bg-zinc-900 border border-white/10 rounded-[32px] shadow-2xl"
                 >
                   <div className="p-8 space-y-8">
                     <div className="flex items-center justify-between">
@@ -4678,10 +5088,23 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                     name={`${meal.icon} ${meal.name}`}
                     items={meal.items}
                     onAddItem={(item) => {
-                      setMealPlan(prev => prev.map((m, i) =>
+                      persistMealPlan(mealPlan.map((m, i) =>
                         i === idx ? { ...m, items: [...m.items, item] } : m
                       ));
                     }}
+                    onUpdateItem={(itemIndex, item) => {
+                      persistMealPlan(mealPlan.map((m, i) =>
+                        i === idx ? { ...m, items: m.items.map((oldItem, oldIndex) => oldIndex === itemIndex ? item : oldItem) } : m
+                      ));
+                    }}
+                    onRemoveItem={(itemIndex) => {
+                      persistMealPlan(mealPlan.map((m, i) =>
+                        i === idx ? { ...m, items: m.items.filter((_, oldIndex) => oldIndex !== itemIndex) } : m
+                      ));
+                    }}
+                    onAddToTracker={addFoodToTracker}
+                    onToggleFavorite={toggleFavoriteFood}
+                    isFavorite={isFavoriteFood}
                   />
                 ))
               ) : (
@@ -5203,7 +5626,21 @@ function MacroCard({ label, value, unit, color }: { label: string, value: string
 
 type MealItem = { name: string; quantity: string; calories: number; protein: number; carbs: number; fat: number };
 
-function FoodItemCard({ item }: { item: MealItem }) {
+function FoodItemCard({
+  item,
+  onEdit,
+  onRemove,
+  onAddToTracker,
+  onToggleFavorite,
+  isFavorite,
+}: {
+  item: MealItem;
+  onEdit?: () => void;
+  onRemove?: () => void;
+  onAddToTracker?: () => void;
+  onToggleFavorite?: () => void;
+  isFavorite?: boolean;
+}) {
   return (
     <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-2 hover:border-white/10 transition-all">
       <div className="flex items-center justify-between gap-2">
@@ -5216,15 +5653,44 @@ function FoodItemCard({ item }: { item: MealItem }) {
         <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[9px] font-black rounded-md border border-blue-500/20">Carb. {item.carbs}g</span>
         <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 text-[9px] font-black rounded-md border border-yellow-500/20">Gord. {item.fat}g</span>
       </div>
+      {(onEdit || onRemove || onAddToTracker || onToggleFavorite) && (
+        <div className="flex items-center gap-2 pt-2 flex-wrap">
+          {onAddToTracker && (
+            <button onClick={onAddToTracker} className="flex-[1_1_88px] min-h-[36px] rounded-xl bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all">
+              Lançar
+            </button>
+          )}
+          {onToggleFavorite && (
+            <button onClick={onToggleFavorite} className={`min-h-[34px] min-w-[34px] rounded-xl border text-[9px] font-black transition-all ${isFavorite ? 'bg-primary text-text-primary border-primary' : 'bg-white/5 text-text-muted border-white/10 hover:text-primary'}`} title="Favorito">
+              <Check size={13} className="mx-auto" />
+            </button>
+          )}
+          {onEdit && (
+            <button onClick={onEdit} className="min-h-[34px] min-w-[34px] rounded-xl bg-white/5 text-text-muted border border-white/10 hover:text-primary transition-all" title="Editar">
+              <Edit3 size={13} className="mx-auto" />
+            </button>
+          )}
+          {onRemove && (
+            <button onClick={onRemove} className="min-h-[34px] min-w-[34px] rounded-xl bg-white/5 text-text-muted border border-white/10 hover:text-error transition-all" title="Remover">
+              <X size={13} className="mx-auto" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function MealRow({ time, name, items, onAddItem }: {
+function MealRow({ time, name, items, onAddItem, onUpdateItem, onRemoveItem, onAddToTracker, onToggleFavorite, isFavorite }: {
   time: string;
   name: string;
   items: MealItem[];
   onAddItem?: (item: MealItem) => void;
+  onUpdateItem?: (index: number, item: MealItem) => void;
+  onRemoveItem?: (index: number) => void;
+  onAddToTracker?: (item: MealItem) => void;
+  onToggleFavorite?: (item: MealItem) => void;
+  isFavorite?: (item: MealItem) => boolean;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [foodInput, setFoodInput] = useState('');
@@ -5232,6 +5698,8 @@ function MealRow({ time, name, items, onAddItem }: {
   const [analyzing, setAnalyzing] = useState(false);
   const [preview, setPreview] = useState<MealItem | null>(null);
   const [error, setError] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<MealItem | null>(null);
 
   const totalCals = items.reduce((s, i) => s + i.calories, 0);
 
@@ -5311,7 +5779,50 @@ function MealRow({ time, name, items, onAddItem }: {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {items.map((item, i) => (
-            <FoodItemCard key={i} item={item} />
+            editingIndex === i && editDraft ? (
+              <div key={i} className="bg-background border border-primary/20 rounded-2xl p-4 space-y-3">
+                <input
+                  value={editDraft.name}
+                  onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold focus:border-primary outline-none"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={editDraft.quantity} onChange={(e) => setEditDraft({ ...editDraft, quantity: e.target.value })} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none" placeholder="Qtd" />
+                  <input type="number" value={editDraft.calories || ''} onChange={(e) => setEditDraft({ ...editDraft, calories: parseInt(e.target.value) || 0 })} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none" placeholder="Kcal" />
+                  <input type="number" value={editDraft.protein || ''} onChange={(e) => setEditDraft({ ...editDraft, protein: parseInt(e.target.value) || 0 })} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none" placeholder="Prot" />
+                  <input type="number" value={editDraft.carbs || ''} onChange={(e) => setEditDraft({ ...editDraft, carbs: parseInt(e.target.value) || 0 })} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none" placeholder="Carb" />
+                  <input type="number" value={editDraft.fat || ''} onChange={(e) => setEditDraft({ ...editDraft, fat: parseInt(e.target.value) || 0 })} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:border-primary outline-none" placeholder="Gord" />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (editDraft && onUpdateItem) onUpdateItem(i, editDraft);
+                      setEditingIndex(null);
+                      setEditDraft(null);
+                    }}
+                    className="flex-1 py-2 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest"
+                  >
+                    Salvar
+                  </button>
+                  <button
+                    onClick={() => { setEditingIndex(null); setEditDraft(null); }}
+                    className="px-4 py-2 bg-white/5 text-text-muted border border-white/10 rounded-xl font-black text-[10px]"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <FoodItemCard
+                key={i}
+                item={item}
+                onAddToTracker={onAddToTracker ? () => onAddToTracker(item) : undefined}
+                onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(item) : undefined}
+                isFavorite={isFavorite ? isFavorite(item) : false}
+                onEdit={onUpdateItem ? () => { setEditingIndex(i); setEditDraft(item); } : undefined}
+                onRemove={onRemoveItem ? () => onRemoveItem(i) : undefined}
+              />
+            )
           ))}
         </div>
 
@@ -5827,7 +6338,7 @@ function CommunityView({ profile }: { profile: UserProfile }) {
 
 function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserProfile, logout: () => void, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, setSimulatedPlan, user, logout } = useAuth();
-  const effectivePlan = (isAdmin && simulatedPlan) ? simulatedPlan : profile.plano;
+  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || profile.name || 'Usuário';
   const userEmail = user?.email || profile.email || '';
@@ -5943,6 +6454,82 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
 
 function AdminView() {
   const [adminTab, setAdminTab] = useState<'general' | 'affiliates'>('general');
+  const [loadingAdmin, setLoadingAdmin] = useState(true);
+  const [adminError, setAdminError] = useState('');
+  const [adminData, setAdminData] = useState<{
+    profiles: UserProfile[];
+    workouts: WorkoutLog[];
+    nutrition: NutritionLog[];
+    posts: Post[];
+    affiliates: Affiliate[];
+    conversions: AffiliateConversion[];
+  }>({ profiles: [], workouts: [], nutrition: [], posts: [], affiliates: [], conversions: [] });
+
+  const fetchAdminData = async () => {
+    setLoadingAdmin(true);
+    setAdminError('');
+    try {
+      const [profilesRes, workoutsRes, nutritionRes, postsRes, affiliatesRes, conversionsRes] = await Promise.allSettled([
+        withTimeout(() => supabase.from('profiles').select('*').order('criado_em', { ascending: false }).limit(200), 15000, 1) as any,
+        withTimeout(() => supabase.from('workout_logs').select('*').order('completedAt', { ascending: false }).limit(300), 15000, 1) as any,
+        withTimeout(() => supabase.from('nutrition_logs').select('*').order('date', { ascending: false }).limit(300), 15000, 1) as any,
+        withTimeout(() => supabase.from('posts').select('*').order('criado_em', { ascending: false }).limit(100), 15000, 1) as any,
+        withTimeout(() => supabase.from('affiliates').select('*').order('criado_em', { ascending: false }).limit(200), 15000, 1) as any,
+        withTimeout(() => supabase.from('affiliate_conversions').select('*').order('created_at', { ascending: false }).limit(300), 15000, 1) as any,
+      ]);
+
+      const read = <T,>(result: PromiseSettledResult<any>, label: string): T[] => {
+        if (result.status === 'rejected') {
+          console.warn(`Admin ${label} fetch failed:`, result.reason);
+          return [];
+        }
+        if (result.value?.error) {
+          console.warn(`Admin ${label} query error:`, result.value.error);
+          return [];
+        }
+        return (result.value?.data || []) as T[];
+      };
+
+      setAdminData({
+        profiles: read<UserProfile>(profilesRes, 'profiles'),
+        workouts: read<WorkoutLog>(workoutsRes, 'workouts'),
+        nutrition: read<NutritionLog>(nutritionRes, 'nutrition'),
+        posts: read<Post>(postsRes, 'posts'),
+        affiliates: read<Affiliate>(affiliatesRes, 'affiliates'),
+        conversions: read<AffiliateConversion>(conversionsRes, 'conversions'),
+      });
+    } catch (e: any) {
+      setAdminError(e.message || 'Erro ao carregar painel administrativo.');
+    } finally {
+      setLoadingAdmin(false);
+    }
+  };
+
+  useEffect(() => {
+    if (adminTab === 'general') fetchAdminData();
+  }, [adminTab]);
+
+  const today = new Date().toISOString().split('T')[0];
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const paidProfiles = adminData.profiles.filter(p => p.plano === 'Pro' || p.plano === 'Elite' || p.subscriptionStatus === 'active');
+  const onboardingStuck = adminData.profiles.filter(p => !p.age || !p.weight || !p.height || !p.goal);
+  const activeToday = new Set([
+    ...adminData.workouts.filter(w => w.completedAt?.startsWith(today)).map(w => w.userUid),
+    ...adminData.nutrition.filter(n => n.date === today).map(n => n.user_id),
+  ]);
+  const monthlyRevenue = adminData.conversions
+    .filter(c => c.created_at && new Date(c.created_at) >= startOfMonth)
+    .reduce((sum, c) => sum + Number(c.valor_assinatura || 0), 0);
+  const pendingAffiliates = adminData.affiliates.filter(a => a.status === 'pendente');
+  const planCounts = (['free', 'Iniciante', 'Pro', 'Elite', 'Admin'] as Plan[]).map(plan => ({
+    plan,
+    count: adminData.profiles.filter(p => (p.plano || 'free') === plan).length,
+  }));
+  const recentUsers = adminData.profiles.slice(0, 6);
+  const recentConversions = adminData.conversions.slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -5973,52 +6560,168 @@ function AdminView() {
 
       {adminTab === 'general' ? (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-surface p-6 rounded-3xl border border-white/5">
-              <h3 className="text-text-muted text-xs font-black uppercase tracking-widest mb-4">Usuários Totais</h3>
-              <div className="text-4xl font-black">1.284</div>
-              <div className="mt-2 text-xs text-success">+12 hoje</div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface border border-white/5 rounded-3xl p-5">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest">Visão operacional</h3>
+              <p className="text-xs text-text-muted mt-1">Dados lidos diretamente do Supabase com as permissões do usuário admin.</p>
             </div>
-            <div className="bg-surface p-6 rounded-3xl border border-white/5">
-              <h3 className="text-text-muted text-xs font-black uppercase tracking-widest mb-4">Assinaturas Ativas</h3>
-              <div className="text-4xl font-black">856</div>
-              <div className="mt-2 text-xs text-primary">67% de conversão</div>
-            </div>
-            <div className="bg-surface p-6 rounded-3xl border border-white/5">
-              <h3 className="text-text-muted text-xs font-black uppercase tracking-widest mb-4">Receita Mensal</h3>
-              <div className="text-4xl font-black">R$ 42.500</div>
-              <div className="mt-2 text-xs text-success">+8% vs mês anterior</div>
-            </div>
+            <button
+              onClick={fetchAdminData}
+              disabled={loadingAdmin}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text-primary hover:bg-white/10 transition-all disabled:opacity-60"
+            >
+              <RefreshCw size={14} className={loadingAdmin ? 'animate-spin' : ''} />
+              Atualizar
+            </button>
           </div>
 
-          <div className="bg-surface rounded-[40px] border border-white/5 overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex justify-between items-center">
-              <h3 className="text-xl font-black">Gerenciamento de Planos</h3>
-              <button className="bg-primary text-text-primary text-xs font-black px-6 py-2 rounded-xl">NOVO RECURSO</button>
+          {adminError && (
+            <div className="bg-error/10 border border-error/20 rounded-3xl p-5 flex items-center gap-3 text-error">
+              <AlertTriangle size={20} />
+              <p className="text-sm font-bold">{adminError}</p>
             </div>
-            <div className="p-8 space-y-6">
-              <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5">
-                <div>
-                  <h4 className="font-bold text-lg">Plano Pro</h4>
-                  <p className="text-sm text-text-muted">IA Adaptativa, Histórico Completo, Suporte 24h</p>
+          )}
+
+          {loadingAdmin ? (
+            <div className="bg-surface border border-white/5 rounded-[40px] p-16 flex flex-col items-center justify-center gap-4 text-text-muted">
+              <Loader2 className="animate-spin text-primary" size={36} />
+              <span className="text-xs font-black uppercase tracking-widest">Carregando dados administrativos...</span>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                <AdminMetricCard icon={<Users size={22} />} label="Usuários" value={adminData.profiles.length.toString()} detail={`${activeToday.size} ativos hoje`} tone="text-primary" />
+                <AdminMetricCard icon={<Wallet size={22} />} label="Assinaturas" value={paidProfiles.length.toString()} detail={`${adminData.profiles.length ? Math.round((paidProfiles.length / adminData.profiles.length) * 100) : 0}% da base`} tone="text-success" />
+                <AdminMetricCard icon={<BarChart3 size={22} />} label="Receita Mês" value={monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} detail={`${recentConversions.length} conversões recentes`} tone="text-primary" />
+                <AdminMetricCard icon={<UserCheck size={22} />} label="Afiliados Pendentes" value={pendingAffiliates.length.toString()} detail={`${adminData.affiliates.length} afiliados no total`} tone={pendingAffiliates.length ? 'text-error' : 'text-success'} />
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-span-2 bg-surface rounded-[32px] border border-white/5 overflow-hidden">
+                  <div className="p-6 border-b border-white/5 flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-tight">Usuários Recentes</h3>
+                      <p className="text-xs text-text-muted mt-1">Últimos perfis criados ou retornados pela base.</p>
+                    </div>
+                    <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{recentUsers.length} exibidos</span>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {recentUsers.length > 0 ? recentUsers.map(user => (
+                      <div key={user.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black shrink-0">
+                            {(user.name || user.email || 'U')[0]?.toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-black text-sm truncate">{user.name || 'Usuário sem nome'}</div>
+                            <div className="text-[10px] text-text-muted font-bold truncate">{user.email}</div>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">{user.plano || 'free'}</span>
+                          <span className={`px-3 py-1 border rounded-xl text-[10px] font-black uppercase tracking-widest ${user.subscriptionStatus === 'active' ? 'bg-success/10 border-success/20 text-success' : 'bg-white/5 border-white/10 text-text-muted'}`}>
+                            {user.subscriptionStatus || 'inactive'}
+                          </span>
+                          {(!user.age || !user.goal) && (
+                            <span className="px-3 py-1 bg-error/10 border border-error/20 text-error rounded-xl text-[10px] font-black uppercase tracking-widest">Onboarding</span>
+                          )}
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="p-10 text-center text-text-muted text-sm font-bold">Nenhum usuário disponível com as permissões atuais.</div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button className="px-4 py-2 bg-white/5 rounded-xl text-xs font-bold hover:bg-white/10 transition-all">EDITAR</button>
-                  <button className="px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold">ATIVO</button>
+
+                <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight">Distribuição de Planos</h3>
+                    <p className="text-xs text-text-muted mt-1">Ajuda a ver conversão e composição da base.</p>
+                  </div>
+                  <div className="space-y-4">
+                    {planCounts.map(({ plan, count }) => {
+                      const pct = adminData.profiles.length ? Math.round((count / adminData.profiles.length) * 100) : 0;
+                      return (
+                        <div key={plan} className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-black uppercase tracking-widest text-text-secondary">{plan}</span>
+                            <span className="font-black text-text-muted">{count} • {pct}%</span>
+                          </div>
+                          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5">
-                <div>
-                  <h4 className="font-bold text-lg">Plano Elite</h4>
-                  <p className="text-sm text-text-muted">Consultoria Individual, Protocolos de Competição, Acesso VIP</p>
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className={onboardingStuck.length ? 'text-error' : 'text-success'} size={22} />
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-tight">Gargalos</h3>
+                      <p className="text-xs text-text-muted">Usuários sem onboarding completo.</p>
+                    </div>
+                  </div>
+                  <div className="text-4xl font-black">{onboardingStuck.length}</div>
+                  <div className="space-y-2">
+                    {onboardingStuck.slice(0, 4).map(user => (
+                      <div key={user.id} className="flex items-center justify-between gap-3 text-xs bg-white/5 rounded-2xl px-4 py-3">
+                        <span className="font-bold truncate">{user.name || user.email}</span>
+                        <span className="text-text-muted shrink-0">perfil incompleto</span>
+                      </div>
+                    ))}
+                    {onboardingStuck.length === 0 && <p className="text-sm text-text-muted">Nenhum gargalo detectado nos perfis carregados.</p>}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button className="px-4 py-2 bg-white/5 rounded-xl text-xs font-bold hover:bg-white/10 transition-all">EDITAR</button>
-                  <button className="px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold">ATIVO</button>
+
+                <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
+                  <div className="flex items-center gap-3">
+                    <Activity className="text-primary" size={22} />
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-tight">Atividade</h3>
+                      <p className="text-xs text-text-muted">Treinos, dieta e comunidade.</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <MiniAdminStat label="Treinos" value={adminData.workouts.length} />
+                    <MiniAdminStat label="Dietas" value={adminData.nutrition.length} />
+                    <MiniAdminStat label="Posts" value={adminData.posts.length} />
+                  </div>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Os números refletem os registros carregados nas últimas consultas limitadas do painel.
+                  </p>
+                </div>
+
+                <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
+                  <div className="flex items-center gap-3">
+                    <Wallet className="text-primary" size={22} />
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-tight">Conversões</h3>
+                      <p className="text-xs text-text-muted">Pagamentos e afiliados recentes.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {recentConversions.map(conv => (
+                      <div key={conv.id} className="bg-white/5 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-black uppercase tracking-widest">{conv.plano}</div>
+                          <div className="text-[10px] text-text-muted">{conv.status_pagamento}</div>
+                        </div>
+                        <div className="text-sm font-black text-primary">
+                          {Number(conv.valor_assinatura || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                      </div>
+                    ))}
+                    {recentConversions.length === 0 && <p className="text-sm text-text-muted">Nenhuma conversão disponível ainda.</p>}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       ) : (
         <AdminAffiliatesView />
@@ -6027,66 +6730,24 @@ function AdminView() {
   );
 }
 
-function PlanSimulator({ currentPlan, onPlanChange }: { currentPlan: Plan, onPlanChange: (plan: Plan | null) => void }) {
-  const [open, setOpen] = useState(false);
-
-  const plans: { value: Plan; label: string }[] = [
-    { value: 'Iniciante', label: 'FREE' },
-    { value: 'Pro', label: 'PRO' },
-    { value: 'Elite', label: 'ELITE' },
-  ];
-
-  const selected = plans.find(p => p.value === currentPlan);
-
+function AdminMetricCard({ icon, label, value, detail, tone }: { icon: React.ReactNode; label: string; value: string; detail: string; tone: string }) {
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-fit">
-      <div className="relative">
-        <button
-          onClick={() => setOpen(v => !v)}
-          className="bg-surface/80 backdrop-blur-xl border border-primary/30 px-4 py-2 rounded-2xl flex items-center gap-2.5 shadow-2xl hover:border-primary/60 transition-all"
-        >
-          <ShieldCheck size={14} className="text-primary" />
-          <span className="text-[10px] font-black text-primary uppercase tracking-widest">
-            Admin {selected ? `· ${selected.label}` : ''}
-          </span>
-          <ChevronRight
-            size={12}
-            className={`text-primary transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
-          />
-        </button>
-
-        {open && (
-          <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 z-[-1]" onClick={() => setOpen(false)} />
-            {/* Dropdown */}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-surface/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden min-w-[140px]">
-              {plans.map(p => (
-                <button
-                  key={p.value}
-                  onClick={() => { onPlanChange(p.value); setOpen(false); }}
-                  className={`w-full flex items-center justify-between px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-colors
-                    ${currentPlan === p.value
-                      ? 'bg-primary/15 text-primary'
-                      : 'text-text-muted hover:bg-white/5 hover:text-text-primary'
-                    }`}
-                >
-                  {p.label}
-                  {currentPlan === p.value && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                </button>
-              ))}
-              <div className="border-t border-white/5">
-                <button
-                  onClick={() => { onPlanChange(null); setOpen(false); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-text-muted hover:text-error hover:bg-error/5 transition-colors"
-                >
-                  <X size={12} /> Resetar
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+    <div className="bg-surface p-5 sm:p-6 rounded-3xl border border-white/5 space-y-4 min-w-0">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-text-muted text-[10px] sm:text-xs font-black uppercase tracking-widest">{label}</h3>
+        <div className={`p-2 rounded-xl bg-white/5 ${tone}`}>{icon}</div>
       </div>
+      <div className="text-2xl sm:text-3xl font-black tracking-tight break-words leading-tight">{value}</div>
+      <div className={`text-xs font-bold ${tone}`}>{detail}</div>
+    </div>
+  );
+}
+
+function MiniAdminStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-white/5 border border-white/5 rounded-2xl p-3 sm:p-4 text-center min-w-0">
+      <div className="text-xl sm:text-2xl font-black">{value}</div>
+      <div className="text-[9px] text-text-muted font-black uppercase tracking-widest mt-1">{label}</div>
     </div>
   );
 }
@@ -6596,10 +7257,21 @@ function EarlyAccessView({ onSelectWorkout: _onSelectWorkout }: { onSelectWorkou
   );
 }
 
-function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, onUpgrade: (plan: Plan) => Promise<void>, currentPlan: Plan }) {
+function PricingView({
+  onBack,
+  onUpgrade,
+  currentPlan,
+  initialCheckoutPlan,
+}: {
+  onBack: () => void,
+  onUpgrade: (plan: Plan) => Promise<void>,
+  currentPlan: Plan,
+  initialCheckoutPlan?: Plan | null,
+}) {
   const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
   const hasReferral = !!localStorage.getItem('affiliate_ref');
 
   const plans = [
@@ -6659,17 +7331,38 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
   ];
 
   const handleUpgrade = async (plan: Plan) => {
-    if (plan === 'Elite') {
-      window.open('https://app.abacatepay.com/pay/bill_0mR4kgjeGnp5du3QSD5naMCU', '_blank');
-      return;
-    }
-    if (plan === 'Pro') {
-      window.open('https://app.abacatepay.com/pay/bill_qcpZwfDkagE0js0dcQrLWTjq', '_blank');
+    if (plan === 'Elite' || plan === 'Pro') {
+      setIsProcessing(true);
+      try {
+        if (user?.id) localStorage.setItem(`pending_checkout_plan_${user.id}`, plan);
+        const res = await fetch('/api/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan,
+            customerEmail: user?.email,
+            userId: user?.id,
+            referralCode: localStorage.getItem('affiliate_ref') || null,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error || 'Erro ao iniciar pagamento.');
+        window.location.href = data.url;
+      } catch (e: any) {
+        alert(e.message || 'Erro ao iniciar pagamento. Tente novamente.');
+        setIsProcessing(false);
+      }
       return;
     }
     if (plan === currentPlan) return;
     setSelectedPlan(plan);
   };
+
+  useEffect(() => {
+    if (!initialCheckoutPlan || autoCheckoutStarted || initialCheckoutPlan === currentPlan) return;
+    setAutoCheckoutStarted(true);
+    handleUpgrade(initialCheckoutPlan);
+  }, [initialCheckoutPlan, autoCheckoutStarted, currentPlan]);
 
   const confirmUpgrade = async () => {
     if (!selectedPlan) return;
@@ -6731,7 +7424,9 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
             </div>
           )}
           <p className="text-text-secondary text-base md:text-lg max-w-2xl mx-auto">
-            Selecione o plano que melhor se adapta aos seus objetivos e comece sua transformação hoje mesmo.
+            {initialCheckoutPlan && initialCheckoutPlan !== 'Iniciante'
+              ? `Estamos preparando o checkout do plano ${initialCheckoutPlan}. O acesso premium só libera após o pagamento aprovado.`
+              : 'Selecione o plano que melhor se adapta aos seus objetivos e comece sua transformação hoje mesmo.'}
           </p>
         </header>
 
@@ -6780,7 +7475,7 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
 
               <button
                 onClick={() => handleUpgrade(plan.id)}
-                disabled={(plan.id !== 'Elite' && plan.id !== 'Pro') && currentPlan === plan.id}
+                disabled={isProcessing || ((plan.id !== 'Elite' && plan.id !== 'Pro') && currentPlan === plan.id)}
                 className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
                   plan.buttonText === 'Plano Atual'
                     ? 'bg-white text-black border border-white cursor-default'
@@ -6789,7 +7484,7 @@ function PricingView({ onBack, onUpgrade, currentPlan }: { onBack: () => void, o
                     : 'bg-white/5 text-text-primary border border-white/10 hover:bg-white/10'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {plan.buttonText}
+                {isProcessing && (plan.id === 'Elite' || plan.id === 'Pro') ? 'REDIRECIONANDO...' : plan.buttonText}
               </button>
             </motion.div>
           ))}

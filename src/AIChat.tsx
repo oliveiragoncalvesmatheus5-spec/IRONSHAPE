@@ -4,6 +4,7 @@ import { Send, Loader2, Bot, Sparkles, ChevronRight, RotateCcw } from 'lucide-re
 import ReactMarkdown from 'react-markdown';
 import { UserProfile } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
+import { PHYSICAL_LIMITATION_OPTIONS } from './data/physicalLimitations';
 import { sendMessage, AIProfile, Message } from './services/claudeService';
 
 // ─── Onboarding config ────────────────────────────────────────────────────────
@@ -28,7 +29,7 @@ const STEPS = [
     title: 'Você tem alguma limitação física?',
     subtitle: 'Selecione todas que se aplicam.',
     type: 'multi' as const,
-    options: ['Nenhuma', 'Joelho', 'Lombar / Coluna', 'Ombro', 'Tornozelo', 'Outra'],
+    options: PHYSICAL_LIMITATION_OPTIONS,
   },
   {
     id: 'priorityMuscles',
@@ -55,6 +56,14 @@ function profileKey(userId: string) {
 
 function historyKey(userId: string) {
   return `ironcoach_history_${userId}`;
+}
+
+function hasPaidAccess(profile: UserProfile | null) {
+  return !!profile && profile.subscriptionStatus === 'active' && (profile.plano === 'Pro' || profile.plano === 'Elite');
+}
+
+function visiblePlan(profile: UserProfile) {
+  return hasPaidAccess(profile) ? profile.plano : 'Iniciante';
 }
 
 function parseAIProfile(answers: Record<string, string | string[]>): AIProfile {
@@ -317,7 +326,7 @@ function Chat({
           <div>
             <h2 className="text-text-primary font-bold">Iron Coach</h2>
             <p className="text-text-muted text-xs">
-              {profile.plano} · {aiProfile.trainingDays} dias/semana
+              {visiblePlan(profile)} · {aiProfile.trainingDays} dias/semana
             </p>
           </div>
         </div>
@@ -463,7 +472,7 @@ export default function AIChat({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isPro = profile?.plano === 'Pro' || profile?.plano === 'Elite' || isAdmin;
+  const isPro = hasPaidAccess(profile) || isAdmin;
 
   // Load persisted profile and history
   useEffect(() => {

@@ -18,22 +18,39 @@ services:
     envs:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: "3000"
       - key: ANTHROPIC_API_KEY
         scope: RUN_TIME
         type: SECRET
       - key: RAPIDAPI_KEY
         scope: RUN_TIME
         type: SECRET
+      - key: RAPIDAPI_HOST
+        value: edb-with-videos-and-images-by-ascendapi.p.rapidapi.com
+        scope: RUN_TIME
       - key: VITE_SUPABASE_URL
         scope: BUILD_TIME
         type: SECRET
       - key: VITE_SUPABASE_ANON_KEY
         scope: BUILD_TIME
         type: SECRET
-      - key: STRIPE_SECRET_KEY
+      - key: SUPABASE_SERVICE_ROLE_KEY
         scope: RUN_TIME
         type: SECRET
-      - key: STRIPE_WEBHOOK_SECRET
+      - key: ABACATEPAY_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: ABACATEPAY_PRODUCT_PRO_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: ABACATEPAY_PRODUCT_ELITE_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: ABACATEPAY_WEBHOOK_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: ABACATEPAY_WEBHOOK_SIGNATURE_KEY
         scope: RUN_TIME
         type: SECRET
       - key: APP_URL

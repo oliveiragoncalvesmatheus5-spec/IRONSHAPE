@@ -187,9 +187,54 @@ export const exerciseTranslations = {
   "agachamento sumô":                                "sumo squat",
   "flexão diamante":                                 "diamond push up",
   "remada baixa":                                    "cable seated row",
+  "mobilidade dinâmica":                             "dynamic warm up",
+  "mobilidade leve sem dor":                         "mobility warm up",
+  "agachamento + alcance":                           "bodyweight squat reach",
+  "sentar e levantar da cadeira":                    "chair squat",
+  "flexão inclinada":                                "incline push up",
+  "flexão na parede":                                "wall push up",
+  "dead bug ou prancha elevada":                     "dead bug",
 
   // Elite
   "levantamento terra":                              "deadlift",
+
+  // ─── CASA / PESO CORPORAL ─────────────────────────────────
+  "flexão inclinada no banco/cadeira":               "incline push up",
+  "flexão inclinada na parede":                      "wall push up",
+  "flexão parcial controlada":                       "push up",
+  "flexão tradicional controlada":                   "push up",
+  "supino no chão com halteres":                     "dumbbell floor press",
+  "pressão isométrica de palmas":                    "isometric chest squeeze",
+  "remada com elástico":                             "resistance band row",
+  "remada unilateral com halter":                    "dumbbell one arm row",
+  "remada isométrica com toalha":                    "seated row with towel",
+  "retração escapular no chão":                      "superman",
+  "barra fixa assistida":                            "assisted pull up",
+  "pulldown com toalha/elástico":                    "cable straight arm pulldown",
+  "agachamento curto na cadeira":                    "chair squat",
+  "agachamento goblet":                              "goblet squat",
+  "bom dia sem carga":                               "bodyweight good morning",
+  "elevação pélvica no chão":                        "glute bridge",
+  "desenvolvimento com elástico":                    "resistance band shoulder press",
+  "elevação frontal sem carga":                      "front raise",
+  "elevação lateral com halteres":                   "dumbbell lateral raise",
+  "elevação lateral isométrica":                     "isometric lateral raise",
+  "wall slide":                                      "wall slide",
+  "rosca com elástico":                              "resistance band biceps curl",
+  "rosca isométrica com toalha":                     "isometric biceps curl",
+  "tríceps no banco com amplitude curta":            "bench triceps dip",
+  "tríceps testa no chão sem carga":                 "bodyweight triceps extension",
+  "farmer hold com halteres":                        "farmer carry",
+  "aperto isométrico de toalha":                     "isometric grip squeeze",
+  "prancha elevada":                                 "incline plank",
+  "prancha frontal":                                 "plank",
+  "dead bug":                                        "dead bug",
+  "prancha lateral adaptada":                        "side plank",
+};
+
+export const localExerciseMedia = {
+  // Exemplo para quando adicionarmos arquivos locais:
+  // "flexão inclinada no banco/cadeira": "/exercise-media/flexao-inclinada.gif",
 };
 
 /**
@@ -200,10 +245,39 @@ function normalize(str) {
   return str
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[°–—]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function getLocalExerciseMedia(namePt) {
+  const key = normalize(namePt);
+  for (const [ptKey, mediaUrl] of Object.entries(localExerciseMedia)) {
+    if (normalize(ptKey) === key) return mediaUrl;
+  }
+  return null;
+}
+
+function keywordFallback(key) {
+  const rules = [
+    [/flexao|push/, "push up"],
+    [/agachamento|cadeira/, "bodyweight squat"],
+    [/remada|row/, "cable seated row"],
+    [/prancha lateral/, "side plank"],
+    [/prancha/, "plank"],
+    [/dead bug/, "dead bug"],
+    [/elevacao pelvica|gluteo|quadril/, "glute bridge"],
+    [/desenvolvimento|ombro/, "shoulder press"],
+    [/elevacao lateral/, "lateral raise"],
+    [/rosca|biceps/, "biceps curl"],
+    [/triceps/, "triceps extension"],
+    [/mobilidade|aquecimento/, "dynamic warm up"],
+    [/barra fixa|pull/, "pull up"],
+    [/pulldown|puxada/, "lat pulldown"],
+  ];
+  const match = rules.find(([pattern]) => pattern.test(key));
+  return match ? match[1] : null;
 }
 
 export function translateExerciseName(namePt) {
@@ -217,9 +291,13 @@ export function translateExerciseName(namePt) {
   // 2. Partial match — chave contida no nome ou vice-versa (pega variações com sufixo)
   for (const [ptKey, enVal] of Object.entries(exerciseTranslations)) {
     const nk = normalize(ptKey);
-    if (key.startsWith(nk) || nk.startsWith(key)) return enVal;
+    if (key.startsWith(nk) || nk.startsWith(key) || key.includes(nk)) return enVal;
   }
 
-  // 3. Fallback: retorna as primeiras 3 palavras em inglês-friendly para a API tentar
+  // 3. Keyword fallback for generated/custom exercise names.
+  const keywordMatch = keywordFallback(key);
+  if (keywordMatch) return keywordMatch;
+
+  // 4. Fallback: retorna as primeiras 3 palavras em inglês-friendly para a API tentar
   return key.split(" ").slice(0, 3).join(" ");
 }

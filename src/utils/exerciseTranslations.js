@@ -3,7 +3,7 @@ export const exerciseTranslations = {
   // ─── PEITO ───────────────────────────────────────────────
   // Free
   "supino reto com halteres":                        "dumbbell bench press",
-  "crucifixo reto":                                  "dumbbell fly",
+  "crucifixo reto":                                  "dumbbell chest fly",
   "flexão de braços (joelhos no chão)":              "knee push up",
   "flexão de braços completa":                       "push up",
   "supino reto com barra":                           "barbell bench press",
@@ -14,7 +14,7 @@ export const exerciseTranslations = {
   "supino inclinado com halteres":                   "dumbbell incline bench press",
   "crucifixo inclinado com halteres":                "dumbbell incline fly",
   "cross over":                                      "cable crossover",
-  "crucifixo reto com halteres":                     "dumbbell fly",
+  "crucifixo reto com halteres":                     "dumbbell chest fly",
   "supino declinado com halteres":                   "dumbbell decline bench press",
   "mergulho entre barras paralelas (dips)":          "dips",
   "cross over de cima para baixo":                   "cable crossover",
@@ -26,7 +26,7 @@ export const exerciseTranslations = {
   "supino reto com barra (carga máxima)":            "barbell bench press",
   "supino reto com halteres (pausa 2s)":             "dumbbell bench press",
   "cross over (polias na altura do peito)":          "cable crossover",
-  "crucifixo reto com halteres (cadência lenta)":    "dumbbell fly",
+  "crucifixo reto com halteres (cadência lenta)":    "dumbbell chest fly",
   "supino declinado com barra (carga máxima)":       "barbell decline bench press",
   "supino declinado com halteres":                   "dumbbell decline bench press",
   "mergulho entre bancos (dips)":                    "triceps dip",

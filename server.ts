@@ -473,7 +473,14 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     const scoreResult = (item: any, searchName: string) => {
       const itemName = normalizeSearchText(String(item?.name || ""));
       const query = normalizeSearchText(searchName);
+      const bodyParts = (item?.bodyParts || []).map((part: string) => normalizeSearchText(String(part)));
+      const targetMuscles = (item?.targetMuscles || []).map((muscle: string) => normalizeSearchText(String(muscle)));
+      const itemContext = [itemName, ...bodyParts, ...targetMuscles].join(" ");
       const words = query.split(" ").filter(word => word.length > 2);
+      const isChestQuery = query.includes("chest") || query.includes("bench") || query.includes("fly");
+      const isShoulderQuery = query.includes("shoulder") || query.includes("lateral raise");
+      const isBackQuery = query.includes("row") || query.includes("pulldown") || query.includes("pull up") || query.includes("back");
+      const isLegQuery = query.includes("squat") || query.includes("leg") || query.includes("lunge") || query.includes("deadlift");
       let score = 0;
       if (itemName === query) score += 100;
       if (itemName.includes(query)) score += 60;
@@ -481,8 +488,19 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
         if (itemName.includes(word)) score += 12;
       }
       if (pickMedia(item)) score += 8;
-      if (itemName.includes("neck") && !query.includes("neck")) score -= 30;
-      if (itemName.includes("calf") && !query.includes("calf")) score -= 20;
+      if (itemContext.includes("neck") && !query.includes("neck")) score -= 35;
+      if (itemContext.includes("calf") && !query.includes("calf")) score -= 25;
+      if ((itemName.includes("reverse") || itemName.includes("rear") || itemName.includes("bent over")) && !query.includes("reverse") && !query.includes("rear")) score -= 45;
+
+      if (isChestQuery && bodyParts.some((part: string) => part.includes("chest"))) score += 30;
+      if (isChestQuery && targetMuscles.some((muscle: string) => muscle.includes("pectoral"))) score += 30;
+      if (isChestQuery && itemName.includes("fly")) score += 20;
+      if (isChestQuery && !/(chest|pectoral|fly)/.test(itemContext)) score -= 60;
+      if (isChestQuery && /(deadlift|row|curl|calf|hip|thigh|leg|squat|hamstring|waist|back|full body)/.test(itemContext)) score -= 70;
+
+      if (isShoulderQuery && /(chest|pectoral|hip|thigh|leg|calf|waist)/.test(itemContext)) score -= 45;
+      if (isBackQuery && /(chest|pectoral|calf|neck)/.test(itemContext)) score -= 40;
+      if (isLegQuery && /(chest|pectoral|neck)/.test(itemContext)) score -= 40;
       return score;
     };
 
@@ -493,13 +511,15 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       console.log(`[workout-gif] Searching ${rapidHost} for: "${searchName}"`);
       const response = await fetch(url, { headers: rapidHeaders });
       const data = await response.json();
-      const listBase = pickArray(data)
+      const listBase = pickArray(data).map(normalizeMediaResult);
+      const detailLimit = rapidHost.includes("ascendapi") ? 8 : 5;
+      const list = (await Promise.all(listBase.slice(0, detailLimit).map(fetchExerciseDetail)))
         .map(normalizeMediaResult)
-        .sort((a, b) => scoreResult(b, searchName) - scoreResult(a, searchName));
-      const list = (await Promise.all(listBase.slice(0, 5).map(fetchExerciseDetail)))
-        .map(normalizeMediaResult);
-      console.log(`[workout-gif] Status: ${response.status}, Results: ${list.length}`);
-      if (response.ok && list.length > 0) return { status: response.status, data: list.slice(0, 5) };
+        .map((item: any) => ({ ...item, matchScore: scoreResult(item, searchName) }))
+        .sort((a, b) => b.matchScore - a.matchScore);
+      const safeList = list.filter((item: any) => item.matchScore >= 35);
+      console.log(`[workout-gif] Status: ${response.status}, Results: ${list.length}, Safe: ${safeList.length}`);
+      if (response.ok && safeList.length > 0) return { status: response.status, data: safeList.slice(0, 5) };
       return null;
     };
 
@@ -522,7 +542,6 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       const candidates = [
         name,
         ...(fallbackQueries[normalized] || []),
-        ...(name.includes(' ') ? [name.split(' ').slice(0, 2).join(' '), name.split(' ')[0]] : []),
       ].filter((query, index, arr) => query && arr.indexOf(query) === index);
 
       let result: Awaited<ReturnType<typeof searchRapidApi>> = null;

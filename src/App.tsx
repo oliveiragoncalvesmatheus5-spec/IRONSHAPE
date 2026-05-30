@@ -3047,6 +3047,11 @@ function ExecutionModal({
       setGifLoading(false);
       return () => { cancelled = true; };
     }
+    if (exercise.videoUrl) {
+      setApiVideoUrl(exercise.videoUrl);
+      setGifLoading(false);
+      return () => { cancelled = true; };
+    }
     const searchName = translateExerciseName(exercise.name);
     searchExercisesByName(exercise.name)
       .then((results: any) => {
@@ -3083,6 +3088,16 @@ function ExecutionModal({
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
+          ) : exercise.videoUrl ? (
+            <video
+              src={exercise.videoUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              controls
+              className="w-full h-full object-contain"
+            />
           ) : apiVideoUrl ? (
             <video
               src={apiVideoUrl}
@@ -3095,15 +3110,6 @@ function ExecutionModal({
             />
           ) : gifUrl ? (
             <img src={gifUrl} alt={exercise.name} className="w-full h-full object-contain" />
-          ) : exercise.videoUrl ? (
-            <video
-              src={exercise.videoUrl}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-5 p-8 text-center">
               <div className="w-20 h-20 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
@@ -3222,6 +3228,10 @@ function ExerciseCard({
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
+      return;
+    }
+    if (exercise.videoUrl) {
+      setApiVideoUrl(exercise.videoUrl);
       return;
     }
     const searchName = translateExerciseName(exercise.name);
@@ -3364,6 +3374,16 @@ function ExerciseCard({
                     <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Carregando...</p>
                   </div>
+                ) : exercise.videoUrl ? (
+                  <video
+                    src={exercise.videoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    className="w-full h-full object-contain"
+                  />
                 ) : apiVideoUrl ? (
                   <video
                     src={apiVideoUrl}
@@ -3379,15 +3399,6 @@ function ExerciseCard({
                     src={gifUrl}
                     alt={exercise.name}
                     className="w-full h-full object-contain"
-                  />
-                ) : exercise.videoUrl ? (
-                  <video
-                    src={exercise.videoUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-text-muted p-8 text-center">

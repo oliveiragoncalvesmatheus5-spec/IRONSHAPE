@@ -3037,20 +3037,18 @@ function ExecutionModal({
   const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(true);
+  const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setGifLoading(true);
+    setGifUrl(null);
+    setApiVideoUrl(null);
+    setCuratedVideoFailed(false);
+    setGifLoading(!exercise.videoUrl);
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
       setGifLoading(false);
-      return () => { cancelled = true; };
-    }
-    if (exercise.videoUrl) {
-      setApiVideoUrl(exercise.videoUrl);
-      setGifLoading(false);
-      return () => { cancelled = true; };
     }
     const searchName = translateExerciseName(exercise.name);
     searchExercisesByName(exercise.name)
@@ -3067,7 +3065,7 @@ function ExecutionModal({
       .catch((err: any) => { console.error('[ExerciseModal] GIF fetch error:', err?.message); })
       .finally(() => { if (!cancelled) setGifLoading(false); });
     return () => { cancelled = true; };
-  }, [exercise.name]);
+  }, [exercise.name, exercise.videoUrl]);
 
   return (
     <motion.div
@@ -3088,7 +3086,7 @@ function ExecutionModal({
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
-          ) : exercise.videoUrl ? (
+          ) : exercise.videoUrl && !curatedVideoFailed ? (
             <video
               src={exercise.videoUrl}
               autoPlay
@@ -3096,6 +3094,7 @@ function ExecutionModal({
               muted
               playsInline
               controls
+              onError={() => setCuratedVideoFailed(true)}
               className="w-full h-full object-contain"
             />
           ) : apiVideoUrl ? (
@@ -3217,6 +3216,7 @@ function ExerciseCard({
   const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
+  const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
 
   const handleToggleDetails = async () => {
     if (showDetails) {
@@ -3224,18 +3224,14 @@ function ExerciseCard({
       return;
     }
     setShowDetails(true);
+    setCuratedVideoFailed(false);
     if (gifUrl || apiVideoUrl) return;
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
-      return;
-    }
-    if (exercise.videoUrl) {
-      setApiVideoUrl(exercise.videoUrl);
-      return;
     }
     const searchName = translateExerciseName(exercise.name);
-    setGifLoading(true);
+    setGifLoading(!exercise.videoUrl);
     try {
       const results = await searchExercisesByName(exercise.name);
       const list = Array.isArray(results) ? results : results?.data;
@@ -3374,7 +3370,7 @@ function ExerciseCard({
                     <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Carregando...</p>
                   </div>
-                ) : exercise.videoUrl ? (
+                ) : exercise.videoUrl && !curatedVideoFailed ? (
                   <video
                     src={exercise.videoUrl}
                     autoPlay
@@ -3382,6 +3378,7 @@ function ExerciseCard({
                     muted
                     playsInline
                     controls
+                    onError={() => setCuratedVideoFailed(true)}
                     className="w-full h-full object-contain"
                   />
                 ) : apiVideoUrl ? (

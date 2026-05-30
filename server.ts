@@ -555,6 +555,24 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
 
     const searchWorkoutX = async (searchName: string) => {
       if (!workoutxKey) return null;
+      const exactWorkoutXIds: Record<string, { id: string; name: string; bodyPart: string; equipment: string; target: string }> = {
+        "dumbbell bench press": { id: "0289", name: "Dumbbell Bench Press", bodyPart: "Chest", equipment: "Dumbbell", target: "Pectorals" },
+        "dumbbell fly": { id: "0308", name: "Dumbbell Fly", bodyPart: "Chest", equipment: "Dumbbell", target: "Pectorals" },
+        "barbell bench press": { id: "0025", name: "Barbell Bench Press", bodyPart: "Chest", equipment: "Barbell", target: "Pectorals" },
+        "push up": { id: "0662", name: "Push Up", bodyPart: "Chest", equipment: "Body Weight", target: "Pectorals" },
+        "knee push up": { id: "3211", name: "Knee Push Up", bodyPart: "Chest", equipment: "Body Weight", target: "Pectorals" },
+      };
+      const exactMatch = exactWorkoutXIds[normalizeSearchText(searchName)];
+      if (exactMatch) {
+        const item = normalizeMediaResult({
+          ...exactMatch,
+          bodyParts: [exactMatch.bodyPart],
+          equipments: [exactMatch.equipment],
+          targetMuscles: [exactMatch.target],
+          gifUrl: `/api/workoutx-gif/${exactMatch.id}`,
+        });
+        return { status: 200, data: [{ ...item, provider: "workoutx", matchScore: 999 }] };
+      }
       const urls = [
         `https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(searchName)}`,
         `https://api.workoutxapp.com/v1/exercises/search?name=${encodeURIComponent(searchName)}`,
@@ -598,6 +616,9 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     };
 
     const fallbackQueries: Record<string, string[]> = {
+      "dumbbell chest fly": ["dumbbell fly"],
+      "dumbbell lying fly": ["dumbbell fly"],
+      "dumbbell flat fly": ["dumbbell fly"],
       "cable seated row": ["seated row", "lever seated row", "barbell bent over row", "dumbbell bent over row", "row"],
       "superman": ["superman", "back extension", "hyperextension"],
       "cable straight arm pulldown": ["straight arm pulldown", "cable pulldown", "lat pulldown", "pulldown"],

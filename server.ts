@@ -497,6 +497,10 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       if (isChestQuery && itemName.includes("fly")) score += 20;
       if (isChestQuery && !/(chest|pectoral|fly)/.test(itemContext)) score -= 60;
       if (isChestQuery && /(deadlift|row|curl|calf|hip|thigh|leg|squat|hamstring|waist|back|full body)/.test(itemContext)) score -= 70;
+      if (isChestQuery && !query.includes("one arm") && /(one arm|single arm|unilateral)/.test(itemContext)) score -= 80;
+      if (isChestQuery && !query.includes("incline") && itemContext.includes("incline")) score -= 45;
+      if (isChestQuery && !query.includes("decline") && itemContext.includes("decline")) score -= 45;
+      if (isChestQuery && !query.includes("hammer") && itemContext.includes("hammer")) score -= 35;
 
       if (isShoulderQuery && /(chest|pectoral|hip|thigh|leg|calf|waist)/.test(itemContext)) score -= 45;
       if (isBackQuery && /(chest|pectoral|calf|neck)/.test(itemContext)) score -= 40;

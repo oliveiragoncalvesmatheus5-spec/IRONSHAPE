@@ -3027,6 +3027,114 @@ function RestTimer({ restTime, onStateChange }: { restTime: string, onStateChang
   );
 }
 
+type ExerciseAnimationType = 'dumbbellBenchPress';
+
+function normalizeExerciseKey(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getExerciseAnimationType(name: string): ExerciseAnimationType | null {
+  const key = normalizeExerciseKey(name);
+  if (key.includes('supino reto com halteres')) return 'dumbbellBenchPress';
+  return null;
+}
+
+function DumbbellBenchPressAnimation() {
+  return (
+    <div className="relative w-full h-full min-h-[260px] bg-[#f7f7f7] overflow-hidden flex items-center justify-center">
+      <svg viewBox="0 0 640 380" className="w-full h-full" role="img" aria-label="Supino reto com halteres">
+        <defs>
+          <linearGradient id="demoSkin" x1="0" x2="1">
+            <stop offset="0%" stopColor="#c9c9c9" />
+            <stop offset="100%" stopColor="#8f8f8f" />
+          </linearGradient>
+          <linearGradient id="demoMuscle" x1="0" x2="1">
+            <stop offset="0%" stopColor="#ff6a00" />
+            <stop offset="100%" stopColor="#b82916" />
+          </linearGradient>
+          <filter id="demoShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor="#000" floodOpacity="0.18" />
+          </filter>
+        </defs>
+
+        <rect width="640" height="380" fill="#f7f7f7" />
+        <ellipse cx="320" cy="326" rx="215" ry="22" fill="#000" opacity="0.08" />
+
+        <g filter="url(#demoShadow)">
+          <rect x="178" y="238" width="284" height="34" rx="17" fill="#1f1f1f" />
+          <rect x="218" y="270" width="18" height="68" rx="6" fill="#2b2b2b" />
+          <rect x="404" y="270" width="18" height="68" rx="6" fill="#2b2b2b" />
+          <rect x="186" y="332" width="70" height="10" rx="5" fill="#2b2b2b" />
+          <rect x="386" y="332" width="70" height="10" rx="5" fill="#2b2b2b" />
+        </g>
+
+        <g filter="url(#demoShadow)">
+          <ellipse cx="320" cy="222" rx="96" ry="42" fill="url(#demoSkin)" />
+          <ellipse cx="320" cy="218" rx="50" ry="27" fill="url(#demoMuscle)" opacity="0.95" />
+          <circle cx="456" cy="218" r="31" fill="url(#demoSkin)" />
+          <path d="M432 218c20-28 53-18 58 6-17-11-36-12-58-6Z" fill="#222" />
+          <rect x="194" y="240" width="96" height="24" rx="12" fill="#222" opacity="0.9" />
+        </g>
+
+        <g strokeLinecap="round" strokeLinejoin="round" filter="url(#demoShadow)">
+          <line x1="275" y1="204" x2="242" y2="142" stroke="url(#demoSkin)" strokeWidth="20">
+            <animate attributeName="x2" values="242;252;242" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
+          </line>
+          <line x1="242" y1="142" x2="242" y2="76" stroke="url(#demoSkin)" strokeWidth="18">
+            <animate attributeName="x1" values="242;252;242" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="y1" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="x2" values="242;252;242" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="76;128;76" dur="2.1s" repeatCount="indefinite" />
+          </line>
+          <line x1="365" y1="204" x2="398" y2="142" stroke="url(#demoSkin)" strokeWidth="20">
+            <animate attributeName="x2" values="398;388;398" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
+          </line>
+          <line x1="398" y1="142" x2="398" y2="76" stroke="url(#demoSkin)" strokeWidth="18">
+            <animate attributeName="x1" values="398;388;398" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="y1" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="x2" values="398;388;398" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="76;128;76" dur="2.1s" repeatCount="indefinite" />
+          </line>
+        </g>
+
+        <g filter="url(#demoShadow)">
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="0 0;10 52;0 0" dur="2.1s" repeatCount="indefinite" />
+            <rect x="214" y="56" width="56" height="18" rx="9" fill="#191919" />
+            <circle cx="214" cy="65" r="22" fill="#111" />
+            <circle cx="270" cy="65" r="22" fill="#111" />
+            <circle cx="214" cy="65" r="10" fill="#333" />
+            <circle cx="270" cy="65" r="10" fill="#333" />
+          </g>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="0 0;-10 52;0 0" dur="2.1s" repeatCount="indefinite" />
+            <rect x="370" y="56" width="56" height="18" rx="9" fill="#191919" />
+            <circle cx="370" cy="65" r="22" fill="#111" />
+            <circle cx="426" cy="65" r="22" fill="#111" />
+            <circle cx="370" cy="65" r="10" fill="#333" />
+            <circle cx="426" cy="65" r="10" fill="#333" />
+          </g>
+        </g>
+
+        <path d="M231 92c-22 27-22 58 0 86" fill="none" stroke="#ff6a00" strokeWidth="5" strokeLinecap="round" opacity="0.85" />
+        <path d="M409 92c22 27 22 58 0 86" fill="none" stroke="#ff6a00" strokeWidth="5" strokeLinecap="round" opacity="0.85" />
+      </svg>
+    </div>
+  );
+}
+
+function ExerciseAnimation({ type }: { type: ExerciseAnimationType }) {
+  if (type === 'dumbbellBenchPress') return <DumbbellBenchPressAnimation />;
+  return null;
+}
+
 function ExecutionModal({
   exercise,
   onClose
@@ -3038,13 +3146,15 @@ function ExecutionModal({
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(true);
   const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
+  const animationType = getExerciseAnimationType(exercise.name);
 
   useEffect(() => {
     let cancelled = false;
     setGifUrl(null);
     setApiVideoUrl(null);
     setCuratedVideoFailed(false);
-    setGifLoading(!exercise.videoUrl);
+    setGifLoading(!exercise.videoUrl && !animationType);
+    if (animationType) return () => { cancelled = true; };
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
@@ -3065,7 +3175,7 @@ function ExecutionModal({
       .catch((err: any) => { console.error('[ExerciseModal] GIF fetch error:', err?.message); })
       .finally(() => { if (!cancelled) setGifLoading(false); });
     return () => { cancelled = true; };
-  }, [exercise.name, exercise.videoUrl]);
+  }, [exercise.name, exercise.videoUrl, animationType]);
 
   return (
     <motion.div
@@ -3086,6 +3196,8 @@ function ExecutionModal({
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
+          ) : animationType ? (
+            <ExerciseAnimation type={animationType} />
           ) : exercise.videoUrl && !curatedVideoFailed ? (
             <video
               src={exercise.videoUrl}
@@ -3217,6 +3329,7 @@ function ExerciseCard({
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
   const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
+  const animationType = getExerciseAnimationType(exercise.name);
 
   const handleToggleDetails = async () => {
     if (showDetails) {
@@ -3225,6 +3338,7 @@ function ExerciseCard({
     }
     setShowDetails(true);
     setCuratedVideoFailed(false);
+    if (animationType) return;
     if (gifUrl || apiVideoUrl) return;
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
@@ -3370,6 +3484,8 @@ function ExerciseCard({
                     <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Carregando...</p>
                   </div>
+                ) : animationType ? (
+                  <ExerciseAnimation type={animationType} />
                 ) : exercise.videoUrl && !curatedVideoFailed ? (
                   <video
                     src={exercise.videoUrl}

@@ -3040,7 +3040,7 @@ function normalizeExerciseKey(value: string) {
 
 function getExerciseAnimationType(name: string): ExerciseAnimationType | null {
   const key = normalizeExerciseKey(name);
-  if (key.includes('supino reto com halteres')) return 'dumbbellBenchPress';
+  if (key.includes('supino reto com halteres') && !navigator.onLine) return 'dumbbellBenchPress';
   return null;
 }
 

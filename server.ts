@@ -388,18 +388,45 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     }
   });
 
-  // Workout media proxy — EDB with videos/images by AscendAPI via RapidAPI.
+  app.get("/api/workoutx-gif/:id", async (req, res) => {
+    const id = req.params.id;
+    const workoutxKey = process.env.WORKOUTX_API_KEY || process.env.VITE_WORKOUTX_KEY;
+    if (!id) return res.status(400).json({ error: "id é obrigatório" });
+    if (!workoutxKey) return res.status(500).json({ error: "WORKOUTX_API_KEY não configurada" });
+
+    try {
+      const response = await fetch(`https://api.workoutxapp.com/v1/gifs/${encodeURIComponent(id)}`, {
+        headers: { "X-WorkoutX-Key": workoutxKey },
+      });
+      if (!response.ok) {
+        return res.status(response.status).json({ error: `WorkoutX GIF retornou ${response.status}` });
+      }
+      const contentType = response.headers.get("content-type") || "image/gif";
+      const cacheControl = response.headers.get("cache-control") || "public, max-age=86400";
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", cacheControl);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return res.send(buffer);
+    } catch (error: any) {
+      console.error(`[workoutx-gif] Error for "${id}":`, error.message);
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Workout media proxy — WorkoutX first, RapidAPI/AscendAPI as legacy fallback.
   app.get("/api/workout-gif", async (req, res) => {
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
-    if (!process.env.RAPIDAPI_KEY) return res.status(500).json({ error: "RAPIDAPI_KEY não configurada" });
 
+    const workoutxKey = process.env.WORKOUTX_API_KEY || process.env.VITE_WORKOUTX_KEY;
     const rapidApiKey = process.env.RAPIDAPI_KEY;
     const rapidHost = process.env.RAPIDAPI_HOST || "edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
-    const rapidHeaders = {
-      'x-rapidapi-host': rapidHost,
-      'x-rapidapi-key': rapidApiKey,
-    };
+    const rapidHeaders = rapidApiKey
+      ? {
+          'x-rapidapi-host': rapidHost,
+          'x-rapidapi-key': rapidApiKey,
+        }
+      : null;
 
     const pickArray = (payload: any): any[] => {
       if (Array.isArray(payload)) return payload;
@@ -445,13 +472,31 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       return null;
     };
 
-    const normalizeMediaResult = (item: any) => ({
-      ...item,
-      name: item?.name || item?.exerciseName || item?.title,
-      gifUrl: item?.gifUrl || pickMedia(item),
-      imageUrl: item?.imageUrl || item?.image_url || item?.image || pickMedia(item),
-      videoUrl: item?.videoUrl || item?.video_url || item?.video,
-    });
+    const toArray = (value: any): string[] => {
+      if (Array.isArray(value)) return value.map((item) => String(item));
+      if (value) return [String(value)];
+      return [];
+    };
+
+    const normalizeMediaResult = (item: any) => {
+      const id = item?.id || item?.exerciseId;
+      const rawGifUrl = item?.gifUrl || pickMedia(item);
+      const workoutxGifUrl = id && typeof rawGifUrl === "string" && rawGifUrl.includes("api.workoutxapp.com")
+        ? `/api/workoutx-gif/${encodeURIComponent(String(id))}`
+        : rawGifUrl;
+      return {
+        ...item,
+        id,
+        exerciseId: item?.exerciseId || id,
+        name: item?.name || item?.exerciseName || item?.title,
+        bodyParts: toArray(item?.bodyParts || item?.bodyPart),
+        targetMuscles: toArray(item?.targetMuscles || item?.target),
+        equipments: toArray(item?.equipments || item?.equipment),
+        gifUrl: workoutxGifUrl,
+        imageUrl: item?.imageUrl || item?.image_url || item?.image || workoutxGifUrl,
+        videoUrl: item?.videoUrl || item?.video_url || item?.video,
+      };
+    };
 
     const fetchExerciseDetail = async (item: any) => {
       if (!rapidHost.includes("ascendapi") || !item?.exerciseId) return item;
@@ -508,7 +553,32 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       return score;
     };
 
+    const searchWorkoutX = async (searchName: string) => {
+      if (!workoutxKey) return null;
+      const urls = [
+        `https://api.workoutxapp.com/v1/exercises/name/${encodeURIComponent(searchName)}`,
+        `https://api.workoutxapp.com/v1/exercises/search?name=${encodeURIComponent(searchName)}`,
+        `https://api.workoutxapp.com/v1/exercises/search?q=${encodeURIComponent(searchName)}`,
+      ];
+      for (const url of urls) {
+        console.log(`[workout-gif] Searching WorkoutX for: "${searchName}"`);
+        const response = await fetch(url, { headers: { "X-WorkoutX-Key": workoutxKey } });
+        if (response.status === 404) continue;
+        const data = await response.json();
+        const list = pickArray(data)
+          .map(normalizeMediaResult)
+          .map((item: any) => ({ ...item, provider: "workoutx", matchScore: scoreResult(item, searchName) }))
+          .sort((a, b) => b.matchScore - a.matchScore);
+        const safeList = list.filter((item: any) => item.matchScore >= 35 && (item.gifUrl || item.videoUrl || item.imageUrl));
+        console.log(`[workout-gif] WorkoutX status: ${response.status}, Results: ${list.length}, Safe: ${safeList.length}`);
+        if (response.ok && safeList.length > 0) return { status: response.status, data: safeList.slice(0, 5) };
+        if (!response.ok) break;
+      }
+      return null;
+    };
+
     const searchRapidApi = async (searchName: string) => {
+      if (!rapidHeaders) return null;
       const url = rapidHost.includes("ascendapi")
         ? `https://${rapidHost}/api/v1/exercises/search?search=${encodeURIComponent(searchName)}`
         : `https://${rapidHost}/exercises/name/${encodeURIComponent(searchName)}?limit=5&offset=0`;
@@ -542,6 +612,10 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     };
 
     try {
+      if (!workoutxKey && !rapidHeaders) {
+        return res.status(500).json({ error: "WORKOUTX_API_KEY não configurada" });
+      }
+
       const normalized = name.toLowerCase().trim();
       const candidates = [
         name,
@@ -550,6 +624,8 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
 
       let result: Awaited<ReturnType<typeof searchRapidApi>> = null;
       for (const query of candidates) {
+        result = await searchWorkoutX(query);
+        if (result) break;
         result = await searchRapidApi(query);
         if (result) break;
       }

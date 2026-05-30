@@ -23,6 +23,9 @@ services:
       - key: ANTHROPIC_API_KEY
         scope: RUN_TIME
         type: SECRET
+      - key: WORKOUTX_API_KEY
+        scope: RUN_TIME
+        type: SECRET
       - key: RAPIDAPI_KEY
         scope: RUN_TIME
         type: SECRET

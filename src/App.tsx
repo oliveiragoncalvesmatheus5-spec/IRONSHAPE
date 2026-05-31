@@ -217,6 +217,170 @@ function buildHomeWorkouts(
   }));
 }
 
+type HomeTrainingMode = 'training' | 'mobility' | 'stretching';
+
+function buildHomeRecoveryWorkouts(
+  onboarding: any,
+  plan: Plan,
+  level: Level,
+  mode: Exclude<HomeTrainingMode, 'training'>
+): Workout[] {
+  const limitation = onboarding?.limitations || 'Nenhuma';
+  const planRequired = plan === 'free' ? 'Iniciante' : plan;
+  const recoveryExercise = (
+    id: string,
+    name: string,
+    reps: string,
+    description: string
+  ) => buildExercise(id, name, 'Full Body', 1, reps, '15s', description, limitation);
+
+  if (mode === 'mobility') {
+    return [
+      {
+        id: 'home-mobility-morning',
+        name: 'Despertar do Corpo',
+        description: 'Sequência curta para começar o dia com menos rigidez e mais disposição.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '6 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-neck', 'Mobilidade cervical suave', '40s', 'Movimente o pescoço sem pressa e sem forçar a amplitude.'),
+          recoveryExercise('mob-shoulders', 'Círculos de ombros', '45s', 'Aquece ombros e parte superior das costas.'),
+          recoveryExercise('mob-cat-cow', 'Mobilidade de coluna em quatro apoios', '60s', 'Alterna flexão e extensão confortável da coluna.'),
+          recoveryExercise('mob-hips', 'Círculos de quadril em pé', '45s', 'Libera quadril e prepara o corpo para caminhar ou treinar.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility',
+      },
+      {
+        id: 'home-mobility-training',
+        name: 'Preparação para Treinar',
+        description: 'Aquecimento articular completo antes do treino em casa.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '10 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-ankle', 'Mobilidade de tornozelo na parede', '45s por lado', 'Melhora conforto no agachamento e em movimentos de pernas.'),
+          recoveryExercise('mob-hip-flexor', 'Mobilidade dinâmica de quadril', '45s por lado', 'Prepara quadril e glúteos para exercícios de pernas.'),
+          recoveryExercise('mob-thoracic', 'Rotação torácica em quatro apoios', '45s por lado', 'Ativa a região média das costas e melhora postura.'),
+          recoveryExercise('mob-wall-slide', 'Wall slide', '10 reps', 'Prepara ombros e escápulas para empurrar e puxar.'),
+          recoveryExercise('mob-squat', 'Agachamento assistido com pausa', '8 reps', 'Ensina amplitude confortável antes do treino principal.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility',
+      },
+      {
+        id: 'home-mobility-posture',
+        name: 'Postura e Ombros',
+        description: 'Movimentos leves para quem passa muito tempo sentado.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '8 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-chin', 'Retração cervical na parede', '10 reps', 'Ajuda a alinhar cabeça e pescoço.'),
+          recoveryExercise('mob-scapula', 'Retração escapular em pé', '12 reps', 'Ativa musculatura postural das costas.'),
+          recoveryExercise('mob-wall-slide-posture', 'Wall slide', '10 reps', 'Trabalha mobilidade de ombros com controle.'),
+          recoveryExercise('mob-thoracic-standing', 'Rotação torácica em pé', '45s por lado', 'Reduz rigidez da parte superior das costas.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility',
+      },
+      {
+        id: 'home-mobility-low-impact',
+        name: 'Quadril e Lombar Leve',
+        description: 'Rotina de baixo impacto com amplitudes confortáveis e controle respiratório.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '9 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-breath', 'Respiração diafragmática deitado', '60s', 'Reduz tensão antes de movimentar a lombar.'),
+          recoveryExercise('mob-pelvis', 'Inclinação pélvica deitado', '12 reps', 'Mobiliza a pelve com movimento pequeno e controlado.'),
+          recoveryExercise('mob-knee-hug', 'Joelho ao peito alternado', '45s', 'Alivia rigidez de quadril e lombar sem impacto.'),
+          recoveryExercise('mob-bridge', 'Elevação pélvica curta', '10 reps', 'Ativa glúteos para apoiar melhor a lombar.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility',
+      },
+    ];
+  }
+
+  return [
+    {
+      id: 'home-stretch-post-workout',
+      name: 'Pós-treino Corpo Inteiro',
+      description: 'Alongamentos simples para desacelerar e iniciar a recuperação.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '8 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-chest', 'Alongamento de peitoral na parede', '40s por lado', 'Abra o peito sem forçar o ombro.'),
+        recoveryExercise('stretch-hamstring', 'Alongamento de posterior sentado', '45s por lado', 'Alongue a parte de trás das pernas com coluna confortável.'),
+        recoveryExercise('stretch-quad', 'Alongamento de quadríceps em pé', '40s por lado', 'Mantenha os joelhos próximos e use apoio se necessário.'),
+        recoveryExercise('stretch-back', 'Postura da criança', '60s', 'Relaxe costas, quadril e respiração.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching',
+    },
+    {
+      id: 'home-stretch-back',
+      name: 'Lombar e Posterior',
+      description: 'Rotina leve para reduzir rigidez depois de um dia sentado.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '10 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-breath', 'Respiração diafragmática deitado', '60s', 'Respire lentamente antes de alongar.'),
+        recoveryExercise('stretch-knee', 'Joelhos ao peito deitado', '45s', 'Relaxe a lombar com amplitude confortável.'),
+        recoveryExercise('stretch-hamstring-lying', 'Alongamento de posterior deitado', '45s por lado', 'Use uma toalha se precisar manter a perna elevada.'),
+        recoveryExercise('stretch-glute', 'Alongamento de glúteo deitado', '45s por lado', 'Evite pressionar demais o joelho.'),
+        recoveryExercise('stretch-child', 'Postura da criança', '60s', 'Finalize com respiração tranquila.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching',
+    },
+    {
+      id: 'home-stretch-upper',
+      name: 'Pescoço e Ombros',
+      description: 'Pausa rápida para aliviar tensão da parte superior do corpo.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '6 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-neck-side', 'Inclinação lateral suave do pescoço', '30s por lado', 'Não puxe a cabeça com força.'),
+        recoveryExercise('stretch-shoulder', 'Alongamento de ombro cruzado', '40s por lado', 'Mantenha o ombro longe da orelha.'),
+        recoveryExercise('stretch-triceps', 'Alongamento de tríceps acima da cabeça', '40s por lado', 'Evite arquear a lombar.'),
+        recoveryExercise('stretch-chest-door', 'Abertura de peito na parede', '45s', 'Respire fundo e mantenha amplitude confortável.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching',
+    },
+    {
+      id: 'home-stretch-sleep',
+      name: 'Relaxar antes de Dormir',
+      description: 'Sequência tranquila para baixar o ritmo no fim do dia.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '12 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-sleep-breath', 'Respiração lenta deitado', '90s', 'Alongue a expiração e relaxe os ombros.'),
+        recoveryExercise('stretch-sleep-glute', 'Alongamento de glúteo deitado', '45s por lado', 'Mantenha a respiração constante.'),
+        recoveryExercise('stretch-sleep-back', 'Rotação lombar deitado', '45s por lado', 'Faça um movimento leve e sem dor.'),
+        recoveryExercise('stretch-sleep-child', 'Postura da criança', '60s', 'Finalize sem pressa.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching',
+    },
+  ];
+}
+
 export default function App() {
   const { user, profile, loading, profileLoading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -2466,6 +2630,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'Todos'>('Todos');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early' | 'registro'>('workouts');
+  const [activeHomeMode, setActiveHomeMode] = useState<HomeTrainingMode>('training');
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
@@ -2503,9 +2668,16 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const usesHomeProtocol = trainingPlace === 'home';
   const usesHybridProtocol = trainingPlace === 'hybrid';
   const homeWorkouts = buildHomeWorkouts(profile, trainingOnboarding, selectedPlanTab, selectedLevel);
-  const workoutSource = usesHomeProtocol ? homeWorkouts : ALL_WORKOUTS;
+  const homeRecoveryWorkouts = activeHomeMode === 'training'
+    ? []
+    : buildHomeRecoveryWorkouts(trainingOnboarding, selectedPlanTab, selectedLevel, activeHomeMode);
+  const workoutSource = usesHomeProtocol
+    ? activeHomeMode === 'training' ? homeWorkouts : homeRecoveryWorkouts
+    : ALL_WORKOUTS;
   const visibleMuscleGroups = usesHomeProtocol
-    ? muscleGroups.filter(group => homeWorkouts.some(w => w.muscleGroup === group))
+    ? activeHomeMode === 'training'
+      ? muscleGroups.filter(group => homeWorkouts.some(w => w.muscleGroup === group))
+      : ['Full Body' as MuscleGroup]
     : muscleGroups;
   const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
 
@@ -2587,23 +2759,50 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       </header>
 
       {usesHomeProtocol && (
-        <section className="bg-primary/10 border border-primary/20 rounded-[28px] p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Treino em casa ativado</div>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              Montei estes treinos com base no objetivo <span className="text-text-primary font-bold">{profile.goal}</span>, nos equipamentos marcados e na limitação <span className="text-text-primary font-bold">{trainingOnboarding?.limitations || 'Nenhuma'}</span>.
-            </p>
+        <section className="space-y-4">
+          <div className="bg-primary/10 border border-primary/20 rounded-[24px] p-5 flex flex-col gap-4">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Treino em casa ativado</div>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Sessões práticas para o objetivo <span className="text-text-primary font-bold">{profile.goal}</span>, com progressão segura e rotina adaptada ao seu espaço.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(trainingOnboarding?.homeEquipment || ['Nenhum']).map((item: string) => (
+                <span key={item} className="px-3 py-1 rounded-lg bg-background/50 border border-white/10 text-[9px] font-black uppercase tracking-widest text-text-secondary">{item}</span>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {(trainingOnboarding?.homeEquipment || ['Nenhum']).map((item: string) => (
-              <span key={item} className="px-3 py-1 rounded-xl bg-background/50 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary">{item}</span>
+          <div className="grid grid-cols-3 gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5">
+            {([
+              { id: 'training', label: 'Treinar', icon: <Dumbbell size={16} /> },
+              { id: 'mobility', label: 'Mobilidade', icon: <Activity size={16} /> },
+              { id: 'stretching', label: 'Alongar', icon: <RefreshCw size={16} /> },
+            ] as const).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveHomeMode(item.id);
+                  setActiveSubTab('workouts');
+                  setSelectedMuscleGroup('Todos');
+                  setSelectedWorkout(null);
+                }}
+                className={`min-h-[58px] rounded-xl flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase transition-all ${
+                  activeHomeMode === item.id
+                    ? 'bg-primary text-text-primary shadow-lg shadow-primary/20'
+                    : 'text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </button>
             ))}
           </div>
         </section>
       )}
 
       {/* Main Plan Tabs */}
-      <div className="flex flex-col gap-3">
+      {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="flex flex-col gap-3">
         <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Protocolo</span>
         <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
           {(['Iniciante', 'Pro', 'Elite'] as Plan[]).map((p) => (
@@ -2624,7 +2823,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Sub-tabs for Pro and Elite */}
       {hasAccess(selectedPlanTab) && (
@@ -2703,7 +2902,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
             {activeSubTab === 'workouts' && (
               <>
                 {/* Filters Area */}
-                <div className="space-y-8">
+                {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="space-y-8">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="flex flex-col gap-3">
                       <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Nível de Intensidade</span>
@@ -2753,9 +2952,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                       </div>
                     </div>
                   </div>
-                </div>
+                </div>}
 
-                <div className="space-y-16">
+                <div className={usesHomeProtocol ? 'space-y-6' : 'space-y-16'}>
                   {visibleMuscleGroups.filter(g => selectedMuscleGroup === 'Todos' || g === selectedMuscleGroup).map((group) => {
                     const groupWorkouts = workoutSource.filter(w =>
                       w.planRequired === selectedPlanTab && 
@@ -2766,20 +2965,38 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                     if (groupWorkouts.length === 0) return null;
 
                     return (
-                      <section key={group} className="space-y-8">
+                      <section key={group} className={usesHomeProtocol ? 'space-y-4' : 'space-y-8'}>
                         <div className="flex items-center gap-6">
-                          <h2 className="text-2xl font-black tracking-tight uppercase">{group}</h2>
+                          <h2 className="text-xl md:text-2xl font-black tracking-tight uppercase">
+                            {usesHomeProtocol && activeHomeMode === 'mobility'
+                              ? 'Rotinas de mobilidade'
+                              : usesHomeProtocol && activeHomeMode === 'stretching'
+                              ? 'Rotinas de alongamento'
+                              : group}
+                          </h2>
                           <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
                         </div>
-                        <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:overflow-visible md:pb-0 md:snap-none">
+                        <div className={usesHomeProtocol
+                          ? 'grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4'
+                          : 'flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:overflow-visible md:pb-0 md:snap-none'}>
                           {groupWorkouts.map((workout) => (
-                            <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
-                              <WorkoutCard
+                            usesHomeProtocol ? (
+                              <HomeRoutineCard
+                                key={workout.id}
                                 workout={workout}
+                                mode={activeHomeMode}
                                 isCompleted={completedWorkouts.includes(workout.id)}
                                 onClick={() => setSelectedWorkout(workout)}
                               />
-                            </div>
+                            ) : (
+                              <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
+                                <WorkoutCard
+                                  workout={workout}
+                                  isCompleted={completedWorkouts.includes(workout.id)}
+                                  onClick={() => setSelectedWorkout(workout)}
+                                />
+                              </div>
+                            )
                           ))}
                         </div>
                       </section>
@@ -2926,6 +3143,71 @@ function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCo
           </div>
         </div>
       </div>
+    </button>
+  );
+}
+
+function HomeRoutineCard({
+  workout,
+  mode,
+  isCompleted,
+  onClick,
+}: {
+  workout: Workout,
+  mode: HomeTrainingMode,
+  isCompleted: boolean,
+  onClick: () => void,
+}) {
+  const config = mode === 'mobility'
+    ? {
+        label: 'Mobilidade',
+        benefit: 'Movimente melhor',
+        icon: <Activity size={20} />,
+        accent: 'text-success',
+        soft: 'bg-success/10 border-success/20',
+      }
+    : mode === 'stretching'
+    ? {
+        label: 'Alongamento',
+        benefit: 'Recupere com calma',
+        icon: <RefreshCw size={20} />,
+        accent: 'text-[#74b9ff]',
+        soft: 'bg-[#74b9ff]/10 border-[#74b9ff]/20',
+      }
+    : {
+        label: 'Treino em casa',
+        benefit: 'Evolua no seu ritmo',
+        icon: <Dumbbell size={20} />,
+        accent: 'text-primary',
+        soft: 'bg-primary/10 border-primary/20',
+      };
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full min-h-[184px] p-5 rounded-2xl bg-surface border border-white/10 text-left transition-all active:scale-[0.98] hover:border-white/20 flex flex-col justify-between gap-5"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 ${config.soft} ${config.accent}`}>
+          {config.icon}
+        </div>
+        {isCompleted && <CheckCircle2 size={20} className="text-success shrink-0" />}
+      </div>
+      <div>
+        <p className={`text-[9px] font-black uppercase tracking-widest mb-2 ${config.accent}`}>{config.label}</p>
+        <h3 className="text-xl font-black tracking-tight leading-tight text-text-primary">{workout.name}</h3>
+        <p className="text-xs text-text-secondary leading-relaxed mt-2 line-clamp-2">{workout.description}</p>
+      </div>
+      <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/5">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold text-text-muted">
+          <span className="flex items-center gap-1.5"><Clock size={13} />{workout.duration}</span>
+          <span className="flex items-center gap-1.5"><Activity size={13} />{workout.exercises.length} movimentos</span>
+        </div>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${config.soft} ${config.accent}`}>
+          <ChevronRight size={18} />
+        </div>
+      </div>
+      <span className="sr-only">{config.benefit}</span>
     </button>
   );
 }

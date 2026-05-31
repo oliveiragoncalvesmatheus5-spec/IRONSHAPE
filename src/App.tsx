@@ -2084,11 +2084,16 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
 
   useEffect(() => {
     if (!user?.id) return;
-    try {
-      setTrainingOnboarding(JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null'));
-    } catch {
-      setTrainingOnboarding(null);
-    }
+    const syncTrainingOnboarding = () => {
+      try {
+        setTrainingOnboarding(JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null'));
+      } catch {
+        setTrainingOnboarding(null);
+      }
+    };
+    syncTrainingOnboarding();
+    window.addEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
+    return () => window.removeEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
   }, [user?.id]);
 
   useEffect(() => {
@@ -2481,11 +2486,16 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
 
   useEffect(() => {
     if (!user?.id) return;
-    try {
-      setTrainingOnboarding(JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null'));
-    } catch {
-      setTrainingOnboarding(null);
-    }
+    const syncTrainingOnboarding = () => {
+      try {
+        setTrainingOnboarding(JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null'));
+      } catch {
+        setTrainingOnboarding(null);
+      }
+    };
+    syncTrainingOnboarding();
+    window.addEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
+    return () => window.removeEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
   }, [user?.id]);
 
   const muscleGroups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen', 'Full Body'];
@@ -6463,10 +6473,36 @@ function CommunityView({ profile }: { profile: UserProfile }) {
 function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserProfile, logout: () => void, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, setSimulatedPlan, user, logout } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
+  const [adminTrainingPlace, setAdminTrainingPlace] = useState<'gym' | 'home'>(() => {
+    if (!user?.id) return 'gym';
+    try {
+      const onboarding = JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null');
+      return onboarding?.trainingPlace === 'home' ? 'home' : 'gym';
+    } catch {
+      return 'gym';
+    }
+  });
 
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || profile.name || 'Usuário';
   const userEmail = user?.email || profile.email || '';
   const isFreePlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
+  const handleAdminTrainingPlaceChange = (trainingPlace: 'gym' | 'home') => {
+    if (!user?.id) return;
+    let onboarding: any = null;
+    try {
+      onboarding = JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null');
+    } catch {
+      onboarding = null;
+    }
+    const nextOnboarding = {
+      ...(onboarding || {}),
+      trainingPlace,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(`training_onboarding_${user.id}`, JSON.stringify(nextOnboarding));
+    setAdminTrainingPlace(trainingPlace);
+    window.dispatchEvent(new CustomEvent('ironshape:training-place-changed', { detail: { trainingPlace } }));
+  };
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
@@ -6552,6 +6588,30 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
                   Resetar para Plano Real
                 </button>
               )}
+              <div className="mt-6 pt-6 border-t border-primary/10">
+                <p className="text-[10px] text-text-muted uppercase tracking-widest font-black mb-3">Ambiente dos treinos</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { id: 'gym', label: 'Academia' },
+                    { id: 'home', label: 'Casa' },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => handleAdminTrainingPlaceChange(option.id)}
+                      className={`py-3 rounded-xl text-xs font-black transition-all border ${
+                        adminTrainingPlace === option.id
+                          ? 'bg-primary border-primary text-text-primary shadow-lg shadow-primary/20'
+                          : 'bg-white/5 border-white/10 text-text-muted hover:border-white/20'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-text-muted mt-3 leading-relaxed">
+                  Alterna a área de treinos entre protocolos de academia e exercícios adaptados para casa.
+                </p>
+              </div>
             </div>
           </section>
         )}

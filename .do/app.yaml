@@ -23,6 +23,12 @@ services:
       - key: ANTHROPIC_API_KEY
         scope: RUN_TIME
         type: SECRET
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: OPENAI_MODEL
+        value: gpt-5.5
+        scope: RUN_TIME
       - key: WORKOUTX_API_KEY
         scope: RUN_TIME
         type: SECRET

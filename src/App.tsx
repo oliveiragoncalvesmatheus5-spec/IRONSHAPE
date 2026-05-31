@@ -2903,27 +2903,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               <>
                 {/* Filters Area */}
                 {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="space-y-8">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="flex flex-col gap-3">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Nível de Intensidade</span>
-                      <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5">
-                        {(selectedPlanTab === 'Elite' ? ['Avançado' as Level] : selectedPlanTab === 'Pro' ? ['Intermediário' as Level] : ['Iniciante' as Level]).map((level: Level) => (
-                          <button
-                            key={level}
-                            onClick={() => setSelectedLevel(level)}
-                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${
-                              selectedLevel === level 
-                                ? 'bg-surface border border-white/10 text-text-primary shadow-xl' 
-                                : 'text-text-muted hover:text-text-secondary'
-                            }`}
-                          >
-                            {level}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
+                  <div>
+                    <div className="flex flex-col gap-3 max-w-4xl">
                       <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Grupo Muscular</span>
                       <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
                         <button

@@ -2692,7 +2692,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     return weights[effectivePlan] >= weights[planId];
   };
 
-  const toggleComplete = async (workoutId: string) => {
+  const toggleComplete = async (workoutId: string): Promise<boolean> => {
     const alreadyDone = completedWorkouts.includes(workoutId);
     setCompletedWorkouts(prev =>
       alreadyDone ? prev.filter(id => id !== workoutId) : [...prev, workoutId]
@@ -2718,10 +2718,12 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           streak: newStreak,
           lastWorkoutDate: today,
         });
+        return true;
       } catch (e) {
         console.error('Erro ao salvar treino:', e);
       }
     }
+    return false;
   };
 
   if (selectedWorkout) {
@@ -2732,6 +2734,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         isCompleted={completedWorkouts.includes(selectedWorkout.id)}
         onToggleComplete={() => toggleComplete(selectedWorkout.id)}
         canEdit={hasAccess('Elite')}
+        currentPoints={profile.points || 0}
       />
     );
   }
@@ -3587,14 +3590,18 @@ function ExerciseCard({
   exercise,
   index,
   isEditing,
+  isCompleted,
   onUpdate,
-  onShowExecution
+  onShowExecution,
+  onToggleComplete
 }: {
   exercise: Exercise,
   index: number,
   isEditing: boolean,
+  isCompleted: boolean,
   onUpdate: (field: keyof Exercise, value: any) => void,
-  onShowExecution: () => void
+  onShowExecution: () => void,
+  onToggleComplete: () => void
 }) {
   const [isResting, setIsResting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -3637,15 +3644,19 @@ function ExerciseCard({
 
   return (
     <div className={`bg-surface rounded-[32px] md:rounded-[40px] border transition-all duration-500 overflow-hidden group ${
-      isResting ? 'border-primary/40 bg-primary/5 shadow-2xl shadow-primary/5' : 'border-white/5 hover:border-white/10'
+      isCompleted
+        ? 'border-success/30 bg-success/5 shadow-2xl shadow-success/5'
+        : isResting ? 'border-primary/40 bg-primary/5 shadow-2xl shadow-primary/5' : 'border-white/5 hover:border-white/10'
     }`}>
       {/* Main card row */}
       <div className="p-6 md:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-8">
         <div className="flex items-start sm:items-center gap-6 md:gap-8 flex-1">
           <div className={`w-12 h-12 md:w-16 md:h-16 rounded-[18px] md:rounded-[24px] flex items-center justify-center text-xl md:text-2xl font-black transition-all duration-500 border shrink-0 ${
-            isResting ? 'bg-primary text-text-primary border-primary/20 scale-110' : 'bg-white/5 text-text-muted group-hover:text-primary group-hover:bg-primary/10 border-white/5'
+            isCompleted
+              ? 'bg-success text-white border-success/20'
+              : isResting ? 'bg-primary text-text-primary border-primary/20 scale-110' : 'bg-white/5 text-text-muted group-hover:text-primary group-hover:bg-primary/10 border-white/5'
           }`}>
-            {index + 1}
+            {isCompleted ? <CheckCircle2 size={24} /> : index + 1}
           </div>
           <div className="space-y-1 flex-1">
             <div className="flex flex-wrap items-center gap-3">
@@ -3667,6 +3678,11 @@ function ExerciseCard({
                 >
                   Descansando
                 </motion.span>
+              )}
+              {isCompleted && (
+                <span className="px-3 py-1 bg-success/10 text-success text-[8px] font-black rounded-full uppercase tracking-widest border border-success/20">
+                  Concluído
+                </span>
               )}
             </div>
             <p className="text-text-secondary text-sm md:text-base max-w-md leading-relaxed line-clamp-2">{exercise.description}</p>
@@ -3736,6 +3752,20 @@ function ExerciseCard({
               <RestTimer restTime={exercise.restTime} onStateChange={setIsResting} />
             )}
           </div>
+
+          {!isEditing && (
+            <button
+              onClick={onToggleComplete}
+              className={`w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                isCompleted
+                  ? 'bg-success/10 text-success border border-success/20 hover:bg-success hover:text-white'
+                  : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white'
+              }`}
+            >
+              {isCompleted ? <CheckCircle2 size={15} /> : <Check size={15} />}
+              {isCompleted ? 'Concluído' : 'Concluir'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -3855,16 +3885,72 @@ function ExerciseCard({
   );
 }
 
-function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, canEdit }: { workout: Workout, onBack: () => void, isCompleted: boolean, onToggleComplete: () => void, canEdit: boolean }) {
+function WorkoutDetailView({
+  workout,
+  onBack,
+  isCompleted,
+  onToggleComplete,
+  canEdit,
+  currentPoints
+}: {
+  workout: Workout,
+  onBack: () => void,
+  isCompleted: boolean,
+  onToggleComplete: () => Promise<boolean>,
+  canEdit: boolean,
+  currentPoints: number
+}) {
   const [exercises, setExercises] = useState(workout.exercises);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedExerciseForVideo, setSelectedExerciseForVideo] = useState<Exercise | null>(null);
+  const [completedExercises, setCompletedExercises] = useState<string[]>([]);
+  const [showPointsNotice, setShowPointsNotice] = useState(false);
+  const [displayPoints, setDisplayPoints] = useState(currentPoints);
+
+  const POINTS_PER_WORKOUT = 100;
 
   useEffect(() => {
     setExercises(workout.exercises);
+    setCompletedExercises(isCompleted ? workout.exercises.map(exercise => exercise.id) : []);
+    setShowPointsNotice(false);
     setSelectedExerciseForVideo(null);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [workout.id, workout.exercises]);
+
+  useEffect(() => {
+    setDisplayPoints(currentPoints);
+  }, [currentPoints]);
+
+  const completedCount = completedExercises.length;
+  const totalExercises = exercises.length || 1;
+  const workoutProgress = Math.round((completedCount / totalExercises) * 100);
+  const nextMilestone = Math.max(1000, Math.ceil((displayPoints + 1) / 1000) * 1000);
+  const previousMilestone = Math.max(0, nextMilestone - 1000);
+  const milestoneProgress = Math.min(100, Math.round(((displayPoints - previousMilestone) / (nextMilestone - previousMilestone)) * 100));
+
+  const completeWorkout = async () => {
+    if (isCompleted) return false;
+    const earnedPoints = await onToggleComplete();
+    if (earnedPoints) {
+      setDisplayPoints(prev => prev + POINTS_PER_WORKOUT);
+      setShowPointsNotice(true);
+      setTimeout(() => setShowPointsNotice(false), 4500);
+    }
+    return earnedPoints;
+  };
+
+  const toggleExerciseComplete = async (exerciseId: string) => {
+    const alreadyDone = completedExercises.includes(exerciseId);
+    const next = alreadyDone
+      ? completedExercises.filter(id => id !== exerciseId)
+      : [...completedExercises, exerciseId];
+
+    setCompletedExercises(next);
+
+    if (!alreadyDone && next.length === exercises.length && exercises.length > 0) {
+      await completeWorkout();
+    }
+  };
 
   const updateExercise = (index: number, field: keyof Exercise, value: any) => {
     const newExercises = [...exercises];
@@ -3951,6 +4037,67 @@ function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, can
         </div>
       </header>
 
+      <AnimatePresence>
+        {showPointsNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.98 }}
+            className="bg-success/10 border border-success/20 rounded-[28px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xl shadow-success/5"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-success text-white flex items-center justify-center shadow-lg shadow-success/20">
+                <Trophy size={22} />
+              </div>
+              <div>
+                <div className="text-sm font-black uppercase tracking-widest text-success">Treino concluído</div>
+                <p className="text-xs text-text-secondary mt-1">Você ganhou +{POINTS_PER_WORKOUT} pts por finalizar todos os exercícios.</p>
+              </div>
+            </div>
+            <div className="text-3xl font-black text-success">+{POINTS_PER_WORKOUT}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <section className="bg-surface border border-white/5 rounded-[28px] p-5 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Progresso do treino</div>
+            <div className="mt-1 text-lg font-black">{completedCount}/{exercises.length} exercícios concluídos</div>
+          </div>
+          <div className="px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest">
+            {workoutProgress}%
+          </div>
+        </div>
+        <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${workoutProgress}%` }}
+            className="h-full bg-primary shadow-[0_0_15px_rgba(255,106,0,0.45)]"
+          />
+        </div>
+
+        <div className="pt-4 border-t border-white/5 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Trophy size={18} className="text-primary" />
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Pontos</div>
+                <div className="text-sm font-black">{displayPoints} pts</div>
+              </div>
+            </div>
+            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Meta {nextMilestone} pts</span>
+          </div>
+          <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${milestoneProgress}%` }}
+              className="h-full bg-success"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Exercícios — direto, sem heading extra */}
       <div className="grid grid-cols-1 gap-4">
         {exercises.map((exercise, index) => (
@@ -3959,8 +4106,10 @@ function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, can
             exercise={exercise}
             index={index}
             isEditing={isEditing}
+            isCompleted={completedExercises.includes(exercise.id)}
             onUpdate={(field, value) => updateExercise(index, field, value)}
             onShowExecution={() => setSelectedExerciseForVideo(exercise)}
+            onToggleComplete={() => toggleExerciseComplete(exercise.id)}
           />
         ))}
       </div>
@@ -3968,7 +4117,15 @@ function WorkoutDetailView({ workout, onBack, isCompleted, onToggleComplete, can
       {/* CTA fixo no rodapé */}
       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/80 backdrop-blur-xl border-t border-white/5">
         <button
-          onClick={onToggleComplete}
+          onClick={async () => {
+            if (!isCompleted) {
+              setCompletedExercises(exercises.map(exercise => exercise.id));
+              await completeWorkout();
+            } else {
+              await onToggleComplete();
+              setCompletedExercises([]);
+            }
+          }}
           className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 ${
             isCompleted
               ? 'bg-success text-white shadow-success/20'
@@ -7157,14 +7314,14 @@ function AdminView() {
                             </div>
                           </div>
                         ))}
-                        {hasMoreUsers && !showAllUsers && (
+                        {hasMoreUsers && (
                           <div className="p-5 flex justify-center">
                             <button
-                              onClick={() => setShowAllUsers(true)}
+                              onClick={() => setShowAllUsers(prev => !prev)}
                               className="flex items-center justify-center gap-2 px-5 py-3 bg-primary/10 border border-primary/20 rounded-2xl text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
                             >
-                              <ChevronDown size={16} />
-                              Ver mais
+                              <ChevronDown size={16} className={`transition-transform ${showAllUsers ? 'rotate-180' : ''}`} />
+                              {showAllUsers ? 'Ver menos' : 'Ver mais'}
                             </button>
                           </div>
                         )}

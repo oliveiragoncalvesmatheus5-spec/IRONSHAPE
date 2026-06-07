@@ -2702,8 +2702,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     : muscleGroups;
   const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
   const points = livePoints;
-  const nextPointsMilestone = Math.max(1000, Math.ceil((points + 1) / 1000) * 1000);
-  const previousPointsMilestone = Math.max(0, nextPointsMilestone - 1000);
+  const POINTS_MILESTONE_STEP = 100;
+  const nextPointsMilestone = Math.max(POINTS_MILESTONE_STEP, Math.ceil((points + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
+  const previousPointsMilestone = Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
   const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
 
   useEffect(() => {
@@ -2864,8 +2865,10 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                 </motion.div>
                 <div className="space-y-2">
                   <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
-                  <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">Pontos adicionados!</h2>
-                  <p className="text-sm text-text-secondary leading-relaxed">Seu treino foi registrado no ranking.</p>
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">Parabéns!</h2>
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    Você ganhou +100 pts e alcançou a marca de {points} pontos.
+                  </p>
                 </div>
                 <div className="bg-primary/10 border border-primary/20 rounded-[28px] p-5 flex items-center justify-center gap-3">
                   <Zap size={22} className="text-primary" />
@@ -4091,6 +4094,7 @@ function WorkoutDetailView({
   const [displayPoints, setDisplayPoints] = useState(currentPoints);
 
   const POINTS_PER_WORKOUT = 100;
+  const POINTS_MILESTONE_STEP = 100;
 
   useEffect(() => {
     setExercises(workout.exercises);
@@ -4107,8 +4111,9 @@ function WorkoutDetailView({
   const completedCount = completedExercises.length;
   const totalExercises = exercises.length || 1;
   const workoutProgress = Math.round((completedCount / totalExercises) * 100);
-  const nextMilestone = Math.max(1000, Math.ceil((displayPoints + 1) / 1000) * 1000);
-  const previousMilestone = Math.max(0, nextMilestone - 1000);
+  const reachedMilestone = Math.max(POINTS_MILESTONE_STEP, Math.floor(displayPoints / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
+  const nextMilestone = Math.max(POINTS_MILESTONE_STEP, Math.ceil((displayPoints + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
+  const previousMilestone = Math.max(0, nextMilestone - POINTS_MILESTONE_STEP);
   const milestoneProgress = Math.min(100, Math.round(((displayPoints - previousMilestone) / (nextMilestone - previousMilestone)) * 100));
 
   const completeWorkout = async () => {
@@ -4267,7 +4272,7 @@ function WorkoutDetailView({
                   <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
                   <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">Treino concluído!</h2>
                   <p className="text-sm text-text-secondary leading-relaxed">
-                    Você finalizou todos os exercícios e ganhou pontos no ranking.
+                    Você finalizou todos os exercícios e alcançou a marca de {reachedMilestone} pts.
                   </p>
                 </div>
 

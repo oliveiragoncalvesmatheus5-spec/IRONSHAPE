@@ -2632,6 +2632,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early' | 'registro'>('workouts');
   const [activeHomeMode, setActiveHomeMode] = useState<HomeTrainingMode>('training');
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
+  const [showWorkoutPointsNotice, setShowWorkoutPointsNotice] = useState(false);
+  const [livePoints, setLivePoints] = useState(profile.points || 0);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
@@ -2644,10 +2646,29 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       return [];
     }
   });
+  const [awardedWorkoutPoints, setAwardedWorkoutPoints] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('awardedWorkoutPoints');
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      localStorage.removeItem('awardedWorkoutPoints');
+      return [];
+    }
+  });
 
   useEffect(() => {
     localStorage.setItem('completedWorkouts', JSON.stringify(completedWorkouts));
   }, [completedWorkouts]);
+
+  useEffect(() => {
+    localStorage.setItem('awardedWorkoutPoints', JSON.stringify(awardedWorkoutPoints));
+  }, [awardedWorkoutPoints]);
+
+  useEffect(() => {
+    setLivePoints(profile.points || 0);
+  }, [profile.points]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -2680,7 +2701,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       : ['Full Body' as MuscleGroup]
     : muscleGroups;
   const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
-  const points = profile.points || 0;
+  const points = livePoints;
   const nextPointsMilestone = Math.max(1000, Math.ceil((points + 1) / 1000) * 1000);
   const previousPointsMilestone = Math.max(0, nextPointsMilestone - 1000);
   const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
@@ -2696,14 +2717,22 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     return weights[effectivePlan] >= weights[planId];
   };
 
-  const toggleComplete = async (workoutId: string): Promise<boolean> => {
-    const alreadyDone = completedWorkouts.includes(workoutId);
-    setCompletedWorkouts(prev =>
-      alreadyDone ? prev.filter(id => id !== workoutId) : [...prev, workoutId]
-    );
-    if (!alreadyDone && user) {
+  const completeWorkoutAndAwardPoints = async (workoutId: string): Promise<boolean> => {
+    const alreadyAwarded = awardedWorkoutPoints.includes(workoutId);
+    const alreadyCompleted = completedWorkouts.includes(workoutId);
+
+    if (!alreadyCompleted) {
+      setCompletedWorkouts(prev => prev.includes(workoutId) ? prev : [...prev, workoutId]);
+    }
+
+    if (!alreadyAwarded && user) {
       const workout = workoutSource.find(w => w.id === workoutId) ?? ALL_WORKOUTS.find(w => w.id === workoutId);
       const today = new Date().toISOString().split('T')[0];
+      const nextPoints = livePoints + 100;
+
+      setLivePoints(nextPoints);
+      setAwardedWorkoutPoints(prev => prev.includes(workoutId) ? prev : [...prev, workoutId]);
+
       try {
         await dataService.addWorkoutLog({
           userUid: user.id,
@@ -2718,16 +2747,37 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         const isConsecutive = lastDate === yesterday.toISOString().split('T')[0];
         const newStreak = lastDate === today ? profile.streak : isConsecutive ? profile.streak + 1 : 1;
         await updateProfile({
-          points: (profile.points || 0) + 100,
+          points: nextPoints,
           streak: newStreak,
           lastWorkoutDate: today,
         });
         return true;
       } catch (e) {
         console.error('Erro ao salvar treino:', e);
+        setLivePoints(points => Math.max(0, points - 100));
+        setAwardedWorkoutPoints(prev => prev.filter(id => id !== workoutId));
       }
     }
     return false;
+  };
+
+  const toggleComplete = async (workoutId: string): Promise<boolean> => {
+    const alreadyDone = completedWorkouts.includes(workoutId);
+
+    if (alreadyDone && awardedWorkoutPoints.includes(workoutId)) {
+      setCompletedWorkouts(prev => prev.filter(id => id !== workoutId));
+      return false;
+    }
+
+    return completeWorkoutAndAwardPoints(workoutId);
+  };
+
+  const completeWorkoutFromCard = async (workoutId: string) => {
+    const earnedPoints = await completeWorkoutAndAwardPoints(workoutId);
+    if (earnedPoints) {
+      setShowWorkoutPointsNotice(true);
+      setTimeout(() => setShowWorkoutPointsNotice(false), 4500);
+    }
   };
 
   if (selectedWorkout) {
@@ -2736,9 +2786,10 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         workout={selectedWorkout} 
         onBack={() => setSelectedWorkout(null)} 
         isCompleted={completedWorkouts.includes(selectedWorkout.id)}
+        hasAwardedPoints={awardedWorkoutPoints.includes(selectedWorkout.id)}
         onToggleComplete={() => toggleComplete(selectedWorkout.id)}
         canEdit={hasAccess('Elite')}
-        currentPoints={profile.points || 0}
+        currentPoints={livePoints}
       />
     );
   }
@@ -2784,6 +2835,54 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
         </div>
       </header>
+
+      <AnimatePresence>
+        {showWorkoutPointsNotice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xl flex items-center justify-center p-5"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 28, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+              className="w-full max-w-md bg-surface border border-primary/20 rounded-[36px] p-7 sm:p-8 shadow-2xl shadow-primary/10 relative overflow-hidden"
+            >
+              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
+              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-56 h-56 bg-primary/20 rounded-full blur-[90px] pointer-events-none" />
+              <div className="relative z-10 space-y-6 text-center">
+                <motion.div
+                  initial={{ scale: 0.75, rotate: -8 }}
+                  animate={{ scale: [0.75, 1.12, 1], rotate: [-8, 4, 0] }}
+                  transition={{ duration: 0.55, ease: 'easeOut' }}
+                  className="w-24 h-24 mx-auto rounded-[28px] bg-primary text-white flex items-center justify-center shadow-2xl shadow-primary/30 border border-primary-hover/40"
+                >
+                  <Trophy size={44} />
+                </motion.div>
+                <div className="space-y-2">
+                  <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">Pontos adicionados!</h2>
+                  <p className="text-sm text-text-secondary leading-relaxed">Seu treino foi registrado no ranking.</p>
+                </div>
+                <div className="bg-primary/10 border border-primary/20 rounded-[28px] p-5 flex items-center justify-center gap-3">
+                  <Zap size={22} className="text-primary" />
+                  <div className="text-5xl font-black text-primary tracking-tighter">+100</div>
+                  <span className="text-xs font-black uppercase tracking-widest text-text-muted">pts</span>
+                </div>
+                <button
+                  onClick={() => setShowWorkoutPointsNotice(false)}
+                  className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
+                >
+                  Continuar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {usesHomeProtocol && (
         <section className="space-y-4">
@@ -2994,14 +3093,18 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                                 workout={workout}
                                 mode={activeHomeMode}
                                 isCompleted={completedWorkouts.includes(workout.id)}
+                                hasAwardedPoints={awardedWorkoutPoints.includes(workout.id)}
                                 onClick={() => setSelectedWorkout(workout)}
+                                onComplete={() => completeWorkoutFromCard(workout.id)}
                               />
                             ) : (
                               <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
                                 <WorkoutCard
                                   workout={workout}
                                   isCompleted={completedWorkouts.includes(workout.id)}
+                                  hasAwardedPoints={awardedWorkoutPoints.includes(workout.id)}
                                   onClick={() => setSelectedWorkout(workout)}
+                                  onComplete={() => completeWorkoutFromCard(workout.id)}
                                 />
                               </div>
                             )
@@ -3097,10 +3200,25 @@ function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgra
   );
 }
 
-function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCompleted: boolean, onClick: () => void }) {
+function WorkoutCard({
+  workout,
+  isCompleted,
+  hasAwardedPoints,
+  onClick,
+  onComplete
+}: {
+  workout: Workout,
+  isCompleted: boolean,
+  hasAwardedPoints: boolean,
+  onClick: () => void,
+  onComplete: () => void
+}) {
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
       className="w-full h-full bg-surface p-8 rounded-[40px] border border-primary/30 transition-all duration-500 relative overflow-hidden flex flex-col text-left"
     >
       <div className="absolute top-0 right-0 p-8 opacity-10 scale-110 transition-all duration-700">
@@ -3135,7 +3253,7 @@ function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCo
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 gap-3">
           <div className="flex -space-x-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="w-8 h-8 rounded-full border-2 border-surface bg-surface-active flex items-center justify-center overflow-hidden">
@@ -3146,12 +3264,28 @@ function WorkoutCard({ workout, isCompleted, onClick }: { workout: Workout, isCo
               +12
             </div>
           </div>
-          <div className="p-3 rounded-2xl bg-primary text-text-primary translate-x-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onComplete();
+            }}
+            disabled={isCompleted && hasAwardedPoints}
+            className={`min-h-[44px] px-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              isCompleted && hasAwardedPoints
+                ? 'bg-success/10 text-success border border-success/20 cursor-default'
+                : 'bg-primary text-text-primary shadow-lg shadow-primary/20 hover:bg-primary-hover'
+            }`}
+          >
+            {isCompleted && hasAwardedPoints ? <CheckCircle2 size={14} /> : <Trophy size={14} />}
+            {isCompleted && hasAwardedPoints ? 'Concluído' : isCompleted ? 'Pontuar' : 'Concluir'}
+          </button>
+          <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary translate-x-1">
             <ChevronRight size={20} />
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -3159,12 +3293,16 @@ function HomeRoutineCard({
   workout,
   mode,
   isCompleted,
+  hasAwardedPoints,
   onClick,
+  onComplete,
 }: {
   workout: Workout,
   mode: HomeTrainingMode,
   isCompleted: boolean,
+  hasAwardedPoints: boolean,
   onClick: () => void,
+  onComplete: () => void,
 }) {
   const config = mode === 'mobility'
     ? {
@@ -3191,8 +3329,11 @@ function HomeRoutineCard({
       };
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
       className="w-full min-h-[184px] p-5 rounded-2xl bg-surface border border-white/10 text-left transition-all active:scale-[0.98] hover:border-white/20 flex flex-col justify-between gap-5"
     >
       <div className="flex items-start justify-between gap-4">
@@ -3211,12 +3352,28 @@ function HomeRoutineCard({
           <span className="flex items-center gap-1.5"><Clock size={13} />{workout.duration}</span>
           <span className="flex items-center gap-1.5"><Activity size={13} />{workout.exercises.length} movimentos</span>
         </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onComplete();
+          }}
+          disabled={isCompleted && hasAwardedPoints}
+          className={`min-h-[40px] px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-1.5 ${
+            isCompleted && hasAwardedPoints
+              ? 'bg-success/10 text-success border border-success/20'
+              : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white'
+          }`}
+        >
+          {isCompleted && hasAwardedPoints ? <CheckCircle2 size={13} /> : <Trophy size={13} />}
+          {isCompleted && hasAwardedPoints ? 'Feito' : isCompleted ? 'Pontuar' : 'Concluir'}
+        </button>
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${config.soft} ${config.accent}`}>
           <ChevronRight size={18} />
         </div>
       </div>
       <span className="sr-only">{config.benefit}</span>
-    </button>
+    </div>
   );
 }
 
@@ -3913,6 +4070,7 @@ function WorkoutDetailView({
   workout,
   onBack,
   isCompleted,
+  hasAwardedPoints,
   onToggleComplete,
   canEdit,
   currentPoints
@@ -3920,6 +4078,7 @@ function WorkoutDetailView({
   workout: Workout,
   onBack: () => void,
   isCompleted: boolean,
+  hasAwardedPoints: boolean,
   onToggleComplete: () => Promise<boolean>,
   canEdit: boolean,
   currentPoints: number
@@ -3953,7 +4112,7 @@ function WorkoutDetailView({
   const milestoneProgress = Math.min(100, Math.round(((displayPoints - previousMilestone) / (nextMilestone - previousMilestone)) * 100));
 
   const completeWorkout = async () => {
-    if (isCompleted) return false;
+    if (isCompleted && hasAwardedPoints) return false;
     const earnedPoints = await onToggleComplete();
     if (earnedPoints) {
       setDisplayPoints(prev => prev + POINTS_PER_WORKOUT);
@@ -4215,7 +4374,7 @@ function WorkoutDetailView({
       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/80 backdrop-blur-xl border-t border-white/5">
         <button
           onClick={async () => {
-            if (!isCompleted) {
+            if (!isCompleted || !hasAwardedPoints) {
               setCompletedExercises(exercises.map(exercise => exercise.id));
               await completeWorkout();
             } else {
@@ -4229,8 +4388,10 @@ function WorkoutDetailView({
               : 'bg-primary text-white shadow-primary/30 hover:bg-orange-400'
           }`}
         >
-          {isCompleted ? (
+          {isCompleted && hasAwardedPoints ? (
             <><CheckCircle2 size={18} /> Treino Concluído</>
+          ) : isCompleted ? (
+            <><Trophy size={18} /> Registrar Pontos</>
           ) : (
             <><Play size={18} /> Concluir Treino de Hoje</>
           )}

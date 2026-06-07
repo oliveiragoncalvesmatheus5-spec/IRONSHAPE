@@ -31,24 +31,35 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try { body = await readBody(req); }
   catch { return json(res, 400, { error: 'Body inválido' }); }
 
-  const { food, quantity } = body;
+  const { food, quantity, estimationMode, portionLabel } = body;
   if (!food || !quantity) {
     return json(res, 400, { error: 'food e quantity são obrigatórios' });
   }
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const isSimpleEstimate = estimationMode === 'simple';
+    const prompt = isSimpleEstimate
+      ? `Estime o valor nutricional de uma refeicao descrita como "${food}".
+
+A pessoa escolheu a porcao "${portionLabel || 'Normal'}". Use ${quantity}g/ml apenas como referencia de volume aproximado, nao como pesagem exata.
+
+Retorne APENAS um JSON válido, sem markdown, sem texto extra, com exatamente estas chaves:
+{"nome":"${food}","quantidade":${quantity},"calorias":0,"proteinas_g":0,"carboidratos_g":0,"gorduras_g":0,"proteinas_pct":0,"carboidratos_pct":0,"gorduras_pct":0}
+
+Use valores realistas para uma refeicao comum com essa descricao e porcao. Apenas o JSON, nada mais.`
+      : `Analise o valor nutricional de: ${quantity}g (ou ml) de "${food}".
+
+Retorne APENAS um JSON válido, sem markdown, sem texto extra, com exatamente estas chaves:
+{"nome":"${food}","quantidade":${quantity},"calorias":0,"proteinas_g":0,"carboidratos_g":0,"gorduras_g":0,"proteinas_pct":0,"carboidratos_pct":0,"gorduras_pct":0}
+
+Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada mais.`;
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 512,
       messages: [{
         role: 'user',
-        content: `Analise o valor nutricional de: ${quantity}g (ou ml) de "${food}".
-
-Retorne APENAS um JSON válido, sem markdown, sem texto extra, com exatamente estas chaves:
-{"nome":"${food}","quantidade":${quantity},"calorias":0,"proteinas_g":0,"carboidratos_g":0,"gorduras_g":0,"proteinas_pct":0,"carboidratos_pct":0,"gorduras_pct":0}
-
-Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada mais.`
+        content: prompt
       }]
     });
 

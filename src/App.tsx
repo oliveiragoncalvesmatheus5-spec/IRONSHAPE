@@ -4691,11 +4691,17 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
 
   const [aiFood, setAiFood] = useState('');
   const [aiQty, setAiQty] = useState('');
+  const [aiPortionSize, setAiPortionSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [aiError, setAiError] = useState('');
-  const [aiResult, setAiResult] = useState<{ name: string; calories: number; protein: number; carbs: number; fat: number } | null>(null);
+  const [aiResult, setAiResult] = useState<MealItem | null>(null);
 
   const AI_FREE_LIMIT = 3;
+  const AI_PORTION_OPTIONS = [
+    { value: 'small', label: 'Pouco', detail: 'lanche ou prato pequeno', grams: 180 },
+    { value: 'medium', label: 'Normal', detail: 'prato comum', grams: 320 },
+    { value: 'large', label: 'Bastante', detail: 'prato reforcado', grams: 480 },
+  ] as const;
   const _todayKey = new Date().toISOString().split('T')[0];
   const aiAnalysisKey = `ai_food_analyses_${profile.id}_${_todayKey}`;
   const [aiAnalysesUsed, setAiAnalysesUsed] = useState<number>(() => {
@@ -4703,23 +4709,37 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
   });
   const isFreePlan = effectivePlan === 'Iniciante' || effectivePlan === 'free' || !effectivePlan;
   const aiLimitReached = isFreePlan && aiAnalysesUsed >= AI_FREE_LIMIT;
+  const selectedAiPortion = AI_PORTION_OPTIONS.find(option => option.value === aiPortionSize) || AI_PORTION_OPTIONS[1];
+  const canAnalyzeFood = !!aiFood.trim() && (isFreePlan || !!aiQty.trim());
 
   const analyzeWithAI = async () => {
-    if (!aiFood.trim() || !aiQty.trim()) return;
+    if (!canAnalyzeFood) return;
     if (aiLimitReached) return;
     setAiAnalyzing(true);
     setAiError('');
     setAiResult(null);
+    const preciseQuantity = parseFloat(aiQty);
+    const quantity = isFreePlan ? selectedAiPortion.grams : preciseQuantity;
+    const foodDescription = isFreePlan
+      ? `${aiFood.trim()} (porcao ${selectedAiPortion.label.toLowerCase()}: ${selectedAiPortion.detail})`
+      : aiFood.trim();
+    const quantityLabel = isFreePlan ? selectedAiPortion.label : `${aiQty}g/ml`;
     try {
       const res = await fetch('/api/analyze-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ food: aiFood.trim(), quantity: parseFloat(aiQty) })
+        body: JSON.stringify({
+          food: foodDescription,
+          quantity,
+          estimationMode: isFreePlan ? 'simple' : 'precise',
+          portionLabel: isFreePlan ? selectedAiPortion.label : undefined
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro na análise');
       setAiResult({
-        name: `${aiFood.trim()} (${aiQty}g)`,
+        name: aiFood.trim(),
+        quantity: quantityLabel,
         calories: Math.round(data.calorias),
         protein: Math.round(data.proteinas_g),
         carbs: Math.round(data.carboidratos_g),
@@ -4743,6 +4763,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
     setAiResult(null);
     setAiFood('');
     setAiQty('');
+    setAiPortionSize('medium');
   };
 
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || effectivePlan === 'Admin';
@@ -5134,38 +5155,95 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
 
               {/* AI Food Analyzer — always visible */}
               <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-                    <Zap size={16} />
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                      <Zap size={16} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                        {isFreePlan ? 'Registrar refeição com IA' : 'Calcular macros com IA'}
+                      </span>
+                      <p className="text-[10px] text-text-muted mt-0.5">
+                        {isFreePlan
+                          ? 'Descreva o que comeu e escolha uma porção. A IA estima os macros para voce.'
+                          : 'Use gramas/ml para uma analise mais precisa de proteinas, carboidratos e gorduras.'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Calcular Macros com IA</span>
-                    <p className="text-[10px] text-text-muted mt-0.5">Digite o alimento e a quantidade — a IA calcula proteínas, carboidratos e gorduras</p>
+                  <div className={`self-start px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-[0.2em] ${
+                    isFreePlan ? 'bg-white/5 border-white/10 text-text-muted' : 'bg-primary/10 border-primary/20 text-primary'
+                  }`}>
+                    {isFreePlan ? 'Modo simples' : 'Modo preciso Pro'}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                {isFreePlan && (
+                  <div className="bg-background/70 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-text-primary">Quer pesar em gramas?</div>
+                      <p className="text-[10px] text-text-muted mt-1">O registro exato por g/ml fica liberado nos planos Pro e Elite.</p>
+                    </div>
+                    <button
+                      onClick={onUpgrade}
+                      className="px-4 py-2 bg-white/5 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all"
+                    >
+                      Liberar precisao
+                    </button>
+                  </div>
+                )}
+
+                <div className={isFreePlan ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-3'}>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Alimento</label>
+                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+                      {isFreePlan ? 'O que voce comeu?' : 'Alimento'}
+                    </label>
                     <input
                       type="text"
-                      placeholder="Ex: Frango grelhado"
+                      placeholder={isFreePlan ? 'Ex: Arroz, feijao, frango e salada' : 'Ex: Frango grelhado'}
                       value={aiFood}
                       onChange={(e) => { setAiFood(e.target.value); setAiResult(null); }}
                       onKeyDown={(e) => e.key === 'Enter' && analyzeWithAI()}
                       className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Quantidade (g ou ml)</label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 150"
-                      value={aiQty}
-                      onChange={(e) => { setAiQty(e.target.value); setAiResult(null); }}
-                      onKeyDown={(e) => e.key === 'Enter' && analyzeWithAI()}
-                      className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
-                    />
-                  </div>
+
+                  {isFreePlan ? (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Tamanho da porcao</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {AI_PORTION_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => { setAiPortionSize(option.value); setAiResult(null); }}
+                            className={`min-h-[68px] rounded-xl border px-3 py-2 text-left transition-all ${
+                              aiPortionSize === option.value
+                                ? 'bg-primary text-text-primary border-primary shadow-lg shadow-primary/20'
+                                : 'bg-background border-white/10 text-text-muted hover:border-primary/30'
+                            }`}
+                          >
+                            <div className="text-[11px] font-black uppercase tracking-widest">{option.label}</div>
+                            <div className={`text-[9px] mt-1 font-bold leading-snug ${aiPortionSize === option.value ? 'text-text-primary/80' : 'text-text-muted'}`}>
+                              {option.detail}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Quantidade exata (g ou ml)</label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 150"
+                        value={aiQty}
+                        onChange={(e) => { setAiQty(e.target.value); setAiResult(null); }}
+                        onKeyDown={(e) => e.key === 'Enter' && analyzeWithAI()}
+                        className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                  )}
                 </div>
                 {aiError && (
                   <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest">{aiError}</p>
@@ -5201,14 +5279,14 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                         Adicionar ao Tracker
                       </button>
                       <button
-                        onClick={() => toggleFavoriteFood({ ...aiResult, quantity: `${aiQty}g` })}
+                        onClick={() => toggleFavoriteFood(aiResult)}
                         className="px-4 py-3 bg-white/5 text-text-muted border border-white/10 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 hover:text-primary transition-all"
                         title="Salvar favorito"
                       >
                         <Check size={14} />
                       </button>
                       <button
-                        onClick={() => { setAiResult(null); setAiFood(''); setAiQty(''); }}
+                        onClick={() => { setAiResult(null); setAiFood(''); setAiQty(''); setAiPortionSize('medium'); }}
                         className="px-4 py-3 bg-white/5 text-text-muted border border-white/10 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
                       >
                         <X size={14} />
@@ -5239,7 +5317,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                     )}
                     <button
                       onClick={analyzeWithAI}
-                      disabled={aiAnalyzing || !aiFood.trim() || !aiQty.trim()}
+                      disabled={aiAnalyzing || !canAnalyzeFood}
                       className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {aiAnalyzing ? (
@@ -6903,6 +6981,7 @@ function AdminView() {
   const [adminTab, setAdminTab] = useState<'general' | 'affiliates'>('general');
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [adminError, setAdminError] = useState('');
+  const [showAllUsers, setShowAllUsers] = useState(false);
   const [adminData, setAdminData] = useState<{
     profiles: UserProfile[];
     workouts: WorkoutLog[];
@@ -6917,7 +6996,7 @@ function AdminView() {
     setAdminError('');
     try {
       const [profilesRes, workoutsRes, nutritionRes, postsRes, affiliatesRes, conversionsRes] = await Promise.allSettled([
-        withTimeout(() => supabase.from('profiles').select('*').order('criado_em', { ascending: false }).limit(200), 15000, 1) as any,
+        withTimeout(() => supabase.from('profiles').select('*').order('criado_em', { ascending: false }).limit(1000), 15000, 1) as any,
         withTimeout(() => supabase.from('workout_logs').select('*').order('completedAt', { ascending: false }).limit(300), 15000, 1) as any,
         withTimeout(() => supabase.from('nutrition_logs').select('*').order('date', { ascending: false }).limit(300), 15000, 1) as any,
         withTimeout(() => supabase.from('posts').select('*').order('criado_em', { ascending: false }).limit(100), 15000, 1) as any,
@@ -6975,7 +7054,8 @@ function AdminView() {
     plan,
     count: adminData.profiles.filter(p => (p.plano || 'free') === plan).length,
   }));
-  const recentUsers = adminData.profiles.slice(0, 6);
+  const recentUsers = showAllUsers ? adminData.profiles : adminData.profiles.slice(0, 6);
+  const hasMoreUsers = adminData.profiles.length > 6;
   const recentConversions = adminData.conversions.slice(0, 5);
 
   return (
@@ -7050,31 +7130,46 @@ function AdminView() {
                       <h3 className="text-lg font-black uppercase tracking-tight">Usuários Recentes</h3>
                       <p className="text-xs text-text-muted mt-1">Últimos perfis criados ou retornados pela base.</p>
                     </div>
-                    <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{recentUsers.length} exibidos</span>
+                    <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{recentUsers.length} de {adminData.profiles.length} exibidos</span>
                   </div>
                   <div className="divide-y divide-white/5">
-                    {recentUsers.length > 0 ? recentUsers.map(user => (
-                      <div key={user.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black shrink-0">
-                            {(user.name || user.email || 'U')[0]?.toUpperCase()}
+                    {recentUsers.length > 0 ? (
+                      <>
+                        {recentUsers.map(user => (
+                          <div key={user.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
+                            <div className="flex items-center gap-4 min-w-0">
+                              <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black shrink-0">
+                                {(user.name || user.email || 'U')[0]?.toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-black text-sm truncate">{user.name || 'Usuário sem nome'}</div>
+                                <div className="text-[10px] text-text-muted font-bold truncate">{user.email}</div>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">{user.plano || 'free'}</span>
+                              <span className={`px-3 py-1 border rounded-xl text-[10px] font-black uppercase tracking-widest ${user.subscriptionStatus === 'active' ? 'bg-success/10 border-success/20 text-success' : 'bg-white/5 border-white/10 text-text-muted'}`}>
+                                {user.subscriptionStatus || 'inactive'}
+                              </span>
+                              {(!user.age || !user.goal) && (
+                                <span className="px-3 py-1 bg-error/10 border border-error/20 text-error rounded-xl text-[10px] font-black uppercase tracking-widest">Onboarding</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <div className="font-black text-sm truncate">{user.name || 'Usuário sem nome'}</div>
-                            <div className="text-[10px] text-text-muted font-bold truncate">{user.email}</div>
+                        ))}
+                        {hasMoreUsers && !showAllUsers && (
+                          <div className="p-5 flex justify-center">
+                            <button
+                              onClick={() => setShowAllUsers(true)}
+                              className="flex items-center justify-center gap-2 px-5 py-3 bg-primary/10 border border-primary/20 rounded-2xl text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
+                            >
+                              <ChevronDown size={16} />
+                              Ver mais
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">{user.plano || 'free'}</span>
-                          <span className={`px-3 py-1 border rounded-xl text-[10px] font-black uppercase tracking-widest ${user.subscriptionStatus === 'active' ? 'bg-success/10 border-success/20 text-success' : 'bg-white/5 border-white/10 text-text-muted'}`}>
-                            {user.subscriptionStatus || 'inactive'}
-                          </span>
-                          {(!user.age || !user.goal) && (
-                            <span className="px-3 py-1 bg-error/10 border border-error/20 text-error rounded-xl text-[10px] font-black uppercase tracking-widest">Onboarding</span>
-                          )}
-                        </div>
-                      </div>
-                    )) : (
+                        )}
+                      </>
+                    ) : (
                       <div className="p-10 text-center text-text-muted text-sm font-bold">Nenhum usuário disponível com as permissões atuais.</div>
                     )}
                   </div>

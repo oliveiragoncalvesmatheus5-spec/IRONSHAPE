@@ -2680,6 +2680,10 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       : ['Full Body' as MuscleGroup]
     : muscleGroups;
   const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
+  const points = profile.points || 0;
+  const nextPointsMilestone = Math.max(1000, Math.ceil((points + 1) / 1000) * 1000);
+  const previousPointsMilestone = Math.max(0, nextPointsMilestone - 1000);
+  const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
 
   useEffect(() => {
     if (selectedMuscleGroup !== 'Todos' && !visibleMuscleGroups.includes(selectedMuscleGroup)) {
@@ -2752,13 +2756,33 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </p>
         </div>
         
-        <button 
-          onClick={onUpgrade}
-          className="flex items-center justify-center gap-2 bg-surface border border-white/10 px-6 py-4 rounded-2xl hover:bg-white/5 transition-all group shrink-0 w-full md:w-auto min-h-[56px]"
-        >
-          <Zap size={18} className="text-primary group-hover:scale-110 transition-transform" />
-          <span className="text-sm font-black uppercase tracking-widest">Planos</span>
-        </button>
+        <div className="bg-surface border border-white/10 rounded-2xl p-4 shrink-0 w-full md:w-[320px] shadow-xl shadow-black/10">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                <Trophy size={18} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Pontos</div>
+                <div className="text-lg font-black leading-tight">{points} pts</div>
+              </div>
+            </div>
+            <span className="text-[10px] font-black text-primary uppercase tracking-widest shrink-0">
+              {pointsProgress}%
+            </span>
+          </div>
+          <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${pointsProgress}%` }}
+              className="h-full bg-primary shadow-[0_0_15px_rgba(255,106,0,0.45)]"
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2 text-[9px] font-black uppercase tracking-widest text-text-muted">
+            <span>{previousPointsMilestone}</span>
+            <span>Meta {nextPointsMilestone} pts</span>
+          </div>
+        </div>
       </header>
 
       {usesHomeProtocol && (
@@ -4040,21 +4064,94 @@ function WorkoutDetailView({
       <AnimatePresence>
         {showPointsNotice && (
           <motion.div
-            initial={{ opacity: 0, y: -12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.98 }}
-            className="bg-success/10 border border-success/20 rounded-[28px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xl shadow-success/5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xl flex items-center justify-center p-5"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-success text-white flex items-center justify-center shadow-lg shadow-success/20">
-                <Trophy size={22} />
+            <motion.div
+              initial={{ opacity: 0, y: 28, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+              className="w-full max-w-md bg-surface border border-primary/20 rounded-[36px] p-7 sm:p-8 shadow-2xl shadow-primary/10 relative overflow-hidden"
+            >
+              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
+              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-56 h-56 bg-primary/20 rounded-full blur-[90px] pointer-events-none" />
+              <div className="relative z-10 space-y-6 text-center">
+                <div className="relative w-24 h-24 mx-auto">
+                  {[0, 1, 2, 3, 4, 5].map((spark) => (
+                    <motion.span
+                      key={spark}
+                      initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.4, 1, 0.2],
+                        x: Math.cos((spark / 6) * Math.PI * 2) * 54,
+                        y: Math.sin((spark / 6) * Math.PI * 2) * 54,
+                      }}
+                      transition={{ duration: 1.2, delay: 0.1 + spark * 0.05, ease: 'easeOut' }}
+                      className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-primary shadow-[0_0_16px_rgba(255,106,0,0.8)]"
+                    />
+                  ))}
+                  <motion.div
+                    initial={{ scale: 0.75, rotate: -8 }}
+                    animate={{ scale: [0.75, 1.12, 1], rotate: [-8, 4, 0] }}
+                    transition={{ duration: 0.55, ease: 'easeOut' }}
+                    className="absolute inset-0 rounded-[28px] bg-primary text-white flex items-center justify-center shadow-2xl shadow-primary/30 border border-primary-hover/40"
+                  >
+                    <Trophy size={44} />
+                  </motion.div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">Treino concluído!</h2>
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    Você finalizou todos os exercícios e ganhou pontos no ranking.
+                  </p>
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-primary/10 border border-primary/20 rounded-[28px] p-5"
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <Zap size={22} className="text-primary" />
+                    <div className="text-5xl font-black text-primary tracking-tighter">+{POINTS_PER_WORKOUT}</div>
+                    <span className="text-xs font-black uppercase tracking-widest text-text-muted">pts</span>
+                  </div>
+                </motion.div>
+
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Seu progresso</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{displayPoints} pts</span>
+                  </div>
+                  <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <motion.div
+                      initial={{ width: `${Math.max(0, milestoneProgress - 10)}%` }}
+                      animate={{ width: `${milestoneProgress}%` }}
+                      transition={{ delay: 0.25, duration: 0.8, ease: 'easeOut' }}
+                      className="h-full bg-primary shadow-[0_0_18px_rgba(255,106,0,0.55)]"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-text-muted">
+                    <span>{previousMilestone}</span>
+                    <span>Meta {nextMilestone} pts</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowPointsNotice(false)}
+                  className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
+                >
+                  Continuar
+                </button>
               </div>
-              <div>
-                <div className="text-sm font-black uppercase tracking-widest text-success">Treino concluído</div>
-                <p className="text-xs text-text-secondary mt-1">Você ganhou +{POINTS_PER_WORKOUT} pts por finalizar todos os exercícios.</p>
-              </div>
-            </div>
-            <div className="text-3xl font-black text-success">+{POINTS_PER_WORKOUT}</div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

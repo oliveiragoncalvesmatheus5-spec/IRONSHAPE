@@ -4014,6 +4014,7 @@ function WorkoutDetailView({
   const [selectedExerciseForVideo, setSelectedExerciseForVideo] = useState<Exercise | null>(null);
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const [showPointsNotice, setShowPointsNotice] = useState(false);
+  const [pointsNoticeMode, setPointsNoticeMode] = useState<'earned' | 'earnedLimit' | 'limit' | 'complete'>('earned');
   const [displayPoints, setDisplayPoints] = useState(currentPoints);
 
   const POINTS_PER_WORKOUT = 100;
@@ -4043,19 +4044,31 @@ function WorkoutDetailView({
   const previousMilestone = isFreePointsPlan ? 0 : Math.max(0, nextMilestone - POINTS_MILESTONE_STEP);
   const milestoneProgress = Math.min(100, Math.round(((displayPoints - previousMilestone) / (nextMilestone - previousMilestone)) * 100));
   const freeLimitReached = isFreePointsPlan && displayPoints >= freePointsLimit;
+  const isLimitNotice = pointsNoticeMode === 'limit';
+  const isEarnedLimitNotice = pointsNoticeMode === 'earnedLimit';
+  const isCompleteNotice = pointsNoticeMode === 'complete';
+  const noticeReachedPoints = isEarnedLimitNotice ? freePointsLimit : reachedMilestone;
 
   const completeWorkout = async () => {
-    if (isCompleted && hasAwardedPoints) return false;
+    if (isCompleted && hasAwardedPoints) {
+      setPointsNoticeMode('complete');
+      setShowPointsNotice(true);
+      setTimeout(() => setShowPointsNotice(false), 4500);
+      return false;
+    }
     if (freeLimitReached && !hasAwardedPoints) {
+      setPointsNoticeMode('limit');
       setShowPointsNotice(true);
       setTimeout(() => setShowPointsNotice(false), 6500);
       return false;
     }
     const earnedPoints = await onToggleComplete();
     if (earnedPoints) {
+      const willReachFreeLimit = isFreePointsPlan && displayPoints + POINTS_PER_WORKOUT >= freePointsLimit;
       setDisplayPoints(prev => prev + POINTS_PER_WORKOUT);
+      setPointsNoticeMode(willReachFreeLimit ? 'earnedLimit' : 'earned');
       setShowPointsNotice(true);
-      setTimeout(() => setShowPointsNotice(false), 4500);
+      setTimeout(() => setShowPointsNotice(false), willReachFreeLimit ? 6500 : 4500);
     }
     return earnedPoints;
   };
@@ -4200,12 +4213,16 @@ function WorkoutDetailView({
                 <div className="space-y-2">
                   <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
                   <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">
-                    {freeLimitReached && !hasAwardedPoints ? 'Meta free completa!' : 'Treino concluído!'}
+                    {isLimitNotice || isEarnedLimitNotice ? 'Meta free completa!' : isCompleteNotice ? 'Treino já registrado!' : 'Treino concluído!'}
                   </h2>
                   <p className="text-sm text-text-secondary leading-relaxed">
-                    {freeLimitReached && !hasAwardedPoints
+                    {isLimitNotice
                       ? `Você chegou aos ${freePointsLimit} pts. Assine Pro ou Elite para liberar mais pontos e mais exercícios.`
-                      : `Você finalizou todos os exercícios e alcançou a marca de ${reachedMilestone} pts.`}
+                      : isEarnedLimitNotice
+                      ? `Você ganhou +${POINTS_PER_WORKOUT} pts e bateu ${freePointsLimit} pts. Agora assine Pro ou Elite para continuar evoluindo com mais pontos e exercícios.`
+                      : isCompleteNotice
+                      ? 'Esse treino já está contando no seu ranking. Continue mantendo a sequência e volte amanhã para somar mais.'
+                      : `Você ganhou +${POINTS_PER_WORKOUT} pts e alcançou ${noticeReachedPoints} pts. Continue concluindo treinos para subir no ranking.`}
                   </p>
                 </div>
 
@@ -4217,7 +4234,9 @@ function WorkoutDetailView({
                 >
                   <div className="flex items-center justify-center gap-3">
                     <Zap size={22} className="text-primary" />
-                    <div className="text-5xl font-black text-primary tracking-tighter">{freeLimitReached && !hasAwardedPoints ? freePointsLimit : `+${POINTS_PER_WORKOUT}`}</div>
+                    <div className="text-5xl font-black text-primary tracking-tighter">
+                      {isLimitNotice ? freePointsLimit : isCompleteNotice ? displayPoints : `+${POINTS_PER_WORKOUT}`}
+                    </div>
                     <span className="text-xs font-black uppercase tracking-widest text-text-muted">pts</span>
                   </div>
                 </motion.div>
@@ -4241,7 +4260,7 @@ function WorkoutDetailView({
                   </div>
                 </div>
 
-                {freeLimitReached && !hasAwardedPoints ? (
+                {isLimitNotice || isEarnedLimitNotice ? (
                   <button
                     onClick={onUpgrade}
                     className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
@@ -4332,15 +4351,18 @@ function WorkoutDetailView({
         <button
           onClick={async () => {
             if (freeLimitReached && !hasAwardedPoints) {
-              onUpgrade();
+              setPointsNoticeMode('limit');
+              setShowPointsNotice(true);
+              setTimeout(() => setShowPointsNotice(false), 6500);
               return;
             }
             if (!isCompleted || !hasAwardedPoints) {
               setCompletedExercises(exercises.map(exercise => exercise.id));
               await completeWorkout();
             } else {
-              await onToggleComplete();
-              setCompletedExercises([]);
+              setPointsNoticeMode('complete');
+              setShowPointsNotice(true);
+              setTimeout(() => setShowPointsNotice(false), 4500);
             }
           }}
           className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 ${

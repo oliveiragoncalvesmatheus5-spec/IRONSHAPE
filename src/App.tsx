@@ -2636,6 +2636,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
   const [livePoints, setLivePoints] = useState(profile.points || 0);
   const livePointsRef = useRef(profile.points || 0);
+  const reconciledCompletedPointsRef = useRef(false);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
@@ -2687,6 +2688,33 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     window.addEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
     return () => window.removeEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || reconciledCompletedPointsRef.current) return;
+    const missingAwards = completedWorkouts.filter(id => !awardedWorkoutPoints.includes(id));
+    if (missingAwards.length === 0) return;
+
+    const basePoints = Math.max(livePointsRef.current, profile.points || 0);
+    const availablePoints = isFreePointsPlan ? Math.max(0, FREE_POINTS_LIMIT - basePoints) : missingAwards.length * 100;
+    const awardsToApply = Math.min(missingAwards.length, Math.floor(availablePoints / 100));
+    if (awardsToApply <= 0) return;
+
+    reconciledCompletedPointsRef.current = true;
+    const awardedIds = missingAwards.slice(0, awardsToApply);
+    const nextPoints = basePoints + (awardsToApply * 100);
+
+    livePointsRef.current = nextPoints;
+    setLivePoints(nextPoints);
+    setAwardedWorkoutPoints(prev => Array.from(new Set([...prev, ...awardedIds])));
+
+    updateProfile({ points: nextPoints }).catch((error) => {
+      console.error('Erro ao sincronizar pontos de treinos concluídos:', error);
+      livePointsRef.current = basePoints;
+      setLivePoints(basePoints);
+      setAwardedWorkoutPoints(prev => prev.filter(id => !awardedIds.includes(id)));
+      reconciledCompletedPointsRef.current = false;
+    });
+  }, [user?.id, completedWorkouts, awardedWorkoutPoints, profile.points, isFreePointsPlan, updateProfile]);
 
   const muscleGroups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen', 'Full Body'];
   const trainingPlace = trainingOnboarding?.trainingPlace;

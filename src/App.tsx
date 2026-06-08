@@ -2622,6 +2622,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan: Plan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null) || 'Iniciante';
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || isAdmin;
+  const isFreePointsPlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
+  const FREE_POINTS_LIMIT = 1000;
   const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(
     (effectivePlan === 'free' || !effectivePlan) ? 'Iniciante' : effectivePlan
   );
@@ -2632,7 +2634,6 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early' | 'registro'>('workouts');
   const [activeHomeMode, setActiveHomeMode] = useState<HomeTrainingMode>('training');
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
-  const [showWorkoutPointsNotice, setShowWorkoutPointsNotice] = useState(false);
   const [livePoints, setLivePoints] = useState(profile.points || 0);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
@@ -2703,9 +2704,12 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
   const points = livePoints;
   const POINTS_MILESTONE_STEP = 100;
-  const nextPointsMilestone = Math.max(POINTS_MILESTONE_STEP, Math.ceil((points + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
-  const previousPointsMilestone = Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
+  const nextPointsMilestone = isFreePointsPlan
+    ? FREE_POINTS_LIMIT
+    : Math.max(POINTS_MILESTONE_STEP, Math.ceil((points + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
+  const previousPointsMilestone = isFreePointsPlan ? 0 : Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
   const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
+  const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
 
   useEffect(() => {
     if (selectedMuscleGroup !== 'Todos' && !visibleMuscleGroups.includes(selectedMuscleGroup)) {
@@ -2727,9 +2731,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     }
 
     if (!alreadyAwarded && user) {
+      if (isFreePointsPlan && livePoints >= FREE_POINTS_LIMIT) {
+        return false;
+      }
+
       const workout = workoutSource.find(w => w.id === workoutId) ?? ALL_WORKOUTS.find(w => w.id === workoutId);
       const today = new Date().toISOString().split('T')[0];
-      const nextPoints = livePoints + 100;
+      const nextPoints = isFreePointsPlan ? Math.min(FREE_POINTS_LIMIT, livePoints + 100) : livePoints + 100;
 
       setLivePoints(nextPoints);
       setAwardedWorkoutPoints(prev => prev.includes(workoutId) ? prev : [...prev, workoutId]);
@@ -2773,14 +2781,6 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     return completeWorkoutAndAwardPoints(workoutId);
   };
 
-  const completeWorkoutFromCard = async (workoutId: string) => {
-    const earnedPoints = await completeWorkoutAndAwardPoints(workoutId);
-    if (earnedPoints) {
-      setShowWorkoutPointsNotice(true);
-      setTimeout(() => setShowWorkoutPointsNotice(false), 4500);
-    }
-  };
-
   if (selectedWorkout) {
     return (
       <WorkoutDetailView 
@@ -2791,6 +2791,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         onToggleComplete={() => toggleComplete(selectedWorkout.id)}
         canEdit={hasAccess('Elite')}
         currentPoints={livePoints}
+        isFreePointsPlan={isFreePointsPlan}
+        freePointsLimit={FREE_POINTS_LIMIT}
+        onUpgrade={onUpgrade}
       />
     );
   }
@@ -2832,60 +2835,18 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
           <div className="flex items-center justify-between mt-2 text-[9px] font-black uppercase tracking-widest text-text-muted">
             <span>{previousPointsMilestone}</span>
-            <span>Meta {nextPointsMilestone} pts</span>
+            <span>{isFreePointsPlan ? `Limite free ${FREE_POINTS_LIMIT} pts` : `Meta ${nextPointsMilestone} pts`}</span>
           </div>
+          {freePointsLimitReached && (
+            <button
+              onClick={onUpgrade}
+              className="w-full mt-3 min-h-[42px] bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all"
+            >
+              Liberar mais pontos
+            </button>
+          )}
         </div>
       </header>
-
-      <AnimatePresence>
-        {showWorkoutPointsNotice && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xl flex items-center justify-center p-5"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 28, scale: 0.94 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 18, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-              className="w-full max-w-md bg-surface border border-primary/20 rounded-[36px] p-7 sm:p-8 shadow-2xl shadow-primary/10 relative overflow-hidden"
-            >
-              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
-              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-56 h-56 bg-primary/20 rounded-full blur-[90px] pointer-events-none" />
-              <div className="relative z-10 space-y-6 text-center">
-                <motion.div
-                  initial={{ scale: 0.75, rotate: -8 }}
-                  animate={{ scale: [0.75, 1.12, 1], rotate: [-8, 4, 0] }}
-                  transition={{ duration: 0.55, ease: 'easeOut' }}
-                  className="w-24 h-24 mx-auto rounded-[28px] bg-primary text-white flex items-center justify-center shadow-2xl shadow-primary/30 border border-primary-hover/40"
-                >
-                  <Trophy size={44} />
-                </motion.div>
-                <div className="space-y-2">
-                  <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
-                  <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">Parabéns!</h2>
-                  <p className="text-sm text-text-secondary leading-relaxed">
-                    Você ganhou +100 pts e alcançou a marca de {points} pontos.
-                  </p>
-                </div>
-                <div className="bg-primary/10 border border-primary/20 rounded-[28px] p-5 flex items-center justify-center gap-3">
-                  <Zap size={22} className="text-primary" />
-                  <div className="text-5xl font-black text-primary tracking-tighter">+100</div>
-                  <span className="text-xs font-black uppercase tracking-widest text-text-muted">pts</span>
-                </div>
-                <button
-                  onClick={() => setShowWorkoutPointsNotice(false)}
-                  className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
-                >
-                  Continuar
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {usesHomeProtocol && (
         <section className="space-y-4">
@@ -3096,18 +3057,14 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                                 workout={workout}
                                 mode={activeHomeMode}
                                 isCompleted={completedWorkouts.includes(workout.id)}
-                                hasAwardedPoints={awardedWorkoutPoints.includes(workout.id)}
                                 onClick={() => setSelectedWorkout(workout)}
-                                onComplete={() => completeWorkoutFromCard(workout.id)}
                               />
                             ) : (
                               <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
                                 <WorkoutCard
                                   workout={workout}
                                   isCompleted={completedWorkouts.includes(workout.id)}
-                                  hasAwardedPoints={awardedWorkoutPoints.includes(workout.id)}
                                   onClick={() => setSelectedWorkout(workout)}
-                                  onComplete={() => completeWorkoutFromCard(workout.id)}
                                 />
                               </div>
                             )
@@ -3206,15 +3163,11 @@ function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgra
 function WorkoutCard({
   workout,
   isCompleted,
-  hasAwardedPoints,
-  onClick,
-  onComplete
+  onClick
 }: {
   workout: Workout,
   isCompleted: boolean,
-  hasAwardedPoints: boolean,
-  onClick: () => void,
-  onComplete: () => void
+  onClick: () => void
 }) {
   return (
     <div
@@ -3256,7 +3209,7 @@ function WorkoutCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 gap-3">
+        <div className="flex items-center justify-between pt-2">
           <div className="flex -space-x-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="w-8 h-8 rounded-full border-2 border-surface bg-surface-active flex items-center justify-center overflow-hidden">
@@ -3267,22 +3220,6 @@ function WorkoutCard({
               +12
             </div>
           </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onComplete();
-            }}
-            disabled={isCompleted && hasAwardedPoints}
-            className={`min-h-[44px] px-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
-              isCompleted && hasAwardedPoints
-                ? 'bg-success/10 text-success border border-success/20 cursor-default'
-                : 'bg-primary text-text-primary shadow-lg shadow-primary/20 hover:bg-primary-hover'
-            }`}
-          >
-            {isCompleted && hasAwardedPoints ? <CheckCircle2 size={14} /> : <Trophy size={14} />}
-            {isCompleted && hasAwardedPoints ? 'Concluído' : isCompleted ? 'Pontuar' : 'Concluir'}
-          </button>
           <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary translate-x-1">
             <ChevronRight size={20} />
           </div>
@@ -3296,16 +3233,12 @@ function HomeRoutineCard({
   workout,
   mode,
   isCompleted,
-  hasAwardedPoints,
   onClick,
-  onComplete,
 }: {
   workout: Workout,
   mode: HomeTrainingMode,
   isCompleted: boolean,
-  hasAwardedPoints: boolean,
   onClick: () => void,
-  onComplete: () => void,
 }) {
   const config = mode === 'mobility'
     ? {
@@ -3355,22 +3288,6 @@ function HomeRoutineCard({
           <span className="flex items-center gap-1.5"><Clock size={13} />{workout.duration}</span>
           <span className="flex items-center gap-1.5"><Activity size={13} />{workout.exercises.length} movimentos</span>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onComplete();
-          }}
-          disabled={isCompleted && hasAwardedPoints}
-          className={`min-h-[40px] px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-1.5 ${
-            isCompleted && hasAwardedPoints
-              ? 'bg-success/10 text-success border border-success/20'
-              : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white'
-          }`}
-        >
-          {isCompleted && hasAwardedPoints ? <CheckCircle2 size={13} /> : <Trophy size={13} />}
-          {isCompleted && hasAwardedPoints ? 'Feito' : isCompleted ? 'Pontuar' : 'Concluir'}
-        </button>
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${config.soft} ${config.accent}`}>
           <ChevronRight size={18} />
         </div>
@@ -4076,7 +3993,10 @@ function WorkoutDetailView({
   hasAwardedPoints,
   onToggleComplete,
   canEdit,
-  currentPoints
+  currentPoints,
+  isFreePointsPlan,
+  freePointsLimit,
+  onUpgrade
 }: {
   workout: Workout,
   onBack: () => void,
@@ -4084,7 +4004,10 @@ function WorkoutDetailView({
   hasAwardedPoints: boolean,
   onToggleComplete: () => Promise<boolean>,
   canEdit: boolean,
-  currentPoints: number
+  currentPoints: number,
+  isFreePointsPlan: boolean,
+  freePointsLimit: number,
+  onUpgrade: () => void
 }) {
   const [exercises, setExercises] = useState(workout.exercises);
   const [isEditing, setIsEditing] = useState(false);
@@ -4111,13 +4034,23 @@ function WorkoutDetailView({
   const completedCount = completedExercises.length;
   const totalExercises = exercises.length || 1;
   const workoutProgress = Math.round((completedCount / totalExercises) * 100);
-  const reachedMilestone = Math.max(POINTS_MILESTONE_STEP, Math.floor(displayPoints / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
-  const nextMilestone = Math.max(POINTS_MILESTONE_STEP, Math.ceil((displayPoints + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
-  const previousMilestone = Math.max(0, nextMilestone - POINTS_MILESTONE_STEP);
+  const reachedMilestone = isFreePointsPlan
+    ? Math.min(freePointsLimit, Math.max(POINTS_MILESTONE_STEP, Math.floor(displayPoints / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP))
+    : Math.max(POINTS_MILESTONE_STEP, Math.floor(displayPoints / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
+  const nextMilestone = isFreePointsPlan
+    ? freePointsLimit
+    : Math.max(POINTS_MILESTONE_STEP, Math.ceil((displayPoints + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
+  const previousMilestone = isFreePointsPlan ? 0 : Math.max(0, nextMilestone - POINTS_MILESTONE_STEP);
   const milestoneProgress = Math.min(100, Math.round(((displayPoints - previousMilestone) / (nextMilestone - previousMilestone)) * 100));
+  const freeLimitReached = isFreePointsPlan && displayPoints >= freePointsLimit;
 
   const completeWorkout = async () => {
     if (isCompleted && hasAwardedPoints) return false;
+    if (freeLimitReached && !hasAwardedPoints) {
+      setShowPointsNotice(true);
+      setTimeout(() => setShowPointsNotice(false), 6500);
+      return false;
+    }
     const earnedPoints = await onToggleComplete();
     if (earnedPoints) {
       setDisplayPoints(prev => prev + POINTS_PER_WORKOUT);
@@ -4134,10 +4067,6 @@ function WorkoutDetailView({
       : [...completedExercises, exerciseId];
 
     setCompletedExercises(next);
-
-    if (!alreadyDone && next.length === exercises.length && exercises.length > 0) {
-      await completeWorkout();
-    }
   };
 
   const updateExercise = (index: number, field: keyof Exercise, value: any) => {
@@ -4270,9 +4199,13 @@ function WorkoutDetailView({
 
                 <div className="space-y-2">
                   <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
-                  <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">Treino concluído!</h2>
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">
+                    {freeLimitReached && !hasAwardedPoints ? 'Meta free completa!' : 'Treino concluído!'}
+                  </h2>
                   <p className="text-sm text-text-secondary leading-relaxed">
-                    Você finalizou todos os exercícios e alcançou a marca de {reachedMilestone} pts.
+                    {freeLimitReached && !hasAwardedPoints
+                      ? `Você chegou aos ${freePointsLimit} pts. Assine Pro ou Elite para liberar mais pontos e mais exercícios.`
+                      : `Você finalizou todos os exercícios e alcançou a marca de ${reachedMilestone} pts.`}
                   </p>
                 </div>
 
@@ -4284,7 +4217,7 @@ function WorkoutDetailView({
                 >
                   <div className="flex items-center justify-center gap-3">
                     <Zap size={22} className="text-primary" />
-                    <div className="text-5xl font-black text-primary tracking-tighter">+{POINTS_PER_WORKOUT}</div>
+                    <div className="text-5xl font-black text-primary tracking-tighter">{freeLimitReached && !hasAwardedPoints ? freePointsLimit : `+${POINTS_PER_WORKOUT}`}</div>
                     <span className="text-xs font-black uppercase tracking-widest text-text-muted">pts</span>
                   </div>
                 </motion.div>
@@ -4304,16 +4237,25 @@ function WorkoutDetailView({
                   </div>
                   <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-text-muted">
                     <span>{previousMilestone}</span>
-                    <span>Meta {nextMilestone} pts</span>
+                    <span>{isFreePointsPlan ? `Limite free ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}</span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowPointsNotice(false)}
-                  className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
-                >
-                  Continuar
-                </button>
+                {freeLimitReached && !hasAwardedPoints ? (
+                  <button
+                    onClick={onUpgrade}
+                    className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
+                  >
+                    Fazer upgrade
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowPointsNotice(false)}
+                    className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
+                  >
+                    Continuar
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -4347,7 +4289,9 @@ function WorkoutDetailView({
                 <div className="text-sm font-black">{displayPoints} pts</div>
               </div>
             </div>
-            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Meta {nextMilestone} pts</span>
+            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">
+              {isFreePointsPlan ? `Limite free ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}
+            </span>
           </div>
           <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
             <motion.div
@@ -4356,6 +4300,14 @@ function WorkoutDetailView({
               className="h-full bg-success"
             />
           </div>
+          {freeLimitReached && (
+            <button
+              onClick={onUpgrade}
+              className="w-full min-h-[44px] bg-primary/10 text-primary border border-primary/20 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+            >
+              Liberar mais pontos e exercícios
+            </button>
+          )}
         </div>
       </section>
 
@@ -4379,6 +4331,10 @@ function WorkoutDetailView({
       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/80 backdrop-blur-xl border-t border-white/5">
         <button
           onClick={async () => {
+            if (freeLimitReached && !hasAwardedPoints) {
+              onUpgrade();
+              return;
+            }
             if (!isCompleted || !hasAwardedPoints) {
               setCompletedExercises(exercises.map(exercise => exercise.id));
               await completeWorkout();
@@ -4393,10 +4349,12 @@ function WorkoutDetailView({
               : 'bg-primary text-white shadow-primary/30 hover:bg-orange-400'
           }`}
         >
-          {isCompleted && hasAwardedPoints ? (
+          {freeLimitReached && !hasAwardedPoints ? (
+            <><Trophy size={18} /> Fazer Upgrade</>
+          ) : isCompleted && hasAwardedPoints ? (
             <><CheckCircle2 size={18} /> Treino Concluído</>
           ) : isCompleted ? (
-            <><Trophy size={18} /> Registrar Pontos</>
+            <><Trophy size={18} /> Concluir Treino</>
           ) : (
             <><Play size={18} /> Concluir Treino de Hoje</>
           )}

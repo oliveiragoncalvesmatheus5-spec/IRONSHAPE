@@ -2623,7 +2623,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const effectivePlan: Plan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null) || 'Iniciante';
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || isAdmin;
   const isFreePointsPlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
-  const FREE_POINTS_LIMIT = 1000;
+  const FREE_POINTS_LIMIT = 2000;
   const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(
     (effectivePlan === 'free' || !effectivePlan) ? 'Iniciante' : effectivePlan
   );

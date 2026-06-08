@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
@@ -2635,6 +2635,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [activeHomeMode, setActiveHomeMode] = useState<HomeTrainingMode>('training');
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
   const [livePoints, setLivePoints] = useState(profile.points || 0);
+  const livePointsRef = useRef(profile.points || 0);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
@@ -2668,7 +2669,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   }, [awardedWorkoutPoints]);
 
   useEffect(() => {
-    setLivePoints(profile.points || 0);
+    const profilePoints = profile.points || 0;
+    livePointsRef.current = Math.max(livePointsRef.current, profilePoints);
+    setLivePoints(prev => Math.max(prev, profilePoints));
   }, [profile.points]);
 
   useEffect(() => {
@@ -2722,7 +2725,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     return weights[effectivePlan] >= weights[planId];
   };
 
-  const completeWorkoutAndAwardPoints = async (workoutId: string): Promise<boolean> => {
+  const completeWorkoutAndAwardPoints = async (workoutId: string): Promise<number | null> => {
     const alreadyAwarded = awardedWorkoutPoints.includes(workoutId);
     const alreadyCompleted = completedWorkouts.includes(workoutId);
 
@@ -2731,14 +2734,16 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     }
 
     if (!alreadyAwarded && user) {
-      if (isFreePointsPlan && livePoints >= FREE_POINTS_LIMIT) {
-        return false;
+      const basePoints = Math.max(livePointsRef.current, profile.points || 0);
+      if (isFreePointsPlan && basePoints >= FREE_POINTS_LIMIT) {
+        return null;
       }
 
       const workout = workoutSource.find(w => w.id === workoutId) ?? ALL_WORKOUTS.find(w => w.id === workoutId);
       const today = new Date().toISOString().split('T')[0];
-      const nextPoints = isFreePointsPlan ? Math.min(FREE_POINTS_LIMIT, livePoints + 100) : livePoints + 100;
+      const nextPoints = isFreePointsPlan ? Math.min(FREE_POINTS_LIMIT, basePoints + 100) : basePoints + 100;
 
+      livePointsRef.current = nextPoints;
       setLivePoints(nextPoints);
       setAwardedWorkoutPoints(prev => prev.includes(workoutId) ? prev : [...prev, workoutId]);
 
@@ -2760,22 +2765,22 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           streak: newStreak,
           lastWorkoutDate: today,
         });
-        return true;
+        return nextPoints;
       } catch (e) {
         console.error('Erro ao salvar treino:', e);
-        setLivePoints(points => Math.max(0, points - 100));
+        livePointsRef.current = basePoints;
+        setLivePoints(basePoints);
         setAwardedWorkoutPoints(prev => prev.filter(id => id !== workoutId));
       }
     }
-    return false;
+    return null;
   };
 
-  const toggleComplete = async (workoutId: string): Promise<boolean> => {
+  const toggleComplete = async (workoutId: string): Promise<number | null> => {
     const alreadyDone = completedWorkouts.includes(workoutId);
 
     if (alreadyDone && awardedWorkoutPoints.includes(workoutId)) {
-      setCompletedWorkouts(prev => prev.filter(id => id !== workoutId));
-      return false;
+      return null;
     }
 
     return completeWorkoutAndAwardPoints(workoutId);
@@ -4002,7 +4007,7 @@ function WorkoutDetailView({
   onBack: () => void,
   isCompleted: boolean,
   hasAwardedPoints: boolean,
-  onToggleComplete: () => Promise<boolean>,
+  onToggleComplete: () => Promise<number | null>,
   canEdit: boolean,
   currentPoints: number,
   isFreePointsPlan: boolean,
@@ -4047,7 +4052,7 @@ function WorkoutDetailView({
   const isLimitNotice = pointsNoticeMode === 'limit';
   const isEarnedLimitNotice = pointsNoticeMode === 'earnedLimit';
   const isCompleteNotice = pointsNoticeMode === 'complete';
-  const noticeReachedPoints = isEarnedLimitNotice ? freePointsLimit : reachedMilestone;
+  const noticeReachedPoints = isEarnedLimitNotice ? freePointsLimit : displayPoints;
 
   const completeWorkout = async () => {
     if (isCompleted && hasAwardedPoints) {
@@ -4062,15 +4067,15 @@ function WorkoutDetailView({
       setTimeout(() => setShowPointsNotice(false), 6500);
       return false;
     }
-    const earnedPoints = await onToggleComplete();
-    if (earnedPoints) {
-      const willReachFreeLimit = isFreePointsPlan && displayPoints + POINTS_PER_WORKOUT >= freePointsLimit;
-      setDisplayPoints(prev => prev + POINTS_PER_WORKOUT);
+    const nextPoints = await onToggleComplete();
+    if (nextPoints !== null) {
+      const willReachFreeLimit = isFreePointsPlan && nextPoints >= freePointsLimit;
+      setDisplayPoints(nextPoints);
       setPointsNoticeMode(willReachFreeLimit ? 'earnedLimit' : 'earned');
       setShowPointsNotice(true);
       setTimeout(() => setShowPointsNotice(false), willReachFreeLimit ? 6500 : 4500);
     }
-    return earnedPoints;
+    return nextPoints !== null;
   };
 
   const toggleExerciseComplete = async (exerciseId: string) => {

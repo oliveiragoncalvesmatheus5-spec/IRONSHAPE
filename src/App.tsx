@@ -3727,7 +3727,8 @@ function ExerciseCard({
   isCompleted,
   onUpdate,
   onShowExecution,
-  onToggleComplete
+  onToggleComplete,
+  isActionPending = false
 }: {
   exercise: Exercise,
   index: number,
@@ -3735,7 +3736,8 @@ function ExerciseCard({
   isCompleted: boolean,
   onUpdate: (field: keyof Exercise, value: any) => void,
   onShowExecution: () => void,
-  onToggleComplete: () => void
+  onToggleComplete: () => void | Promise<void>,
+  isActionPending?: boolean
 }) {
   const [isResting, setIsResting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -3890,14 +3892,15 @@ function ExerciseCard({
           {!isEditing && (
             <button
               onClick={onToggleComplete}
+              disabled={isActionPending}
               className={`w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
                 isCompleted
                   ? 'bg-success/10 text-success border border-success/20 hover:bg-success hover:text-white'
                   : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white'
-              }`}
+              } disabled:opacity-70 disabled:cursor-wait`}
             >
-              {isCompleted ? <CheckCircle2 size={15} /> : <Check size={15} />}
-              {isCompleted ? 'Concluído' : 'Concluir'}
+              {isActionPending ? <Loader2 size={15} className="animate-spin" /> : isCompleted ? <CheckCircle2 size={15} /> : <Check size={15} />}
+              {isActionPending ? 'Registrando' : isCompleted ? 'Concluído' : 'Concluir'}
             </button>
           )}
         </div>
@@ -4049,6 +4052,7 @@ function WorkoutDetailView({
   const [showPointsNotice, setShowPointsNotice] = useState(false);
   const [pointsNoticeMode, setPointsNoticeMode] = useState<'earned' | 'earnedLimit' | 'limit' | 'complete'>('earned');
   const [displayPoints, setDisplayPoints] = useState(currentPoints);
+  const [isAwardingWorkout, setIsAwardingWorkout] = useState(false);
 
   const POINTS_PER_WORKOUT = 100;
   const POINTS_MILESTONE_STEP = 100;
@@ -4083,6 +4087,7 @@ function WorkoutDetailView({
   const noticeReachedPoints = isEarnedLimitNotice ? freePointsLimit : displayPoints;
 
   const completeWorkout = async () => {
+    if (isAwardingWorkout) return false;
     if (isCompleted && hasAwardedPoints) {
       setPointsNoticeMode('complete');
       setShowPointsNotice(true);
@@ -4095,15 +4100,20 @@ function WorkoutDetailView({
       setTimeout(() => setShowPointsNotice(false), 6500);
       return false;
     }
-    const nextPoints = await onToggleComplete();
-    if (nextPoints !== null) {
-      const willReachFreeLimit = isFreePointsPlan && nextPoints >= freePointsLimit;
-      setDisplayPoints(nextPoints);
-      setPointsNoticeMode(willReachFreeLimit ? 'earnedLimit' : 'earned');
-      setShowPointsNotice(true);
-      setTimeout(() => setShowPointsNotice(false), willReachFreeLimit ? 6500 : 4500);
+    setIsAwardingWorkout(true);
+    try {
+      const nextPoints = await onToggleComplete();
+      if (nextPoints !== null) {
+        const willReachFreeLimit = isFreePointsPlan && nextPoints >= freePointsLimit;
+        setDisplayPoints(nextPoints);
+        setPointsNoticeMode(willReachFreeLimit ? 'earnedLimit' : 'earned');
+        setShowPointsNotice(true);
+        setTimeout(() => setShowPointsNotice(false), willReachFreeLimit ? 6500 : 4500);
+      }
+      return nextPoints !== null;
+    } finally {
+      setIsAwardingWorkout(false);
     }
-    return nextPoints !== null;
   };
 
   const toggleExerciseComplete = async (exerciseId: string) => {
@@ -4113,6 +4123,10 @@ function WorkoutDetailView({
       : [...completedExercises, exerciseId];
 
     setCompletedExercises(next);
+
+    if (!alreadyDone && next.length === exercises.length) {
+      await completeWorkout();
+    }
   };
 
   const updateExercise = (index: number, field: keyof Exercise, value: any) => {
@@ -4126,7 +4140,7 @@ function WorkoutDetailView({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6 pb-32"
+      className="space-y-6 pb-56 md:pb-32"
     >
       <AnimatePresence>
         {selectedExerciseForVideo && (
@@ -4375,14 +4389,16 @@ function WorkoutDetailView({
             onUpdate={(field, value) => updateExercise(index, field, value)}
             onShowExecution={() => setSelectedExerciseForVideo(exercise)}
             onToggleComplete={() => toggleExerciseComplete(exercise.id)}
+            isActionPending={isAwardingWorkout}
           />
         ))}
       </div>
 
       {/* CTA fixo no rodapé */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-background/80 backdrop-blur-xl border-t border-white/5">
+      <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-50 md:z-40 p-4 bg-background/80 backdrop-blur-xl border-t border-white/5">
         <button
           onClick={async () => {
+            if (isAwardingWorkout) return;
             if (freeLimitReached && !hasAwardedPoints) {
               setPointsNoticeMode('limit');
               setShowPointsNotice(true);
@@ -4403,8 +4419,11 @@ function WorkoutDetailView({
               ? 'bg-success text-white shadow-success/20'
               : 'bg-primary text-white shadow-primary/30 hover:bg-orange-400'
           }`}
+          disabled={isAwardingWorkout}
         >
-          {freeLimitReached && !hasAwardedPoints ? (
+          {isAwardingWorkout ? (
+            <><Loader2 size={18} className="animate-spin" /> Registrando</>
+          ) : freeLimitReached && !hasAwardedPoints ? (
             <><Trophy size={18} /> Fazer Upgrade</>
           ) : isCompleted && hasAwardedPoints ? (
             <><CheckCircle2 size={18} /> Treino Concluído</>

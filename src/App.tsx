@@ -4833,9 +4833,44 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
   const { isAdmin, simulatedPlan } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
+  type MacroResults = {
+    bmr: number;
+    tdee: number;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  type NutritionCalcData = {
+    weight: string;
+    height: string;
+    age: string;
+    gender: 'male' | 'female';
+    activityLevel: string;
+    goal: 'lose' | 'maintain' | 'gain';
+  };
+  type GeneratedMealPlan = {
+    time: string;
+    name: string;
+    icon: string;
+    items: MealItem[];
+  }[];
+
   const localStorageKey = `nutrition_prefs_${profile.id}`;
+  const protocolStorageKey = `nutrition_protocol_${profile.id}`;
   const localPrefs = (() => {
     try { return JSON.parse(localStorage.getItem(localStorageKey) || 'null'); } catch { return null; }
+  })();
+  const savedProtocol = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(protocolStorageKey) || 'null') as {
+        calcData?: NutritionCalcData;
+        results?: MacroResults;
+        mealPlan?: GeneratedMealPlan;
+      } | null;
+    } catch {
+      return null;
+    }
   })();
   const hasPrefs = !!(profile.nutrition_preferences || localPrefs);
   const [showPrefsForm, setShowPrefsForm] = useState(!hasPrefs);
@@ -4845,33 +4880,23 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savePrefsError, setSavePrefsError] = useState('');
 
-  const [calcData, setCalcData] = useState({
+  const defaultCalcData: NutritionCalcData = {
     weight: profile.weight.toString(),
     height: profile.height.toString(),
     age: profile.age.toString(),
     gender: 'male' as 'male' | 'female',
     activityLevel: '1.55',
     goal: 'maintain' as 'lose' | 'maintain' | 'gain'
-  });
+  };
 
-  const [results, setResults] = useState<{
-    bmr: number;
-    tdee: number;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-  } | null>(null);
+  const [calcData, setCalcData] = useState<NutritionCalcData>(savedProtocol?.calcData || defaultCalcData);
+  const [results, setResults] = useState<MacroResults | null>(savedProtocol?.results || null);
 
   const mealPlanStorageKey = `meal_plan_${profile.id}`;
   const favoriteFoodsKey = `nutrition_favorites_${profile.id}`;
 
-  const [mealPlan, setMealPlan] = useState<{
-    time: string;
-    name: string;
-    icon: string;
-    items: MealItem[];
-  }[]>(() => {
+  const [mealPlan, setMealPlan] = useState<GeneratedMealPlan>(() => {
+    if (savedProtocol?.mealPlan?.length) return savedProtocol.mealPlan;
     try { return JSON.parse(localStorage.getItem(`meal_plan_${profile.id}`) || '[]'); } catch { return []; }
   });
 
@@ -4907,6 +4932,13 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
     setFavoriteFoods(nextFavorites);
     try { localStorage.setItem(favoriteFoodsKey, JSON.stringify(nextFavorites)); } catch { /* ignore */ }
   };
+
+  useEffect(() => {
+    if (!results) return;
+    try {
+      sessionStorage.setItem(protocolStorageKey, JSON.stringify({ calcData, results, mealPlan }));
+    } catch { /* ignore */ }
+  }, [protocolStorageKey, calcData, results, mealPlan]);
 
   const normalizeFavoriteKey = (item: MealItem) => `${item.name.trim().toLowerCase()}|${item.quantity.trim().toLowerCase()}`;
 
@@ -5050,14 +5082,16 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
     const fat = Math.round((calories * 0.25) / 9); // 25% of calories
     const carbs = Math.round((calories - (protein * 4) - (fat * 9)) / 4);
 
-    setResults({ 
+    const nextResults = { 
       bmr: Math.round(bmr), 
       tdee: Math.round(tdee), 
       calories, 
       protein, 
       carbs, 
       fat 
-    });
+    };
+
+    setResults(nextResults);
 
     await generateMealPlan(calories, protein, carbs, fat);
   };
@@ -5082,13 +5116,14 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
 
   const saveManualMacros = async () => {
     if (results) {
-      setResults({
+      const nextResults = {
         ...results,
         calories: manualMacros.calories,
         protein: manualMacros.protein,
         carbs: manualMacros.carbs,
         fat: manualMacros.fat
-      });
+      };
+      setResults(nextResults);
       await generateMealPlan(manualMacros.calories, manualMacros.protein, manualMacros.carbs, manualMacros.fat);
     }
   };

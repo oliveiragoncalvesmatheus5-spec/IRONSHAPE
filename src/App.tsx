@@ -2648,6 +2648,79 @@ function safeParseArray<T>(key: string, fallback: T[] = []): T[] {
   }
 }
 
+function FreeTrainingPhaseGate({
+  points,
+  limit,
+  onUpgrade,
+}: {
+  points: number;
+  limit: number;
+  onUpgrade: () => void;
+}) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden rounded-[32px] border border-primary/25 bg-surface p-5 sm:p-7 md:p-9 shadow-2xl shadow-primary/10"
+    >
+      <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
+      <div className="relative z-10 grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xl shadow-primary/20">
+              <Trophy size={28} />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Primeira fase concluída</div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter uppercase leading-tight">
+                Sua evolução continua no Pro ou Elite
+              </h2>
+            </div>
+          </div>
+
+          <p className="text-sm sm:text-base text-text-secondary leading-relaxed max-w-2xl">
+            Você chegou aos {limit} pontos e completou a jornada inicial do IronShape. Para liberar novos protocolos, mais pontos e uma rotina de evolução contínua, escolha um dos planos.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+              <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">Conquista</div>
+              <div className="mt-1 text-2xl font-black text-primary">{Math.max(points, limit)} pts</div>
+            </div>
+            <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+              <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">Próxima etapa</div>
+              <div className="mt-1 text-lg font-black text-text-primary">Pro ou Elite</div>
+            </div>
+          </div>
+
+          <button
+            onClick={onUpgrade}
+            className="w-full sm:w-auto min-h-[54px] px-7 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            <ShieldCheck size={17} />
+            Continuar minha evolução
+          </button>
+        </div>
+
+        <div className="rounded-[28px] bg-background/70 border border-white/10 p-5 space-y-4">
+          {[
+            'Protocolos Pro e Elite liberados',
+            'Mais pontos, ranking e histórico de evolução',
+            'Planilha do atleta e recursos avançados no Elite',
+          ].map((item) => (
+            <div key={item} className="flex items-start gap-3">
+              <div className="mt-0.5 w-7 h-7 rounded-xl bg-success/10 border border-success/20 text-success flex items-center justify-center shrink-0">
+                <Check size={14} />
+              </div>
+              <p className="text-sm font-bold text-text-secondary leading-relaxed">{item}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan: Plan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null) || 'Iniciante';
@@ -2797,6 +2870,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const previousPointsMilestone = isFreePointsPlan ? 0 : Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
   const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
   const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
+  const freeTrainingPhaseComplete = freePointsLimitReached && !isAdmin;
   const weeklyWorkoutIds = weeklyWorkouts.map(item => item.workoutId);
   const allAvailableWorkouts = [...workoutSource, ...ALL_WORKOUTS];
   const favoriteWorkouts = favoriteWorkoutIds
@@ -2994,18 +3068,29 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
           <div className="flex items-center justify-between mt-2 text-[9px] font-black uppercase tracking-widest text-text-muted">
             <span>{previousPointsMilestone}</span>
-            <span>{isFreePointsPlan ? `Limite free ${FREE_POINTS_LIMIT} pts` : `Meta ${nextPointsMilestone} pts`}</span>
+            <span>{isFreePointsPlan ? `Fase 1: ${FREE_POINTS_LIMIT} pts` : `Meta ${nextPointsMilestone} pts`}</span>
           </div>
-          {freePointsLimitReached && (
+          {freeTrainingPhaseComplete && (
             <button
               onClick={onUpgrade}
               className="w-full mt-3 min-h-[42px] bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all"
             >
-              Liberar mais pontos
+              Continuar evolução
             </button>
           )}
         </div>
       </header>
+
+      {freeTrainingPhaseComplete && (
+        <FreeTrainingPhaseGate
+          points={points}
+          limit={FREE_POINTS_LIMIT}
+          onUpgrade={onUpgrade}
+        />
+      )}
+
+      {freeTrainingPhaseComplete ? null : (
+        <>
 
       {usesHomeProtocol && (
         <section className="space-y-4">
@@ -3405,6 +3490,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -4411,7 +4498,6 @@ function WorkoutDetailView({
     if (freeLimitReached && !hasAwardedPoints) {
       setPointsNoticeMode('limit');
       setShowPointsNotice(true);
-      setTimeout(() => setShowPointsNotice(false), 6500);
       return false;
     }
     setIsAwardingWorkout(true);
@@ -4422,7 +4508,7 @@ function WorkoutDetailView({
         setDisplayPoints(nextPoints);
         setPointsNoticeMode(willReachFreeLimit ? 'earnedLimit' : 'earned');
         setShowPointsNotice(true);
-        setTimeout(() => setShowPointsNotice(false), willReachFreeLimit ? 6500 : 4500);
+        if (!willReachFreeLimit) setTimeout(() => setShowPointsNotice(false), 4500);
       }
       return nextPoints !== null;
     } finally {
@@ -4574,13 +4660,13 @@ function WorkoutDetailView({
                 <div className="space-y-2">
                   <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
                   <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">
-                    {isLimitNotice || isEarnedLimitNotice ? 'Meta free completa!' : isCompleteNotice ? 'Treino já registrado!' : 'Treino concluído!'}
+                    {isLimitNotice || isEarnedLimitNotice ? 'Primeira fase concluída!' : isCompleteNotice ? 'Treino já registrado!' : 'Treino concluído!'}
                   </h2>
                   <p className="text-sm text-text-secondary leading-relaxed">
                     {isLimitNotice
-                      ? `Você chegou aos ${freePointsLimit} pts. Assine Pro ou Elite para liberar mais pontos e mais exercícios.`
+                      ? `Você chegou aos ${freePointsLimit} pontos e completou sua jornada inicial. Assine Pro ou Elite para continuar com novos protocolos e evolução contínua.`
                       : isEarnedLimitNotice
-                      ? `Você ganhou +${POINTS_PER_WORKOUT} pts e bateu ${freePointsLimit} pts. Agora assine Pro ou Elite para continuar evoluindo com mais pontos e exercícios.`
+                      ? `Você ganhou +${POINTS_PER_WORKOUT} pontos e fechou a primeira fase do IronShape. Agora desbloqueie Pro ou Elite para seguir para a próxima etapa.`
                       : isCompleteNotice
                       ? 'Esse treino já está contando no seu ranking. Continue mantendo a sequência e volte amanhã para somar mais.'
                       : `Você ganhou +${POINTS_PER_WORKOUT} pts e alcançou ${noticeReachedPoints} pts. Continue concluindo treinos para subir no ranking.`}
@@ -4617,7 +4703,7 @@ function WorkoutDetailView({
                   </div>
                   <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-text-muted">
                     <span>{previousMilestone}</span>
-                    <span>{isFreePointsPlan ? `Limite free ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}</span>
+                    <span>{isFreePointsPlan ? `Fase 1: ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}</span>
                   </div>
                 </div>
 
@@ -4626,7 +4712,7 @@ function WorkoutDetailView({
                     onClick={onUpgrade}
                     className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
                   >
-                    Fazer upgrade
+                    Continuar minha evolução
                   </button>
                 ) : (
                   <button
@@ -4670,7 +4756,7 @@ function WorkoutDetailView({
               </div>
             </div>
             <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">
-              {isFreePointsPlan ? `Limite free ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}
+              {isFreePointsPlan ? `Fase 1: ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}
             </span>
           </div>
           <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -4685,7 +4771,7 @@ function WorkoutDetailView({
               onClick={onUpgrade}
               className="w-full min-h-[44px] bg-primary/10 text-primary border border-primary/20 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
             >
-              Liberar mais pontos e exercícios
+              Continuar no Pro ou Elite
             </button>
           )}
         </div>
@@ -4716,7 +4802,6 @@ function WorkoutDetailView({
             if (freeLimitReached && !hasAwardedPoints) {
               setPointsNoticeMode('limit');
               setShowPointsNotice(true);
-              setTimeout(() => setShowPointsNotice(false), 6500);
               return;
             }
             if (!isCompleted || !hasAwardedPoints) {

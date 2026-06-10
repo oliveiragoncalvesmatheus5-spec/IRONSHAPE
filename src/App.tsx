@@ -3854,6 +3854,11 @@ function ExerciseAnimation({ type }: { type: ExerciseAnimationType }) {
   return null;
 }
 
+function shouldPreferRapidApiMedia(exercise: Exercise) {
+  const id = String(exercise.id || '').toLowerCase();
+  return id.startsWith('home-') || id.startsWith('mob-') || id.startsWith('stretch-');
+}
+
 function ExecutionModal({
   exercise,
   onClose
@@ -3880,7 +3885,7 @@ function ExecutionModal({
       setGifLoading(false);
     }
     const searchName = translateExerciseName(exercise.name);
-    searchExercisesByName(exercise.name)
+    searchExercisesByName(exercise.name, shouldPreferRapidApiMedia(exercise) ? { source: 'rapidapi' } : undefined)
       .then((results: any) => {
         if (cancelled) return;
         const list = Array.isArray(results) ? results : results?.data;
@@ -4072,7 +4077,7 @@ function ExerciseCard({
     const searchName = translateExerciseName(exercise.name);
     setGifLoading(!exercise.videoUrl);
     try {
-      const results = await searchExercisesByName(exercise.name);
+      const results = await searchExercisesByName(exercise.name, shouldPreferRapidApiMedia(exercise) ? { source: 'rapidapi' } : undefined);
       const list = Array.isArray(results) ? results : results?.data;
       if (Array.isArray(list) && list.length > 0) {
         setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);

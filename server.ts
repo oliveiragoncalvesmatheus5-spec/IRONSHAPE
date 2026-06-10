@@ -428,6 +428,8 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
   app.get("/api/workout-gif", async (req, res) => {
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
+    const preferredSource = String(req.query.source || "").toLowerCase();
+    const preferRapidApi = preferredSource === "rapidapi" || preferredSource === "ascendapi" || preferredSource === "exercisedb";
 
     const workoutxKey = process.env.WORKOUTX_API_KEY || process.env.VITE_WORKOUTX_KEY;
     const rapidApiKey = process.env.RAPIDAPI_KEY;
@@ -618,7 +620,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       const detailLimit = rapidHost.includes("ascendapi") ? 8 : 5;
       const list = (await Promise.all(listBase.slice(0, detailLimit).map(fetchExerciseDetail)))
         .map(normalizeMediaResult)
-        .map((item: any) => ({ ...item, matchScore: scoreResult(item, searchName) }))
+        .map((item: any) => ({ ...item, provider: "rapidapi", matchScore: scoreResult(item, searchName) }))
         .sort((a, b) => b.matchScore - a.matchScore);
       const safeList = list.filter((item: any) => item.matchScore >= 35);
       console.log(`[workout-gif] Status: ${response.status}, Results: ${list.length}, Safe: ${safeList.length}`);
@@ -641,6 +643,26 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       "incline plank": ["plank"],
       "side plank": ["side plank", "plank"],
       "resistance band row": ["seated row", "barbell bent over row", "dumbbell bent over row", "row"],
+      "cat cow stretch": ["cat camel", "bird dog", "superman"],
+      "thoracic rotation": ["open book stretch", "side lying rotation", "superman"],
+      "shoulder circles": ["shoulder mobility", "arm circles", "shoulder press"],
+      "wall slide": ["shoulder mobility", "scapular wall slide", "shoulder press"],
+      "neck stretch": ["neck side stretch", "side neck stretch"],
+      "neck side stretch": ["side neck stretch", "neck stretch"],
+      "hip mobility": ["hip flexor stretch", "glute bridge", "bodyweight squat"],
+      "standing hip circles": ["hip mobility", "glute bridge", "bodyweight squat"],
+      "ankle mobility": ["calf stretch", "bodyweight squat"],
+      "diaphragmatic breathing": ["dead bug", "crunch"],
+      "pelvic tilt": ["glute bridge", "dead bug"],
+      "knee to chest stretch": ["hamstring stretch", "glute stretch", "child pose"],
+      "hamstring stretch": ["seated single leg hamstring stretch", "hamstring"],
+      "quad stretch": ["quadriceps stretch", "bodyweight squat"],
+      "glute stretch": ["glute bridge", "hip thrust"],
+      "cross body shoulder stretch": ["shoulder stretch", "shoulder press"],
+      "triceps stretch": ["overhead triceps stretch", "bodyweight triceps extension", "cable triceps pushdown", "triceps pushdown"],
+      "chest stretch": ["doorway chest stretch", "standing chest stretch", "push up"],
+      "child pose": ["kneeling push up to child pose", "child pose"],
+      "spinal twist stretch": ["russian twist", "side plank"],
     };
 
     try {
@@ -656,10 +678,17 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
 
       let result: Awaited<ReturnType<typeof searchRapidApi>> = null;
       for (const query of candidates) {
-        result = await searchWorkoutX(query);
-        if (result) break;
-        result = await searchRapidApi(query);
-        if (result) break;
+        if (preferRapidApi) {
+          result = await searchRapidApi(query);
+          if (result) break;
+          result = await searchWorkoutX(query);
+          if (result) break;
+        } else {
+          result = await searchWorkoutX(query);
+          if (result) break;
+          result = await searchRapidApi(query);
+          if (result) break;
+        }
       }
 
       if (result) return res.status(result.status).json(result.data);

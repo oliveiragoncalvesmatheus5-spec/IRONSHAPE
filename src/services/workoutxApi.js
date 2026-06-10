@@ -30,9 +30,11 @@ export function getExercisesByTarget(muscle) {
   return request(`/exercises?target=${encodeURIComponent(muscle)}`);
 }
 
-export async function searchExercisesByName(name) {
+export async function searchExercisesByName(name, options = {}) {
   const nameEn = translateExerciseName(name);
-  const res = await fetch(`/api/workout-gif?name=${encodeURIComponent(nameEn)}`);
+  const params = new URLSearchParams({ name: nameEn });
+  if (options.source) params.set('source', options.source);
+  const res = await fetch(`/api/workout-gif?${params.toString()}`);
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.message || `Erro ${res.status}`);

@@ -2652,10 +2652,14 @@ function FreeTrainingPhaseGate({
   points,
   limit,
   onUpgrade,
+  onPrepareTest,
+  testStatus,
 }: {
   points: number;
   limit: number;
   onUpgrade: () => void;
+  onPrepareTest?: () => void | Promise<void>;
+  testStatus?: string;
 }) {
   return (
     <motion.section
@@ -2700,6 +2704,20 @@ function FreeTrainingPhaseGate({
             <ShieldCheck size={17} />
             Continuar minha evolução
           </button>
+          {onPrepareTest && (
+            <div className="space-y-2">
+              <button
+                onClick={onPrepareTest}
+                className="w-full sm:w-auto min-h-[48px] px-6 rounded-2xl bg-white/5 border border-white/10 text-text-secondary text-[10px] font-black uppercase tracking-widest hover:text-text-primary hover:border-primary/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <RotateCcw size={15} />
+                Voltar para 1900 pts
+              </button>
+              {testStatus && (
+                <p className="text-xs font-bold text-text-muted leading-relaxed">{testStatus}</p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="rounded-[28px] bg-background/70 border border-white/10 p-5 space-y-4">
@@ -2786,6 +2804,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [favoriteWorkoutIds, setFavoriteWorkoutIds] = useState<string[]>(() => safeParseArray<string>(favoriteStorageKey));
   const [weeklyWorkouts, setWeeklyWorkouts] = useState<WeeklyWorkoutSlot[]>(() => safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
   const [weeklyCompletedIds, setWeeklyCompletedIds] = useState<string[]>(() => safeParseArray<string>(weeklyDoneStorageKey));
+  const [adminWorkoutTestStatus, setAdminWorkoutTestStatus] = useState('');
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
   const [livePoints, setLivePoints] = useState(profile.points || 0);
   const livePointsRef = useRef(profile.points || 0);
@@ -2986,6 +3005,33 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     setWeeklyCompletedIds([]);
   };
 
+  const prepareAdminFreePhaseRetest = async () => {
+    if (!isAdmin) return;
+    setAdminWorkoutTestStatus('Preparando teste...');
+    try {
+      localStorage.removeItem('completedWorkouts');
+      localStorage.removeItem('awardedWorkoutPoints');
+      localStorage.removeItem(weeklyDoneStorageKey);
+      setCompletedWorkouts([]);
+      setAwardedWorkoutPoints([]);
+      setWeeklyCompletedIds([]);
+      livePointsRef.current = 1900;
+      setLivePoints(1900);
+      setSelectedWorkout(null);
+      setSelectedPlanTab('Iniciante');
+      setSelectedLevel('Iniciante');
+      setActiveSubTab('workouts');
+      await updateProfile({
+        points: 1900,
+        plano: 'Iniciante',
+        subscriptionStatus: 'inactive',
+      });
+      setAdminWorkoutTestStatus('Pronto: complete um treino para bater 2000 pts e ver a mensagem.');
+    } catch (error: any) {
+      setAdminWorkoutTestStatus(error?.message || 'Não foi possível preparar o teste.');
+    }
+  };
+
   const completeWorkoutAndAwardPoints = async (workoutId: string): Promise<number | null> => {
     const alreadyAwarded = awardedWorkoutPoints.includes(workoutId);
     const alreadyCompleted = completedWorkouts.includes(workoutId);
@@ -3132,6 +3178,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           points={points}
           limit={FREE_POINTS_LIMIT}
           onUpgrade={onUpgrade}
+          onPrepareTest={isAdmin ? prepareAdminFreePhaseRetest : undefined}
+          testStatus={isAdmin ? adminWorkoutTestStatus : undefined}
         />
       )}
 

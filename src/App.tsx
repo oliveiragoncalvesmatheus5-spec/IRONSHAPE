@@ -2721,6 +2721,48 @@ function FreeTrainingPhaseGate({
   );
 }
 
+function CelebrationFireworks() {
+  const bursts = [
+    { x: '16%', y: '18%', delay: 0 },
+    { x: '82%', y: '16%', delay: 0.12 },
+    { x: '24%', y: '72%', delay: 0.24 },
+    { x: '78%', y: '72%', delay: 0.36 },
+  ];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {bursts.map((burst, burstIndex) => (
+        <div
+          key={`${burst.x}-${burst.y}`}
+          className="absolute"
+          style={{ left: burst.x, top: burst.y }}
+        >
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((spark) => (
+            <motion.span
+              key={spark}
+              initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+              animate={{
+                opacity: [0, 1, 0.9, 0],
+                scale: [0.2, 1, 0.65, 0.15],
+                x: Math.cos((spark / 8) * Math.PI * 2) * (44 + burstIndex * 8),
+                y: Math.sin((spark / 8) * Math.PI * 2) * (44 + burstIndex * 8),
+              }}
+              transition={{
+                duration: 1.35,
+                delay: burst.delay + spark * 0.025,
+                repeat: Infinity,
+                repeatDelay: 1.7,
+                ease: 'easeOut',
+              }}
+              className={`absolute w-1.5 h-1.5 rounded-full ${spark % 2 === 0 ? 'bg-primary' : 'bg-success'} shadow-[0_0_14px_rgba(255,106,0,0.75)]`}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan: Plan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null) || 'Iniciante';
@@ -2870,7 +2912,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const previousPointsMilestone = isFreePointsPlan ? 0 : Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
   const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
   const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
-  const freeTrainingPhaseComplete = freePointsLimitReached && !isAdmin;
+  const isAdminTestingFreePhase = isAdmin && (simulatedPlan === 'Iniciante' || simulatedPlan === 'free');
+  const freeTrainingPhaseComplete = freePointsLimitReached && (!isAdmin || isAdminTestingFreePhase);
   const weeklyWorkoutIds = weeklyWorkouts.map(item => item.workoutId);
   const allAvailableWorkouts = [...workoutSource, ...ALL_WORKOUTS];
   const favoriteWorkouts = favoriteWorkoutIds
@@ -2961,10 +3004,14 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       const workout = workoutSource.find(w => w.id === workoutId) ?? ALL_WORKOUTS.find(w => w.id === workoutId);
       const today = new Date().toISOString().split('T')[0];
       const nextPoints = isFreePointsPlan ? Math.min(FREE_POINTS_LIMIT, basePoints + 100) : basePoints + 100;
+      const willCompleteFreePhase = isFreePointsPlan && nextPoints >= FREE_POINTS_LIMIT;
 
       livePointsRef.current = nextPoints;
       setLivePoints(nextPoints);
       setAwardedWorkoutPoints(prev => prev.includes(workoutId) ? prev : [...prev, workoutId]);
+      if (willCompleteFreePhase) {
+        window.dispatchEvent(new CustomEvent('ironshape:free-phase-completed', { detail: { points: nextPoints } }));
+      }
 
       try {
         await dataService.addWorkoutLog({
@@ -4470,6 +4517,18 @@ function WorkoutDetailView({
     setDisplayPoints(currentPoints);
   }, [currentPoints]);
 
+  useEffect(() => {
+    if (!isFreePointsPlan) return;
+    const handleFreePhaseCompleted = (event: Event) => {
+      const points = (event as CustomEvent<{ points?: number }>).detail?.points || freePointsLimit;
+      setDisplayPoints(points);
+      setPointsNoticeMode('earnedLimit');
+      setShowPointsNotice(true);
+    };
+    window.addEventListener('ironshape:free-phase-completed', handleFreePhaseCompleted);
+    return () => window.removeEventListener('ironshape:free-phase-completed', handleFreePhaseCompleted);
+  }, [isFreePointsPlan, freePointsLimit]);
+
   const completedCount = completedExercises.length;
   const totalExercises = exercises.length || 1;
   const workoutProgress = Math.round((completedCount / totalExercises) * 100);
@@ -4507,7 +4566,7 @@ function WorkoutDetailView({
         const willReachFreeLimit = isFreePointsPlan && nextPoints >= freePointsLimit;
         setDisplayPoints(nextPoints);
         setPointsNoticeMode(willReachFreeLimit ? 'earnedLimit' : 'earned');
-        setShowPointsNotice(true);
+        if (!willReachFreeLimit) setShowPointsNotice(true);
         if (!willReachFreeLimit) setTimeout(() => setShowPointsNotice(false), 4500);
       }
       return nextPoints !== null;
@@ -4629,6 +4688,7 @@ function WorkoutDetailView({
               transition={{ type: 'spring', stiffness: 260, damping: 22 }}
               className="w-full max-w-md bg-surface border border-primary/20 rounded-[36px] p-7 sm:p-8 shadow-2xl shadow-primary/10 relative overflow-hidden"
             >
+              {(isLimitNotice || isEarnedLimitNotice) && <CelebrationFireworks />}
               <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
               <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-56 h-56 bg-primary/20 rounded-full blur-[90px] pointer-events-none" />
               <div className="relative z-10 space-y-6 text-center">
@@ -7698,8 +7758,9 @@ function CommunityView({ profile }: { profile: UserProfile }) {
 }
 
 function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserProfile, logout: () => void, onUpgrade: () => void }) {
-  const { isAdmin, simulatedPlan, setSimulatedPlan, user, logout } = useAuth();
+  const { isAdmin, simulatedPlan, setSimulatedPlan, user, logout, updateProfile } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
+  const [adminTestStatus, setAdminTestStatus] = useState('');
   const [adminTrainingPlace, setAdminTrainingPlace] = useState<'gym' | 'home'>(() => {
     if (!user?.id) return 'gym';
     try {
@@ -7729,6 +7790,25 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
     localStorage.setItem(`training_onboarding_${user.id}`, JSON.stringify(nextOnboarding));
     setAdminTrainingPlace(trainingPlace);
     window.dispatchEvent(new CustomEvent('ironshape:training-place-changed', { detail: { trainingPlace } }));
+  };
+  const prepareFreePhaseTest = async () => {
+    setAdminTestStatus('Preparando teste...');
+    try {
+      localStorage.removeItem('completedWorkouts');
+      localStorage.removeItem('awardedWorkoutPoints');
+      if (user?.id) {
+        localStorage.removeItem(`weekly_workouts_done_${user.id}`);
+      }
+      await updateProfile({
+        points: 1900,
+        plano: 'Iniciante',
+        subscriptionStatus: 'inactive',
+      });
+      setSimulatedPlan('Iniciante');
+      setAdminTestStatus('Teste pronto: usuário em 1900 pts. Complete um treino para bater 2000.');
+    } catch (error: any) {
+      setAdminTestStatus(error?.message || 'Não foi possível preparar o teste.');
+    }
   };
 
   return (
@@ -7838,6 +7918,25 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
                 <p className="text-xs text-text-muted mt-3 leading-relaxed">
                   Alterna a área de treinos entre protocolos de academia e exercícios adaptados para casa.
                 </p>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-primary/10">
+                <p className="text-[10px] text-text-muted uppercase tracking-widest font-black mb-3">Teste da fase free</p>
+                <button
+                  onClick={prepareFreePhaseTest}
+                  className="w-full min-h-[48px] rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  <Trophy size={16} />
+                  Preparar 1900 pts
+                </button>
+                <p className="text-xs text-text-muted mt-3 leading-relaxed">
+                  Define sua conta como Iniciante com 1900 pontos e limpa marcações locais de treino. Ao concluir o próximo treino, a celebração dos 2000 pontos deve aparecer na hora.
+                </p>
+                {adminTestStatus && (
+                  <div className="mt-3 rounded-2xl bg-white/5 border border-white/10 p-3 text-xs font-bold text-text-secondary">
+                    {adminTestStatus}
+                  </div>
+                )}
               </div>
             </div>
           </section>

@@ -71,7 +71,12 @@ import {
   Ruler,
   Scale,
   ChevronDown,
-  MoreHorizontal
+  MoreHorizontal,
+  Star,
+  Trash2,
+  PlusCircle,
+  CalendarDays,
+  Repeat2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -2618,12 +2623,42 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   );
 }
 
+const WEEK_DAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+const DEFAULT_WEEK_DAYS = ['Segunda', 'Quarta', 'Sexta', 'Terça', 'Quinta', 'Sábado', 'Domingo'];
+
+type WeeklyWorkoutSlot = WeeklySchedule & {
+  assignedAt: string;
+};
+
+function getWeeklyWorkoutLimit(plan: Plan, isAdmin = false) {
+  if (isAdmin || plan === 'Admin' || plan === 'Elite') return 7;
+  if (plan === 'Pro') return 5;
+  return 3;
+}
+
+function safeParseArray<T>(key: string, fallback: T[] = []): T[] {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved) return fallback;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+}
+
 function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan: Plan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null) || 'Iniciante';
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || isAdmin;
   const isFreePointsPlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
   const FREE_POINTS_LIMIT = 2000;
+  const storageUserId = user?.id || profile.id || 'guest';
+  const weeklyStorageKey = `weekly_workouts_${storageUserId}`;
+  const favoriteStorageKey = `favorite_workouts_${storageUserId}`;
+  const weeklyDoneStorageKey = `weekly_workouts_done_${storageUserId}`;
+  const weeklyWorkoutLimit = getWeeklyWorkoutLimit(effectivePlan, isAdmin);
   const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(
     (effectivePlan === 'free' || !effectivePlan) ? 'Iniciante' : effectivePlan
   );
@@ -2633,6 +2668,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'workouts' | 'ia' | 'history' | 'ranking' | 'spreadsheet' | 'early' | 'registro'>('workouts');
   const [activeHomeMode, setActiveHomeMode] = useState<HomeTrainingMode>('training');
+  const [favoriteWorkoutIds, setFavoriteWorkoutIds] = useState<string[]>(() => safeParseArray<string>(favoriteStorageKey));
+  const [weeklyWorkouts, setWeeklyWorkouts] = useState<WeeklyWorkoutSlot[]>(() => safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
+  const [weeklyCompletedIds, setWeeklyCompletedIds] = useState<string[]>(() => safeParseArray<string>(weeklyDoneStorageKey));
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
   const [livePoints, setLivePoints] = useState(profile.points || 0);
   const livePointsRef = useRef(profile.points || 0);
@@ -2668,6 +2706,24 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   useEffect(() => {
     localStorage.setItem('awardedWorkoutPoints', JSON.stringify(awardedWorkoutPoints));
   }, [awardedWorkoutPoints]);
+
+  useEffect(() => {
+    setFavoriteWorkoutIds(safeParseArray<string>(favoriteStorageKey));
+    setWeeklyWorkouts(safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
+    setWeeklyCompletedIds(safeParseArray<string>(weeklyDoneStorageKey));
+  }, [favoriteStorageKey, weeklyStorageKey, weeklyDoneStorageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(favoriteStorageKey, JSON.stringify(favoriteWorkoutIds));
+  }, [favoriteStorageKey, favoriteWorkoutIds]);
+
+  useEffect(() => {
+    localStorage.setItem(weeklyStorageKey, JSON.stringify(weeklyWorkouts));
+  }, [weeklyStorageKey, weeklyWorkouts]);
+
+  useEffect(() => {
+    localStorage.setItem(weeklyDoneStorageKey, JSON.stringify(weeklyCompletedIds));
+  }, [weeklyDoneStorageKey, weeklyCompletedIds]);
 
   useEffect(() => {
     const profilePoints = profile.points || 0;
@@ -2741,6 +2797,22 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const previousPointsMilestone = isFreePointsPlan ? 0 : Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
   const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
   const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
+  const weeklyWorkoutIds = weeklyWorkouts.map(item => item.workoutId);
+  const allAvailableWorkouts = [...workoutSource, ...ALL_WORKOUTS];
+  const favoriteWorkouts = favoriteWorkoutIds
+    .map(id => allAvailableWorkouts.find(workout => workout.id === id))
+    .filter((workout): workout is Workout => Boolean(workout));
+  const weeklyWorkoutDetails = weeklyWorkouts
+    .map(slot => ({
+      ...slot,
+      workout: allAvailableWorkouts.find(workout => workout.id === slot.workoutId),
+    }))
+    .filter((slot): slot is WeeklyWorkoutSlot & { workout: Workout } => Boolean(slot.workout));
+  const weeklyCompletedCount = weeklyWorkoutDetails.filter(slot => weeklyCompletedIds.includes(slot.workoutId)).length;
+
+  useEffect(() => {
+    setWeeklyWorkouts(prev => prev.length > weeklyWorkoutLimit ? prev.slice(0, weeklyWorkoutLimit) : prev);
+  }, [weeklyWorkoutLimit]);
 
   useEffect(() => {
     if (selectedMuscleGroup !== 'Todos' && !visibleMuscleGroups.includes(selectedMuscleGroup)) {
@@ -2751,6 +2823,51 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const hasAccess = (planId: Plan) => {
     const weights = { 'free': 0, 'Iniciante': 1, 'Pro': 2, 'Elite': 3, 'Admin': 4 };
     return weights[effectivePlan] >= weights[planId];
+  };
+
+  const toggleFavoriteWorkout = (workoutId: string) => {
+    setFavoriteWorkoutIds(prev =>
+      prev.includes(workoutId) ? prev.filter(id => id !== workoutId) : [...prev, workoutId]
+    );
+  };
+
+  const addWorkoutToWeek = (workout: Workout) => {
+    setWeeklyWorkouts(prev => {
+      if (prev.some(item => item.workoutId === workout.id)) return prev.filter(item => item.workoutId !== workout.id);
+      if (prev.length >= weeklyWorkoutLimit) return prev;
+
+      const usedDays = new Set(prev.map(item => item.day));
+      const nextDay = DEFAULT_WEEK_DAYS.find(day => !usedDays.has(day)) || WEEK_DAYS.find(day => !usedDays.has(day)) || 'Segunda';
+
+      return [
+        ...prev,
+        {
+          day: nextDay,
+          workoutId: workout.id,
+          workoutName: workout.name,
+          muscleGroup: workout.muscleGroup,
+          assignedAt: new Date().toISOString(),
+        },
+      ];
+    });
+  };
+
+  const moveWeeklyWorkout = (workoutId: string, day: string) => {
+    setWeeklyWorkouts(prev => prev.map(item => item.workoutId === workoutId ? { ...item, day } : item));
+  };
+
+  const removeWorkoutFromWeek = (workoutId: string) => {
+    setWeeklyWorkouts(prev => prev.filter(item => item.workoutId !== workoutId));
+    setWeeklyCompletedIds(prev => prev.filter(id => id !== workoutId));
+  };
+
+  const clearWeeklyWorkouts = () => {
+    setWeeklyWorkouts([]);
+    setWeeklyCompletedIds([]);
+  };
+
+  const startFreshWeeklyCheckins = () => {
+    setWeeklyCompletedIds([]);
   };
 
   const completeWorkoutAndAwardPoints = async (workoutId: string): Promise<number | null> => {
@@ -2812,6 +2929,15 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     }
 
     return completeWorkoutAndAwardPoints(workoutId);
+  };
+
+  const markWeeklyWorkoutDone = async (workoutId: string) => {
+    if (weeklyCompletedIds.includes(workoutId)) {
+      setWeeklyCompletedIds(prev => prev.filter(id => id !== workoutId));
+      return;
+    }
+    await completeWorkoutAndAwardPoints(workoutId);
+    setWeeklyCompletedIds(prev => prev.includes(workoutId) ? prev : [...prev, workoutId]);
   };
 
   if (selectedWorkout) {
@@ -2923,6 +3049,143 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
         </section>
       )}
+
+      <section className="bg-surface border border-white/10 rounded-[28px] p-5 md:p-6 space-y-5 shadow-xl shadow-black/10">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+              <CalendarDays size={22} />
+            </div>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight">Treinos da Semana</h2>
+                <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-text-muted">
+                  {weeklyWorkouts.length}/{weeklyWorkoutLimit}
+                </span>
+              </div>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {isFreePointsPlan
+                  ? 'Monte uma rotina simples com seus treinos favoritos.'
+                  : 'Organize sua semana sem perder o acesso aos protocolos avançados.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={startFreshWeeklyCheckins}
+              disabled={weeklyWorkouts.length === 0}
+              className="min-h-[40px] px-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+            >
+              <Repeat2 size={14} />
+              Repetir
+            </button>
+            <button
+              onClick={clearWeeklyWorkouts}
+              disabled={weeklyWorkouts.length === 0}
+              className="min-h-[40px] px-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+            >
+              <Trash2 size={14} />
+              Limpar
+            </button>
+          </div>
+        </div>
+
+        <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${weeklyWorkoutDetails.length ? Math.round((weeklyCompletedCount / weeklyWorkoutDetails.length) * 100) : 0}%` }}
+            className="h-full bg-success shadow-[0_0_15px_rgba(34,197,94,0.35)]"
+          />
+        </div>
+
+        {weeklyWorkoutDetails.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            {weeklyWorkoutDetails.map(({ workout, day, workoutId }) => {
+              const isWeeklyDone = weeklyCompletedIds.includes(workoutId);
+              return (
+                <div key={workoutId} className={`rounded-2xl border p-4 space-y-4 transition-all ${isWeeklyDone ? 'bg-success/10 border-success/25' : 'bg-white/5 border-white/10'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <select
+                        value={day}
+                        onChange={(event) => moveWeeklyWorkout(workoutId, event.target.value)}
+                        className="bg-background/80 border border-white/10 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-primary outline-none"
+                      >
+                        {WEEK_DAYS.map(item => <option key={item} value={item}>{item}</option>)}
+                      </select>
+                      <h3 className="mt-3 text-lg font-black tracking-tight text-text-primary leading-tight">{workout.name}</h3>
+                      <p className="text-xs text-text-muted mt-1">{workout.muscleGroup} • {workout.duration}</p>
+                    </div>
+                    <button
+                      onClick={() => removeWorkoutFromWeek(workoutId)}
+                      className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary hover:border-white/20 transition-all flex items-center justify-center shrink-0"
+                      aria-label="Remover treino da semana"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setSelectedWorkout(workout)}
+                      className="min-h-[38px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary transition-all"
+                    >
+                      Abrir
+                    </button>
+                    <button
+                      onClick={() => markWeeklyWorkoutDone(workoutId)}
+                      className={`min-h-[38px] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isWeeklyDone ? 'bg-success text-text-primary' : 'bg-primary text-text-primary hover:bg-primary-hover'}`}
+                    >
+                      {isWeeklyDone ? 'Feito' : 'Marcar feito'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center">
+            <p className="text-sm font-bold text-text-secondary">Adicione treinos pelos cards abaixo para montar sua semana.</p>
+          </div>
+        )}
+
+        {favoriteWorkouts.length > 0 && (
+          <div className="space-y-3 pt-1">
+            <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">Favoritos</div>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              {favoriteWorkouts.slice(0, 10).map(workout => (
+                <button
+                  key={workout.id}
+                  onClick={() => addWorkoutToWeek(workout)}
+                  disabled={!weeklyWorkoutIds.includes(workout.id) && weeklyWorkouts.length >= weeklyWorkoutLimit}
+                  className={`min-h-[42px] px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex items-center gap-2 ${
+                    weeklyWorkoutIds.includes(workout.id)
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'bg-white/5 border-white/10 text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed'
+                  }`}
+                >
+                  <Star size={13} className={favoriteWorkoutIds.includes(workout.id) ? 'fill-current' : ''} />
+                  {workout.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {weeklyWorkouts.length >= weeklyWorkoutLimit && isFreePointsPlan && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-primary/10 border border-primary/20 p-4">
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Free libera {weeklyWorkoutLimit} treinos por semana. Pro libera 5 e Elite libera a rotina completa.
+            </p>
+            <button
+              onClick={onUpgrade}
+              className="min-h-[40px] px-4 rounded-xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
+            >
+              Fazer upgrade
+            </button>
+          </div>
+        )}
+      </section>
 
       {/* Main Plan Tabs */}
       {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="flex flex-col gap-3">
@@ -3097,7 +3360,12 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                                 <WorkoutCard
                                   workout={workout}
                                   isCompleted={completedWorkouts.includes(workout.id)}
+                                  isFavorite={favoriteWorkoutIds.includes(workout.id)}
+                                  isInWeeklyPlan={weeklyWorkoutIds.includes(workout.id)}
+                                  weeklyLimitReached={weeklyWorkouts.length >= weeklyWorkoutLimit}
                                   onClick={() => setSelectedWorkout(workout)}
+                                  onToggleFavorite={() => toggleFavoriteWorkout(workout.id)}
+                                  onToggleWeekly={() => addWorkoutToWeek(workout)}
                                 />
                               </div>
                             )
@@ -3196,11 +3464,21 @@ function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgra
 function WorkoutCard({
   workout,
   isCompleted,
-  onClick
+  isFavorite,
+  isInWeeklyPlan,
+  weeklyLimitReached,
+  onClick,
+  onToggleFavorite,
+  onToggleWeekly
 }: {
   workout: Workout,
   isCompleted: boolean,
-  onClick: () => void
+  isFavorite: boolean,
+  isInWeeklyPlan: boolean,
+  weeklyLimitReached: boolean,
+  onClick: () => void,
+  onToggleFavorite: () => void,
+  onToggleWeekly: () => void
 }) {
   return (
     <div
@@ -3219,6 +3497,24 @@ function WorkoutCard({
           <CheckCircle2 size={16} />
         </div>
       )}
+
+      <div className={`absolute top-6 ${isCompleted ? 'right-16' : 'right-6'} z-30 flex gap-2`}>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleFavorite();
+          }}
+          className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
+            isFavorite
+              ? 'bg-primary/15 border-primary/30 text-primary'
+              : 'bg-background/80 border-white/10 text-text-muted hover:text-text-primary'
+          }`}
+          aria-label={isFavorite ? 'Remover dos favoritos' : 'Favoritar treino'}
+        >
+          <Star size={16} className={isFavorite ? 'fill-current' : ''} />
+        </button>
+      </div>
 
       <div className="relative z-10 flex-1 space-y-8">
         <div className="space-y-3">
@@ -3242,7 +3538,7 @@ function WorkoutCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 gap-3">
           <div className="flex -space-x-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="w-8 h-8 rounded-full border-2 border-surface bg-surface-active flex items-center justify-center overflow-hidden">
@@ -3253,9 +3549,22 @@ function WorkoutCard({
               +12
             </div>
           </div>
-          <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary translate-x-1">
-            <ChevronRight size={20} />
-          </div>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleWeekly();
+            }}
+            disabled={!isInWeeklyPlan && weeklyLimitReached}
+            className={`min-h-[42px] px-3 rounded-2xl border text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 ${
+              isInWeeklyPlan
+                ? 'bg-success/10 border-success/25 text-success'
+                : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/15 disabled:opacity-40 disabled:cursor-not-allowed'
+            }`}
+          >
+            {isInWeeklyPlan ? <CheckCircle2 size={15} /> : <PlusCircle size={15} />}
+            {isInWeeklyPlan ? 'Na semana' : 'Adicionar'}
+          </button>
         </div>
       </div>
     </div>

@@ -2912,8 +2912,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const previousPointsMilestone = isFreePointsPlan ? 0 : Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
   const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
   const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
-  const isAdminTestingFreePhase = isAdmin && (simulatedPlan === 'Iniciante' || simulatedPlan === 'free');
-  const freeTrainingPhaseComplete = freePointsLimitReached && (!isAdmin || isAdminTestingFreePhase);
+  const freeTrainingPhaseComplete = freePointsLimitReached;
   const weeklyWorkoutIds = weeklyWorkouts.map(item => item.workoutId);
   const allAvailableWorkouts = [...workoutSource, ...ALL_WORKOUTS];
   const favoriteWorkouts = favoriteWorkoutIds

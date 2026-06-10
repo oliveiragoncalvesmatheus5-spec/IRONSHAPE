@@ -192,7 +192,7 @@ export const exerciseTranslations = {
   "agachamento + alcance":                           "bodyweight squat reach",
   "sentar e levantar da cadeira":                    "chair squat",
   "flexão inclinada":                                "incline push up",
-  "flexão na parede":                                "wall push up",
+  "flexão na parede":                                "incline push up",
   "dead bug ou prancha elevada":                     "dead bug",
 
   // Elite
@@ -200,7 +200,7 @@ export const exerciseTranslations = {
 
   // ─── CASA / PESO CORPORAL ─────────────────────────────────
   "flexão inclinada no banco/cadeira":               "incline push up",
-  "flexão inclinada na parede":                      "wall push up",
+  "flexão inclinada na parede":                      "incline push up",
   "flexão parcial controlada":                       "push up",
   "flexão tradicional controlada":                   "push up",
   "supino no chão com halteres":                     "dumbbell floor press",

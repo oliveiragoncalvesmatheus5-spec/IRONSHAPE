@@ -162,7 +162,7 @@ function buildHomeWorkouts(
 
   const library: Record<MuscleGroup, Exercise[]> = {
     'Peito': [
-      buildExercise('home-pushup-incline', hasBench ? 'Flexão inclinada no banco/cadeira' : 'Flexão inclinada na parede', 'Peito', series, reps, rest, 'Variação de flexão ajustável para peito, tríceps e core.', limitation),
+      buildExercise('home-pushup-incline', hasBench ? 'Flexão inclinada no banco/cadeira' : 'Flexão inclinada', 'Peito', series, reps, rest, 'Variação de flexão ajustável para peito, tríceps e core.', limitation),
       buildExercise('home-pushup-control', hasLimitation ? 'Flexão parcial controlada' : 'Flexão tradicional controlada', 'Peito', series, reps, rest, 'Movimento base para ganhar força de empurrar sem máquinas.', limitation),
       buildExercise('home-chest-squeeze', hasDumbbells ? 'Supino no chão com halteres' : 'Pressão isométrica de palmas', 'Peito', series, '10-14 reps', rest, 'Estimula peitoral com baixa necessidade de equipamento.', limitation),
     ],
@@ -194,7 +194,7 @@ function buildHomeWorkouts(
     'Full Body': [
       mobilityFirst,
       buildExercise('home-circuit-squat', hasLimitation ? 'Sentar e levantar da cadeira' : 'Agachamento + alcance', 'Full Body', series, reps, rest, 'Movimento global para ativar pernas, core e coordenação.', limitation),
-      buildExercise('home-circuit-push', hasBench ? 'Flexão inclinada' : 'Flexão na parede', 'Full Body', series, reps, rest, 'Empurrar seguro para treino geral em casa.', limitation),
+      buildExercise('home-circuit-push', 'Flexão inclinada', 'Full Body', series, reps, rest, 'Empurrar seguro para treino geral em casa.', limitation),
       buildExercise('home-circuit-row', hasElastic ? 'Remada com elástico' : 'Retração escapular', 'Full Body', series, reps, rest, 'Puxada/postura para equilibrar o protocolo.', limitation),
       buildExercise('home-circuit-core', 'Dead bug ou prancha elevada', 'Full Body', series, '8-12 reps', '45s', 'Finaliza com estabilidade de core.', limitation),
     ],

@@ -671,8 +671,15 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       }
 
       const normalized = name.toLowerCase().trim();
+      const queryAliases: Record<string, string> = {
+        "wall push up": "incline push up",
+        "wall pushup": "incline push up",
+        "wall push-up": "incline push up",
+        "standing wall push up": "incline push up",
+      };
+      const primaryQuery = queryAliases[normalized] || name;
       const candidates = [
-        name,
+        primaryQuery,
         ...(fallbackQueries[normalized] || []),
       ].filter((query, index, arr) => query && arr.indexOf(query) === index);
 

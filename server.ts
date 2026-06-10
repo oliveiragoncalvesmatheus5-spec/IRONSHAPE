@@ -708,39 +708,27 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
 
   // Iron Coach chat endpoint
   app.post("/api/iron-coach", async (req, res) => {
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "OPENAI_API_KEY não configurada" });
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: "ANTHROPIC_API_KEY não configurada" });
     }
     const { systemPrompt, messages } = req.body;
     if (!systemPrompt || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "systemPrompt e messages são obrigatórios" });
     }
     try {
-      const response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: process.env.OPENAI_MODEL || "gpt-5.5",
-          instructions: systemPrompt,
-          input: messages,
-          max_output_tokens: 1024,
-        }),
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const response = await anthropic.messages.create({
+        model: process.env.IRON_COACH_MODEL || "claude-haiku-4-5",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages,
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        return res.status(response.status).json({ error: data?.error?.message || "Erro ao conectar com a OpenAI" });
+      const block = response.content[0];
+      if (block.type !== "text") {
+        return res.status(500).json({ error: "Resposta inesperada da IA" });
       }
-
-      const text = data.output_text || data.output
-        ?.flatMap((item: any) => item?.content || [])
-        .find((content: any) => content?.type === "output_text")
-        ?.text;
-      if (!text) return res.status(500).json({ error: "Resposta inesperada da IA" });
-      return res.json({ text });
+      return res.json({ text: block.text });
     } catch (error: any) {
       console.error("[iron-coach] error:", error.message);
       return res.status(500).json({ error: error.message || "Erro ao conectar com o Iron Coach" });

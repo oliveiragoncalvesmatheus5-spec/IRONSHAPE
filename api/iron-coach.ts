@@ -39,7 +39,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: process.env.IRON_COACH_MODEL || 'claude-haiku-4-5',
       max_tokens: 1024,
       system: [
         {

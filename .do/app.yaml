@@ -59,6 +59,12 @@ services:
       - key: ABACATEPAY_WEBHOOK_SIGNATURE_KEY
         scope: RUN_TIME
         type: SECRET
+      - key: VITE_GA_MEASUREMENT_ID
+        value: G-JTYEDMRSQR
+        scope: RUN_AND_BUILD_TIME
+      - key: GA_API_SECRET
+        scope: RUN_TIME
+        type: SECRET
       - key: APP_URL
         value: https://ironshape.online
         scope: RUN_TIME

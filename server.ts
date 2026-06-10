@@ -21,13 +21,55 @@ import {
 
 const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
 
+function getPlanValue(plan: string) {
+  if (plan === "Pro") return 19.9;
+  if (plan === "Elite") return 29.9;
+  return 0;
+}
+
+async function sendGoogleAnalyticsEvent({
+  clientId,
+  userId,
+  name,
+  params,
+}: {
+  clientId?: string | null;
+  userId?: string | null;
+  name: string;
+  params?: Record<string, unknown>;
+}) {
+  const measurementId = process.env.VITE_GA_MEASUREMENT_ID;
+  const apiSecret = process.env.GA_API_SECRET;
+  if (!measurementId || !apiSecret || !clientId) return;
+
+  try {
+    const response = await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(measurementId)}&api_secret=${encodeURIComponent(apiSecret)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          user_id: userId || undefined,
+          events: [{ name, params }],
+        }),
+      },
+    );
+    if (!response.ok) {
+      console.warn("[ga4] event not accepted:", name, response.status, await response.text());
+    }
+  } catch (error: any) {
+    console.warn("[ga4] event failed:", name, error.message);
+  }
+}
+
 async function updateProfilePlanFromPayment(event: any) {
   const url = process.env.VITE_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) throw new Error("Supabase service role não configurado.");
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-  const { customer, payment, subscription, userId, plan, referralCode } = extractWebhookMetadata(event);
+  const { customer, payment, subscription, userId, plan, referralCode, analyticsClientId } = extractWebhookMetadata(event);
   const eventName = String(event?.event || "");
   const isCancellation = isCancellationEvent(eventName);
   const isActivation = isActivationEvent(eventName);
@@ -52,6 +94,31 @@ async function updateProfilePlanFromPayment(event: any) {
 
   const { error } = await updateQuery;
   if (error) throw error;
+
+  if (isActivation && isPaidPlan(String(plan))) {
+    const value = ((payment?.paidAmount || payment?.amount || subscription?.amount || 0) as number) / 100 || getPlanValue(String(plan));
+    await sendGoogleAnalyticsEvent({
+      clientId: analyticsClientId,
+      userId,
+      name: "purchase",
+      params: {
+        transaction_id: payment?.id || subscription?.id || event?.id || `${userId || customer?.email || "unknown"}-${Date.now()}`,
+        currency: "BRL",
+        value,
+        affiliation: "AbacatePay",
+        plan,
+        items: [
+          {
+            item_id: String(plan).toLowerCase(),
+            item_name: `IronShape ${plan}`,
+            item_category: "subscription",
+            price: value,
+            quantity: 1,
+          },
+        ],
+      },
+    });
+  }
 
   if (!isActivation || !referralCode || !userId || !isPaidPlan(String(plan))) return;
 
@@ -179,7 +246,7 @@ async function startServer() {
   app.post("/api/create-payment", async (req, res) => {
     const parsed = validateCreatePaymentBody(req.body);
     if (parsed.ok === false) return res.status(400).json({ error: parsed.error });
-    const { plan, customerEmail, userId, referralCode } = parsed.value;
+    const { plan, customerEmail, userId, referralCode, analyticsClientId } = parsed.value;
 
     const config = getCheckoutConfig(plan);
 
@@ -207,6 +274,7 @@ async function startServer() {
             plan,
             customerEmail,
             referralCode: referralCode || null,
+            analyticsClientId: analyticsClientId || null,
           },
         }),
       });

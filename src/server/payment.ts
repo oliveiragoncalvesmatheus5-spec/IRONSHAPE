@@ -25,6 +25,7 @@ export type CreatePaymentBody = {
   customerEmail?: string;
   userId: string;
   referralCode?: string | null;
+  analyticsClientId?: string | null;
 };
 
 export type ValidationResult<T> =
@@ -45,6 +46,11 @@ function isSafeOptionalCode(value: unknown) {
   return typeof value === 'string' && value.length <= 80 && /^[a-zA-Z0-9._-]+$/.test(value);
 }
 
+function isSafeOptionalAnalyticsId(value: unknown) {
+  if (value === undefined || value === null || value === '') return true;
+  return typeof value === 'string' && value.length <= 120 && /^[a-zA-Z0-9._:-]+$/.test(value);
+}
+
 export function validateCreatePaymentBody(body: any): ValidationResult<CreatePaymentBody> {
   if (!isPaidPlan(body?.plan)) {
     return { ok: false, error: 'Plano inválido para pagamento.' };
@@ -58,6 +64,9 @@ export function validateCreatePaymentBody(body: any): ValidationResult<CreatePay
   if (!isSafeOptionalCode(body.referralCode)) {
     return { ok: false, error: 'Código de indicação inválido.' };
   }
+  if (!isSafeOptionalAnalyticsId(body.analyticsClientId)) {
+    return { ok: false, error: 'ID de analytics inválido.' };
+  }
 
   return {
     ok: true,
@@ -66,6 +75,7 @@ export function validateCreatePaymentBody(body: any): ValidationResult<CreatePay
       userId: body.userId.trim(),
       customerEmail: body.customerEmail || undefined,
       referralCode: body.referralCode || null,
+      analyticsClientId: body.analyticsClientId || null,
     },
   };
 }
@@ -126,6 +136,7 @@ export function extractWebhookMetadata(event: any, env: NodeJS.ProcessEnv = proc
   const plan = metadata.plan || externalPlan || planFromProduct;
   const userId = metadata.userId || externalUserId;
   const referralCode = metadata.referralCode || externalRef;
+  const analyticsClientId = metadata.analyticsClientId || metadata.gaClientId || null;
 
   return {
     checkout,
@@ -135,6 +146,7 @@ export function extractWebhookMetadata(event: any, env: NodeJS.ProcessEnv = proc
     userId,
     plan,
     referralCode,
+    analyticsClientId,
   };
 }
 

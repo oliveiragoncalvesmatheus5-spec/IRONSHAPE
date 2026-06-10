@@ -43,6 +43,18 @@ test('validates create payment payload', () => {
       userId: 'user-123456',
       customerEmail: 'user@test.com',
       referralCode: 'REF_01',
+      analyticsClientId: null,
+    },
+  });
+
+  assert.deepEqual(validateCreatePaymentBody({ plan: 'Pro', userId: 'user-123456', analyticsClientId: '123456.abcdef' }), {
+    ok: true,
+    value: {
+      plan: 'Pro',
+      userId: 'user-123456',
+      customerEmail: undefined,
+      referralCode: null,
+      analyticsClientId: '123456.abcdef',
     },
   });
 });
@@ -83,7 +95,7 @@ test('extracts webhook metadata from metadata and external id', () => {
     data: {
       checkout: {
         externalId: 'ironshape:fallback-user:Elite:AFF2:999',
-        metadata: { userId: 'user-1', plan: 'Pro', referralCode: 'AFF1' },
+        metadata: { userId: 'user-1', plan: 'Pro', referralCode: 'AFF1', analyticsClientId: '123456.abcdef' },
       },
     },
   };
@@ -96,6 +108,7 @@ test('extracts webhook metadata from metadata and external id', () => {
     userId: 'user-1',
     plan: 'Pro',
     referralCode: 'AFF1',
+    analyticsClientId: '123456.abcdef',
   });
 
   const eventWithProductAndExternalId = {

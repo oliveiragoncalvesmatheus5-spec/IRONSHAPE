@@ -6,6 +6,7 @@ import { UserProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, P
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
 import { searchExercisesByName } from './services/workoutxApi';
+import { getAnalyticsClientId, initAnalytics, trackEvent, trackPlanEvent } from './services/analytics';
 import { getLocalExerciseMedia, translateExerciseName } from './utils/exerciseTranslations';
 import AIChat from './AIChat';
 import { DashboardMetricCard } from './components/dashboardCards';
@@ -395,8 +396,26 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
+    trackEvent('app_screen_view', { screen_name: activeTab });
   }, [activeTab]);
+
+  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
+
+  const openPricing = (source: string, plan?: Plan | null) => {
+    if (plan) setCheckoutPlan(plan);
+    else setCheckoutPlan(null);
+    trackEvent('click_upgrade', {
+      source,
+      plan: plan || 'not_selected',
+      current_plan: effectivePlan,
+    });
+    setShowPricing(true);
+  };
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -476,8 +495,6 @@ export default function App() {
     );
   }
 
-  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
-
   if (loading && !initTimeout) {
     return <LoadingScreen onRetry={() => initSession()} />;
   }
@@ -546,8 +563,7 @@ export default function App() {
         profile={profile}
         onComplete={(plan) => {
           if (plan !== 'Iniciante') {
-            setCheckoutPlan(plan);
-            setShowPricing(true);
+            openPricing('onboarding', plan);
           }
         }}
       />
@@ -600,7 +616,7 @@ export default function App() {
 
         <div className="hidden md:flex md:flex-col md:gap-8 md:mt-auto md:mb-12 w-full items-center">
           <button
-            onClick={() => { setCheckoutPlan(null); setShowPricing(true); }}
+            onClick={() => openPricing('desktop_sidebar')}
             className={`p-3 rounded-2xl transition-all duration-300 ${effectivePlan === 'free' ? 'text-primary bg-primary/10 animate-pulse' : 'text-text-muted hover:text-primary hover:bg-primary/10'}`}
             title="Planos"
           >
@@ -762,17 +778,17 @@ export default function App() {
             {activeTab === 'dashboard' && (
               <DashboardView 
                 profile={profile} 
-                onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }}
+                onUpgrade={() => openPricing('dashboard')}
                 onStartWorkout={() => setActiveTab('workouts')}
                 onViewNutrition={() => setActiveTab('nutrition')}
               />
             )}
-            {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }} /></ViewErrorBoundary>}
-            {activeTab === 'nutrition' && <NutritionView profile={profile} onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }} updateProfile={updateProfile} />}
+            {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => openPricing('workouts')} /></ViewErrorBoundary>}
+            {activeTab === 'nutrition' && <NutritionView profile={profile} onUpgrade={() => openPricing('nutrition')} updateProfile={updateProfile} />}
             {activeTab === 'progress' && <BodyProgressView userId={profile.id} />}
             {activeTab === 'community' && <CommunityView profile={profile} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} />}
-            {activeTab === 'settings' && <SettingsView profile={profile} logout={logout} onUpgrade={() => { setCheckoutPlan(null); setShowPricing(true); }} />}
+            {activeTab === 'settings' && <SettingsView profile={profile} logout={logout} onUpgrade={() => openPricing('settings')} />}
             {activeTab === 'admin' && isAdmin && <AdminView />}
           </motion.div>
         </AnimatePresence>
@@ -2661,6 +2677,14 @@ function FreeTrainingPhaseGate({
   onPrepareTest?: () => void | Promise<void>;
   testStatus?: string;
 }) {
+  useEffect(() => {
+    trackEvent('upgrade_prompt_view', {
+      source: 'free_phase_gate',
+      points,
+      limit,
+    });
+  }, [points, limit]);
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 18 }}
@@ -2698,7 +2722,15 @@ function FreeTrainingPhaseGate({
           </div>
 
           <button
-            onClick={onUpgrade}
+            onClick={() => {
+              trackEvent('click_upgrade', {
+                source: 'free_phase_gate',
+                plan: 'not_selected',
+                points,
+                limit,
+              });
+              onUpgrade();
+            }}
             className="w-full sm:w-auto min-h-[54px] px-7 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
             <ShieldCheck size={17} />
@@ -3054,7 +3086,21 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       livePointsRef.current = nextPoints;
       setLivePoints(nextPoints);
       setAwardedWorkoutPoints(prev => prev.includes(workoutId) ? prev : [...prev, workoutId]);
+      trackEvent('workout_completed', {
+        workout_id: workoutId,
+        workout_name: workout?.name ?? workoutId,
+        muscle_group: workout?.muscleGroup ?? 'unknown',
+        plan: effectivePlan,
+        points_after: nextPoints,
+        points_awarded: 100,
+      });
       if (willCompleteFreePhase) {
+        trackEvent('free_phase_completed', {
+          points: nextPoints,
+          limit: FREE_POINTS_LIMIT,
+          workout_id: workoutId,
+          workout_name: workout?.name ?? workoutId,
+        });
         window.dispatchEvent(new CustomEvent('ironshape:free-phase-completed', { detail: { points: nextPoints } }));
       }
 
@@ -8848,6 +8894,13 @@ function PricingView({
   const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
   const hasReferral = !!localStorage.getItem('affiliate_ref');
 
+  useEffect(() => {
+    trackEvent('view_pricing', {
+      current_plan: currentPlan,
+      initial_checkout_plan: initialCheckoutPlan || 'none',
+    });
+  }, [currentPlan, initialCheckoutPlan]);
+
   const plans = [
     {
       id: 'Iniciante' as Plan,
@@ -8905,10 +8958,20 @@ function PricingView({
   ];
 
   const handleUpgrade = async (plan: Plan) => {
+    trackPlanEvent('select_plan', plan, {
+      current_plan: currentPlan,
+      has_referral: hasReferral,
+    });
+
     if (plan === 'Elite' || plan === 'Pro') {
       setIsProcessing(true);
       try {
         if (user?.id) localStorage.setItem(`pending_checkout_plan_${user.id}`, plan);
+        const analyticsClientId = await getAnalyticsClientId();
+        trackPlanEvent('begin_checkout', plan, {
+          current_plan: currentPlan,
+          has_referral: hasReferral,
+        });
         const res = await fetch('/api/create-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -8917,10 +8980,15 @@ function PricingView({
             customerEmail: user?.email,
             userId: user?.id,
             referralCode: localStorage.getItem('affiliate_ref') || null,
+            analyticsClientId,
           }),
         });
         const data = await res.json();
         if (!res.ok || !data.url) throw new Error(data.error || 'Erro ao iniciar pagamento.');
+        trackPlanEvent('checkout_redirect', plan, {
+          provider: data.provider || 'abacatepay',
+          mode: data.mode || 'unknown',
+        });
         window.location.href = data.url;
       } catch (e: any) {
         alert(e.message || 'Erro ao iniciar pagamento. Tente novamente.');

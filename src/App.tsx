@@ -122,19 +122,109 @@ function buildExercise(
     description,
     instructions: [
       'Faça um aquecimento leve antes de começar.',
-      'Execute o movimento com controle, sem prender a respiração.',
+      `Execute ${name.toLowerCase()} devagar, respirando normalmente e usando apenas uma amplitude confortável.`,
       hasLimitation ? `Respeite a limitação marcada: ${limitation}. Pare se sentir dor.` : 'Mantenha postura firme e amplitude confortável.',
     ],
     proTips: [
       hasLimitation
         ? 'Priorize controle e conforto articular antes de aumentar repetições.'
-        : 'Quando completar todas as séries com facilidade, aumente repetições ou tempo sob tensão.',
+        : 'Use uma cadeira ou parede como apoio sempre que precisar de mais estabilidade.',
+      'Garrafas com água podem servir como carga leve. Comece sem peso se estiver aprendendo o movimento.',
     ],
     commonErrors: [
       'Apressar o movimento e perder alinhamento do corpo.',
+      'Continuar mesmo sentindo dor, tontura ou falta de ar fora do normal.',
     ],
   };
 }
+
+type HomeWorkoutTemplate = {
+  name: string;
+  exercises: string[];
+};
+
+const HOME_PRO_WORKOUTS: Record<MuscleGroup, HomeWorkoutTemplate[]> = {
+  Peito: [
+    { name: 'Peito com Apoio', exercises: ['Flexão na parede', 'Pressão das mãos', 'Abertura dos braços'] },
+    { name: 'Peito na Cadeira', exercises: ['Flexão inclinada na cadeira', 'Pressão com garrafas', 'Flexão curta com apoio'] },
+    { name: 'Peito no Chão', exercises: ['Supino no chão com garrafas', 'Crucifixo no chão', 'Pressão das mãos deitado'] },
+  ],
+  Costas: [
+    { name: 'Costas e Postura', exercises: ['Remada com toalha', 'Retração dos ombros', 'Braços em W'] },
+    { name: 'Costas com Garrafas', exercises: ['Remada curvada com garrafas', 'Remada unilateral apoiada', 'Abertura inversa'] },
+    { name: 'Costas sem Equipamento', exercises: ['Puxada isométrica com toalha', 'Superman alternado', 'Deslizamento na parede'] },
+  ],
+  Pernas: [
+    { name: 'Pernas com Cadeira', exercises: ['Sentar e levantar da cadeira', 'Extensão de joelho sentado', 'Elevação de panturrilha com apoio'] },
+    { name: 'Pernas e Glúteos', exercises: ['Agachamento com apoio', 'Elevação pélvica no chão', 'Abertura lateral da perna'] },
+    { name: 'Pernas com Equilíbrio', exercises: ['Marcha parada com apoio', 'Passo para trás com apoio', 'Panturrilha apoiada'] },
+  ],
+  Ombros: [
+    { name: 'Ombros Leves', exercises: ['Elevação frontal sem carga', 'Elevação lateral sem carga', 'Círculos com os braços'] },
+    { name: 'Ombros com Garrafas', exercises: ['Desenvolvimento sentado com garrafas', 'Elevação lateral com garrafas', 'Abertura inversa apoiada'] },
+    { name: 'Ombros e Mobilidade', exercises: ['Deslizamento na parede', 'Braços em Y', 'Retração dos ombros'] },
+  ],
+  Braços: [
+    { name: 'Bíceps em Casa', exercises: ['Rosca com garrafas', 'Rosca martelo com garrafas', 'Contração de bíceps com toalha'] },
+    { name: 'Tríceps em Casa', exercises: ['Extensão acima da cabeça', 'Tríceps para trás', 'Pressão de tríceps na parede'] },
+    { name: 'Braços Completos', exercises: ['Rosca alternada', 'Extensão de tríceps sentado', 'Aperto de toalha'] },
+  ],
+  Abdômen: [
+    { name: 'Abdômen na Cadeira', exercises: ['Elevação alternada dos joelhos', 'Inclinação lateral sentada', 'Contração abdominal sentada'] },
+    { name: 'Abdômen no Chão', exercises: ['Inseto morto', 'Elevação pélvica no chão', 'Toque alternado nos calcanhares'] },
+    { name: 'Abdômen com Apoio', exercises: ['Prancha na parede', 'Marcha com abdômen contraído', 'Rotação de tronco sentada'] },
+  ],
+  'Full Body': [
+    { name: 'Corpo Inteiro com Cadeira', exercises: ['Sentar e levantar da cadeira', 'Flexão na parede', 'Marcha parada com apoio'] },
+    { name: 'Corpo Inteiro sem Impacto', exercises: ['Agachamento apoiado', 'Remada com toalha', 'Joelhos alternados em pé'] },
+    { name: 'Movimento Completo', exercises: ['Elevação de panturrilha', 'Pressão com garrafas', 'Elevação pélvica no chão'] },
+  ],
+};
+
+const HOME_ELITE_WORKOUTS: Record<MuscleGroup, HomeWorkoutTemplate[]> = {
+  Peito: [
+    { name: 'Peito com Ritmo', exercises: ['Flexão inclinada lenta', 'Pressão das mãos', 'Supino com garrafas', 'Crucifixo no chão'] },
+    { name: 'Peito com Pausa', exercises: ['Flexão na parede com pausa', 'Supino no chão', 'Abertura dos braços', 'Pressão isométrica das mãos'] },
+    { name: 'Peito e Tríceps', exercises: ['Flexão inclinada', 'Supino fechado com garrafas', 'Extensão de tríceps sentado', 'Pressão das mãos'] },
+    { name: 'Peito Completo', exercises: ['Flexão adaptada', 'Supino alternado com garrafas', 'Crucifixo no chão', 'Flexão na parede'] },
+  ],
+  Costas: [
+    { name: 'Costas Fortes', exercises: ['Remada com garrafas', 'Remada unilateral apoiada', 'Braços em W', 'Retração dos ombros'] },
+    { name: 'Costas e Postura', exercises: ['Remada com toalha', 'Deslizamento na parede', 'Abertura inversa', 'Superman alternado'] },
+    { name: 'Costas com Controle', exercises: ['Remada lenta com garrafas', 'Puxada isométrica com toalha', 'Elevação alternada dos braços', 'Retração escapular'] },
+    { name: 'Costas Completas', exercises: ['Remada unilateral', 'Abertura inversa apoiada', 'Braços em Y', 'Puxada de toalha'] },
+  ],
+  Pernas: [
+    { name: 'Pernas Fortes', exercises: ['Sentar e levantar lentamente', 'Elevação pélvica', 'Extensão de joelho sentado', 'Elevação de panturrilha'] },
+    { name: 'Pernas e Glúteos', exercises: ['Agachamento apoiado', 'Passo para trás com apoio', 'Abertura lateral da perna', 'Elevação pélvica'] },
+    { name: 'Pernas com Controle', exercises: ['Agachamento com pausa', 'Flexão de joelho em pé', 'Marcha lenta com apoio', 'Elevação de panturrilha'] },
+    { name: 'Pernas Completas', exercises: ['Sentar e levantar', 'Elevação lateral da perna', 'Extensão de quadril em pé', 'Panturrilha unilateral apoiada'] },
+  ],
+  Ombros: [
+    { name: 'Ombros Fortes', exercises: ['Desenvolvimento sentado', 'Elevação frontal', 'Elevação lateral', 'Abertura inversa'] },
+    { name: 'Ombros e Postura', exercises: ['Deslizamento na parede', 'Braços em Y', 'Braços em W', 'Retração escapular'] },
+    { name: 'Ombros com Controle', exercises: ['Elevação lateral lenta', 'Desenvolvimento com garrafas', 'Círculos com os braços', 'Rotação externa sem carga'] },
+    { name: 'Ombros Completos', exercises: ['Elevação frontal alternada', 'Elevação lateral', 'Abertura inversa apoiada', 'Pressão acima da cabeça'] },
+  ],
+  Braços: [
+    { name: 'Bíceps Completo', exercises: ['Rosca direta com garrafas', 'Rosca alternada', 'Rosca martelo', 'Contração com toalha'] },
+    { name: 'Tríceps Completo', exercises: ['Extensão acima da cabeça', 'Tríceps para trás', 'Supino fechado no chão', 'Pressão na parede'] },
+    { name: 'Braços Alternados', exercises: ['Rosca com garrafas', 'Extensão de tríceps', 'Rosca martelo', 'Aperto de toalha'] },
+    { name: 'Braços com Controle', exercises: ['Rosca lenta', 'Tríceps com pausa', 'Rosca sentada', 'Extensão unilateral'] },
+  ],
+  Abdômen: [
+    { name: 'Centro do Corpo', exercises: ['Inseto morto', 'Prancha na parede', 'Elevação pélvica', 'Contração abdominal'] },
+    { name: 'Abdômen Sentado', exercises: ['Joelhos alternados sentado', 'Inclinação lateral sentada', 'Rotação controlada', 'Contração com respiração'] },
+    { name: 'Abdômen no Chão', exercises: ['Toque nos calcanhares', 'Inseto morto alternado', 'Elevação pélvica', 'Braços e pernas alternados'] },
+    { name: 'Estabilidade do Corpo', exercises: ['Prancha inclinada', 'Marcha parada', 'Equilíbrio com apoio', 'Pressão das mãos nos joelhos'] },
+  ],
+  'Full Body': [
+    { name: 'Corpo Inteiro Forte', exercises: ['Sentar e levantar', 'Flexão inclinada', 'Remada com garrafas', 'Marcha parada'] },
+    { name: 'Corpo Inteiro com Cadeira', exercises: ['Agachamento apoiado', 'Desenvolvimento sentado', 'Extensão de joelhos', 'Retração dos ombros'] },
+    { name: 'Corpo Inteiro com Garrafas', exercises: ['Remada com garrafas', 'Supino no chão', 'Agachamento apoiado', 'Rosca alternada'] },
+    { name: 'Corpo Inteiro e Equilíbrio', exercises: ['Marcha com apoio', 'Passo para trás', 'Flexão na parede', 'Elevação de panturrilha'] },
+  ],
+};
 
 function buildHomeWorkouts(
   profile: UserProfile,
@@ -142,85 +232,45 @@ function buildHomeWorkouts(
   plan: Plan,
   level: Level
 ): Workout[] {
-  const goal = String(profile.goal || '').toLowerCase();
-  const equipment = Array.isArray(onboarding?.homeEquipment) ? onboarding.homeEquipment : [];
-  const hasDumbbells = equipment.includes('Halteres');
-  const hasElastic = equipment.includes('Elástico');
-  const hasBar = equipment.includes('Barra fixa');
-  const hasBench = equipment.includes('Banco/cadeira');
+  const goalLabel = profile.goal || 'melhorar a saúde';
   const limitation = onboarding?.limitations || 'Nenhuma';
-  const hasLimitation = limitation !== 'Nenhuma';
   const series = level === 'Avançado' ? 4 : level === 'Intermediário' ? 3 : 2;
   const duration = level === 'Avançado' ? '45 min' : level === 'Intermediário' ? '35 min' : '25 min';
-  const carga: Workout['carga'] = level === 'Avançado' ? 'Alta' : level === 'Intermediário' ? 'Média' : 'Baixa';
-  const reps = goal.includes('emagrec') || goal.includes('condicion') ? '12-18 reps' : goal.includes('força') ? '6-10 reps' : '10-15 reps';
-  const rest = goal.includes('emagrec') || goal.includes('condicion') ? '30s' : '60s';
+  const carga: Workout['carga'] = level === 'Iniciante' ? 'Baixa' : 'Média';
+  const reps = level === 'Avançado' ? '12-15 reps' : level === 'Intermediário' ? '10-12 reps' : '8-10 reps';
+  const rest = level === 'Avançado' ? '40s' : '60s';
   const planRequired = plan === 'free' ? 'Iniciante' : plan;
+  const groups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen', 'Full Body'];
+  const beginnerTemplates: Record<MuscleGroup, HomeWorkoutTemplate[]> = Object.fromEntries(
+    groups.map(group => [group, HOME_PRO_WORKOUTS[group].slice(0, 1)])
+  ) as Record<MuscleGroup, HomeWorkoutTemplate[]>;
+  const templates = plan === 'Elite' || plan === 'Admin'
+    ? HOME_ELITE_WORKOUTS
+    : plan === 'Pro'
+      ? HOME_PRO_WORKOUTS
+      : beginnerTemplates;
 
-  const mobilityFirst = hasLimitation
-    ? buildExercise('home-mobility-safe', 'Mobilidade leve sem dor', 'Full Body', 2, '6-8 movimentos', '30s', 'Preparação articular para treinar em casa com segurança.', limitation)
-    : buildExercise('home-mobility', 'Mobilidade dinâmica', 'Full Body', 2, '8-10 movimentos', '30s', 'Ativa quadril, tornozelo, coluna torácica e ombros antes do treino.', limitation);
-
-  const library: Record<MuscleGroup, Exercise[]> = {
-    'Peito': [
-      buildExercise('home-pushup-incline', hasBench ? 'Flexão inclinada no banco/cadeira' : 'Flexão inclinada', 'Peito', series, reps, rest, 'Variação de flexão ajustável para peito, tríceps e core.', limitation),
-      buildExercise('home-pushup-control', hasLimitation ? 'Flexão parcial controlada' : 'Flexão tradicional controlada', 'Peito', series, reps, rest, 'Movimento base para ganhar força de empurrar sem máquinas.', limitation),
-      buildExercise('home-chest-squeeze', hasDumbbells ? 'Supino no chão com halteres' : 'Pressão isométrica de palmas', 'Peito', series, '10-14 reps', rest, 'Estimula peitoral com baixa necessidade de equipamento.', limitation),
-    ],
-    'Costas': [
-      buildExercise('home-row', hasElastic ? 'Remada com elástico' : hasDumbbells ? 'Remada unilateral com halter' : 'Remada isométrica com toalha', 'Costas', series, reps, rest, 'Fortalece dorsais e melhora postura para compensar o treino de empurrar.', limitation),
-      buildExercise('home-scapula', 'Retração escapular no chão', 'Costas', series, '12-15 reps', '45s', 'Ativa musculatura das costas com pouca sobrecarga na lombar.', limitation),
-      buildExercise('home-pull', hasBar ? 'Barra fixa assistida' : 'Pulldown com toalha/elástico', 'Costas', series, '6-12 reps', rest, 'Puxada vertical adaptada ao equipamento disponível.', limitation),
-    ],
-    'Pernas': [
-      buildExercise('home-squat', hasLimitation ? 'Agachamento curto na cadeira' : hasDumbbells ? 'Agachamento goblet' : 'Agachamento livre', 'Pernas', series, reps, rest, 'Base para pernas e glúteos, ajustando amplitude conforme conforto.', limitation),
-      buildExercise('home-hip-hinge', hasDumbbells ? 'Levantamento romeno com halteres' : 'Bom dia sem carga', 'Pernas', series, '10-14 reps', rest, 'Fortalece posterior de coxa e glúteos com controle de tronco.', limitation),
-      buildExercise('home-glute-bridge', 'Elevação pélvica no chão', 'Pernas', series, '12-20 reps', '45s', 'Ótima opção para glúteos e estabilidade sem impacto.', limitation),
-    ],
-    'Ombros': [
-      buildExercise('home-shoulder-press', hasDumbbells ? 'Desenvolvimento com halteres' : hasElastic ? 'Desenvolvimento com elástico' : 'Elevação frontal sem carga', 'Ombros', series, '10-14 reps', rest, 'Trabalha ombros com carga ajustável para ambiente doméstico.', limitation),
-      buildExercise('home-lateral-raise', hasDumbbells ? 'Elevação lateral com halteres' : 'Elevação lateral isométrica', 'Ombros', series, '12-16 reps', '45s', 'Foco em deltoide lateral, sem precisar de máquina.', limitation),
-      buildExercise('home-wall-slide', 'Wall slide', 'Ombros', series, '8-12 reps', '30s', 'Melhora controle escapular e mobilidade de ombros.', limitation),
-    ],
-    'Braços': [
-      buildExercise('home-curl', hasDumbbells ? 'Rosca direta com halteres' : hasElastic ? 'Rosca com elástico' : 'Rosca isométrica com toalha', 'Braços', series, '10-15 reps', rest, 'Bíceps em casa usando o equipamento disponível.', limitation),
-      buildExercise('home-triceps', hasBench ? 'Tríceps no banco com amplitude curta' : 'Tríceps testa no chão sem carga', 'Braços', series, '10-14 reps', rest, 'Tríceps com variação controlada para evitar desconforto no ombro.', limitation),
-      buildExercise('home-carry', hasDumbbells ? 'Farmer hold com halteres' : 'Aperto isométrico de toalha', 'Braços', series, '20-40s', '45s', 'Fortalece pegada, antebraço e estabilidade.', limitation),
-    ],
-    'Abdômen': [
-      buildExercise('home-plank', hasLimitation ? 'Prancha elevada' : 'Prancha frontal', 'Abdômen', series, '20-45s', '45s', 'Core anti-extensão para proteger lombar e melhorar estabilidade.', limitation),
-      buildExercise('home-dead-bug', 'Dead bug', 'Abdômen', series, '8-12 por lado', '45s', 'Controle de core com baixa sobrecarga lombar.', limitation),
-      buildExercise('home-side-plank', 'Prancha lateral adaptada', 'Abdômen', series, '15-35s por lado', '45s', 'Fortalece oblíquos e estabilidade lateral.', limitation),
-    ],
-    'Full Body': [
-      mobilityFirst,
-      buildExercise('home-circuit-squat', hasLimitation ? 'Sentar e levantar da cadeira' : 'Agachamento + alcance', 'Full Body', series, reps, rest, 'Movimento global para ativar pernas, core e coordenação.', limitation),
-      buildExercise('home-circuit-push', 'Flexão inclinada', 'Full Body', series, reps, rest, 'Empurrar seguro para treino geral em casa.', limitation),
-      buildExercise('home-circuit-row', hasElastic ? 'Remada com elástico' : 'Retração escapular', 'Full Body', series, reps, rest, 'Puxada/postura para equilibrar o protocolo.', limitation),
-      buildExercise('home-circuit-core', 'Dead bug ou prancha elevada', 'Full Body', series, '8-12 reps', '45s', 'Finaliza com estabilidade de core.', limitation),
-    ],
-  };
-
-  const preferredGroups: MuscleGroup[] = (() => {
-    if (goal.includes('emagrec') || goal.includes('condicion')) return ['Full Body', 'Pernas', 'Abdômen', 'Costas'];
-    if (goal.includes('força')) return ['Full Body', 'Pernas', 'Peito', 'Costas'];
-    if (goal.includes('mobilidade') || goal.includes('saúde')) return ['Full Body', 'Costas', 'Abdômen', 'Pernas'];
-    return ['Full Body', 'Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen'];
-  })();
-
-  const goalLabel = profile.goal || 'Treino';
-  return preferredGroups.map((group, index) => ({
-    id: `home-${slugifyText(goalLabel)}-${slugifyText(group)}-${slugifyText(level)}`,
-    name: group === 'Full Body' ? `Casa ${goalLabel}` : `Casa ${group}`,
-    description: `Treino em casa para ${goalLabel.toLowerCase()}, adaptado ao equipamento informado e às limitações do usuário.`,
+  return groups.flatMap(group => templates[group].map((template, workoutIndex) => ({
+    id: `home-${slugifyText(plan)}-${slugifyText(group)}-${workoutIndex + 1}`,
+    name: template.name,
+    description: `${template.name} para ${goalLabel.toLowerCase()}: treino em casa, sem impacto e com movimentos simples. Ajuste a amplitude, use apoio e pare se sentir dor.`,
     muscleGroup: group,
     level,
     duration,
     carga,
-    exercises: library[group].slice(0, group === 'Full Body' ? 5 : 3),
+    exercises: template.exercises.map((exerciseName, exerciseIndex) => buildExercise(
+      `home-${slugifyText(plan)}-${slugifyText(group)}-${workoutIndex + 1}-${exerciseIndex + 1}`,
+      exerciseName,
+      group,
+      series,
+      reps,
+      rest,
+      `Movimento doméstico de baixo impacto para trabalhar ${group.toLowerCase()} com controle e segurança.`,
+      limitation
+    )),
     planRequired,
-    authorUid: `home-protocol-${index}`,
-  }));
+    authorUid: `home-${slugifyText(plan)}-${workoutIndex}`,
+  })));
 }
 
 type HomeTrainingMode = 'training' | 'mobility' | 'stretching';
@@ -241,7 +291,7 @@ function buildHomeRecoveryWorkouts(
   ) => buildExercise(id, name, 'Full Body', 1, reps, '15s', description, limitation);
 
   if (mode === 'mobility') {
-    return [
+    const mobilityWorkouts: Workout[] = [
       {
         id: 'home-mobility-morning',
         name: 'Despertar do Corpo',
@@ -311,10 +361,122 @@ function buildHomeRecoveryWorkouts(
         planRequired,
         authorUid: 'home-mobility',
       },
+      {
+        id: 'home-mobility-full-body',
+        name: 'Mobilidade do Corpo Inteiro',
+        description: 'Movimentos simples para despertar as articulações e movimentar o corpo sem impacto.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '10 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-full-march', 'Marcha leve no lugar', '60s', 'Caminhe sem sair do lugar e use uma cadeira como apoio se precisar.'),
+          recoveryExercise('mob-full-shoulders', 'Círculos de ombros', '40s', 'Faça círculos pequenos e confortáveis para frente e para trás.'),
+          recoveryExercise('mob-full-trunk', 'Rotação suave do tronco', '40s', 'Gire o tronco sem movimentar rápido ou forçar a lombar.'),
+          recoveryExercise('mob-full-hips', 'Mobilidade de quadril com apoio', '40s por lado', 'Segure em uma cadeira e movimente o quadril com controle.'),
+          recoveryExercise('mob-full-ankles', 'Mobilidade de tornozelos', '40s por lado', 'Movimente cada tornozelo em uma amplitude confortável.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility-pro',
+      },
+      {
+        id: 'home-mobility-knees-ankles',
+        name: 'Joelhos e Tornozelos',
+        description: 'Rotina sentada e com apoio para melhorar o movimento das pernas com segurança.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '9 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-knee-extension', 'Extensão de joelho sentado', '10 reps por lado', 'Estenda uma perna por vez sem travar o joelho.'),
+          recoveryExercise('mob-knee-flexion', 'Flexão leve de joelho com apoio', '10 reps por lado', 'Dobre o joelho levando o calcanhar para trás com apoio firme.'),
+          recoveryExercise('mob-heel-raise', 'Elevação dos calcanhares', '12 reps', 'Suba e desça os calcanhares devagar usando apoio.'),
+          recoveryExercise('mob-toe-raise', 'Elevação das pontas dos pés', '12 reps', 'Mantenha os calcanhares no chão e levante a parte da frente dos pés.'),
+          recoveryExercise('mob-ankle-circle', 'Círculos de tornozelo sentado', '8 por lado', 'Desenhe círculos lentos com cada pé.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility-pro',
+      },
+      {
+        id: 'home-mobility-balance',
+        name: 'Mobilidade e Equilíbrio',
+        description: 'Movimentos assistidos para coordenação, estabilidade e confiança no dia a dia.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '12 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-balance-march', 'Marcha lenta com apoio', '60s', 'Segure em uma cadeira e eleve um pé de cada vez.'),
+          recoveryExercise('mob-balance-one-leg', 'Apoio em um pé assistido', '20s por lado', 'Retire um pé do chão mantendo as mãos próximas do apoio.'),
+          recoveryExercise('mob-balance-side-step', 'Passo lateral controlado', '8 por lado', 'Dê passos curtos para o lado mantendo o tronco firme.'),
+          recoveryExercise('mob-balance-knee', 'Elevação alternada dos joelhos', '10 por lado', 'Eleve os joelhos somente até uma altura confortável.'),
+          recoveryExercise('mob-balance-weight', 'Transferência de peso entre as pernas', '12 reps', 'Leve o peso de uma perna para a outra sem tirar os pés do chão.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility-elite',
+      },
+      {
+        id: 'home-mobility-spine-hips',
+        name: 'Coluna e Quadril',
+        description: 'Sequência controlada para reduzir rigidez e melhorar movimentos do tronco e do quadril.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '12 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-spine-pelvis', 'Inclinação pélvica deitado', '12 reps', 'Movimente a pelve lentamente mantendo os ombros relaxados.'),
+          recoveryExercise('mob-spine-knees', 'Rotação de joelhos deitado', '8 por lado', 'Leve os joelhos juntos para cada lado sem forçar.'),
+          recoveryExercise('mob-spine-bridge', 'Elevação pélvica curta', '10 reps', 'Eleve o quadril apenas até uma altura confortável.'),
+          recoveryExercise('mob-spine-thoracic', 'Rotação torácica em quatro apoios', '8 por lado', 'Gire a parte superior das costas com o quadril estável.'),
+          recoveryExercise('mob-spine-hip-seated', 'Mobilidade de quadril sentado', '10 reps', 'Abra e feche os joelhos de forma leve e controlada.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility-elite',
+      },
+      {
+        id: 'home-mobility-free-arms',
+        name: 'Ombros e Braços Livres',
+        description: 'Rotina leve para movimentar braços, ombros e escápulas sem precisar de equipamentos.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '10 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-arms-circles', 'Círculos pequenos com os braços', '40s', 'Mantenha os braços confortáveis e faça círculos pequenos.'),
+          recoveryExercise('mob-arms-alternate', 'Elevação alternada dos braços', '10 por lado', 'Eleve um braço de cada vez sem arquear a lombar.'),
+          recoveryExercise('mob-arms-wall', 'Deslizamento na parede', '10 reps', 'Deslize os braços mantendo contato confortável com a parede.'),
+          recoveryExercise('mob-arms-external', 'Rotação externa dos ombros', '12 reps', 'Mantenha os cotovelos junto ao corpo e abra os antebraços.'),
+          recoveryExercise('mob-arms-open', 'Abertura e fechamento dos braços', '12 reps', 'Abra o peito e depois aproxime os braços sem impulso.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility-elite',
+      },
+      {
+        id: 'home-mobility-active',
+        name: 'Mobilidade Ativa Completa',
+        description: 'Combinação de movimentos cotidianos para trabalhar o corpo inteiro com apoio e controle.',
+        muscleGroup: 'Full Body',
+        level,
+        duration: '14 min',
+        carga: 'Baixa',
+        exercises: [
+          recoveryExercise('mob-active-chair', 'Sentar e levantar com controle', '10 reps', 'Use uma cadeira firme e ajude com as mãos se necessário.'),
+          recoveryExercise('mob-active-squat', 'Agachamento curto com apoio', '10 reps', 'Desça somente até onde conseguir manter conforto e equilíbrio.'),
+          recoveryExercise('mob-active-step', 'Passo para trás assistido', '8 por lado', 'Dê um passo curto para trás segurando em um apoio.'),
+          recoveryExercise('mob-active-trunk', 'Rotação suave do tronco', '8 por lado', 'Gire lentamente mantendo os pés firmes no chão.'),
+          recoveryExercise('mob-active-reach', 'Alcance alternado acima da cabeça', '10 por lado', 'Alcance para cima sem elevar os ombros ou sentir dor.'),
+        ],
+        planRequired,
+        authorUid: 'home-mobility-elite',
+      },
     ];
+    if (plan === 'Elite' || plan === 'Admin') {
+      return [...mobilityWorkouts.slice(0, 4), ...mobilityWorkouts.slice(6, 10)];
+    }
+    return mobilityWorkouts.slice(0, plan === 'Pro' ? 6 : 4);
   }
 
-  return [
+  const stretchingWorkouts: Workout[] = [
     {
       id: 'home-stretch-post-workout',
       name: 'Pós-treino Corpo Inteiro',
@@ -384,7 +546,119 @@ function buildHomeRecoveryWorkouts(
       planRequired,
       authorUid: 'home-stretching',
     },
+    {
+      id: 'home-stretch-full-body',
+      name: 'Alongamento do Corpo Inteiro',
+      description: 'Sequência tranquila para alongar as principais regiões do corpo sem movimentos difíceis.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '11 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-full-chest', 'Alongamento de peito na parede', '40s por lado', 'Gire o corpo devagar até sentir um alongamento leve no peito.'),
+        recoveryExercise('stretch-full-side', 'Alongamento lateral do tronco', '35s por lado', 'Incline o tronco sem girar ou perder o equilíbrio.'),
+        recoveryExercise('stretch-full-hamstring', 'Alongamento de posterior sentado', '40s por lado', 'Estenda uma perna e incline o tronco somente até onde for confortável.'),
+        recoveryExercise('stretch-full-calf', 'Alongamento de panturrilha na parede', '40s por lado', 'Mantenha o calcanhar de trás apoiado no chão.'),
+        recoveryExercise('stretch-full-breath', 'Respiração lenta', '60s', 'Inspire pelo nariz e solte o ar lentamente.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching-pro',
+    },
+    {
+      id: 'home-stretch-legs-hips',
+      name: 'Pernas e Quadril',
+      description: 'Alongamentos com apoio para aliviar a rigidez das pernas e do quadril.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '12 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-legs-quad', 'Alongamento de quadríceps com apoio', '35s por lado', 'Segure em uma cadeira e aproxime o calcanhar sem puxar com força.'),
+        recoveryExercise('stretch-legs-towel', 'Alongamento de posterior com toalha', '40s por lado', 'Use a toalha para sustentar a perna sem travar o joelho.'),
+        recoveryExercise('stretch-legs-glute', 'Alongamento de glúteos sentado', '40s por lado', 'Cruze uma perna e incline o tronco suavemente.'),
+        recoveryExercise('stretch-legs-calf', 'Alongamento de panturrilha', '40s por lado', 'Mantenha os pés apontados para frente e o calcanhar apoiado.'),
+        recoveryExercise('stretch-legs-hip', 'Relaxamento do quadril deitado', '60s', 'Deixe os joelhos relaxarem em uma posição confortável.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching-pro',
+    },
+    {
+      id: 'home-stretch-posture',
+      name: 'Alongamento e Postura',
+      description: 'Pausa guiada para aliviar tensões e recuperar uma postura confortável.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '10 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-posture-neck', 'Retração cervical suave', '10 reps', 'Leve o queixo para trás sem inclinar a cabeça.'),
+        recoveryExercise('stretch-posture-chest', 'Abertura do peito na parede', '40s por lado', 'Abra o peito mantendo o ombro relaxado.'),
+        recoveryExercise('stretch-posture-shoulder', 'Alongamento de ombro cruzado', '35s por lado', 'Aproxime o braço do peito sem pressionar a articulação.'),
+        recoveryExercise('stretch-posture-side', 'Alongamento lateral sentado', '35s por lado', 'Mantenha os dois pés apoiados enquanto inclina o tronco.'),
+        recoveryExercise('stretch-posture-breath', 'Respiração postural', '60s', 'Cresça a coluna ao inspirar e relaxe ao soltar o ar.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching-elite',
+    },
+    {
+      id: 'home-stretch-back-hips',
+      name: 'Costas e Quadril',
+      description: 'Alongamentos adaptáveis para relaxar costas, glúteos e quadril.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '13 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-back-child', 'Postura da criança adaptada', '50s', 'Apoie os braços em uma cadeira se o chão não for confortável.'),
+        recoveryExercise('stretch-back-knee', 'Joelho ao peito deitado', '40s por lado', 'Aproxime uma perna de cada vez sem pressionar o joelho.'),
+        recoveryExercise('stretch-back-rotation', 'Rotação lombar suave', '40s por lado', 'Deixe os joelhos caírem juntos em uma amplitude pequena.'),
+        recoveryExercise('stretch-back-glute', 'Alongamento de glúteos deitado', '40s por lado', 'Mantenha cabeça e ombros relaxados no chão.'),
+        recoveryExercise('stretch-back-hip', 'Alongamento do quadril com apoio', '40s por lado', 'Use uma cadeira para manter equilíbrio e conforto.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching-elite',
+    },
+    {
+      id: 'home-stretch-leg-recovery',
+      name: 'Recuperação das Pernas',
+      description: 'Rotina leve para descansar pernas e tornozelos depois das atividades do dia.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '12 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-recovery-quad', 'Alongamento de quadríceps apoiado', '35s por lado', 'Segure em um apoio e mantenha os joelhos próximos.'),
+        recoveryExercise('stretch-recovery-hamstring', 'Alongamento de posterior sentado', '40s por lado', 'Incline o tronco sem curvar demais as costas.'),
+        recoveryExercise('stretch-recovery-inner', 'Alongamento da parte interna das pernas', '45s', 'Afaste os pés apenas até sentir tensão leve.'),
+        recoveryExercise('stretch-recovery-calf', 'Alongamento de panturrilha na parede', '40s por lado', 'Mantenha o pé de trás totalmente apoiado.'),
+        recoveryExercise('stretch-recovery-ankle', 'Movimentação suave dos tornozelos', '40s por lado', 'Movimente os pés lentamente antes de finalizar.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching-elite',
+    },
+    {
+      id: 'home-stretch-complete-relaxation',
+      name: 'Relaxamento Completo',
+      description: 'Sequência calma para desacelerar, respirar e relaxar o corpo inteiro.',
+      muscleGroup: 'Full Body',
+      level,
+      duration: '14 min',
+      carga: 'Baixa',
+      exercises: [
+        recoveryExercise('stretch-relax-breath', 'Respiração diafragmática', '90s', 'Deixe o abdômen subir ao inspirar e relaxar ao expirar.'),
+        recoveryExercise('stretch-relax-neck', 'Alongamento suave do pescoço', '30s por lado', 'Incline a cabeça sem usar as mãos para puxar.'),
+        recoveryExercise('stretch-relax-arms', 'Abertura dos braços deitado', '50s', 'Abra os braços e relaxe os ombros no chão.'),
+        recoveryExercise('stretch-relax-trunk', 'Rotação de tronco deitado', '40s por lado', 'Mova os joelhos juntos e mantenha os ombros apoiados.'),
+        recoveryExercise('stretch-relax-full', 'Alongamento do corpo inteiro', '60s', 'Alongue braços e pernas sem prender a respiração.'),
+      ],
+      planRequired,
+      authorUid: 'home-stretching-elite',
+    },
   ];
+  if (plan === 'Elite' || plan === 'Admin') {
+    return [...stretchingWorkouts.slice(0, 4), ...stretchingWorkouts.slice(6, 10)];
+  }
+  return stretchingWorkouts.slice(0, plan === 'Pro' ? 6 : 4);
 }
 
 export default function App() {

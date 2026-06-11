@@ -77,7 +77,10 @@ import {
   Trash2,
   PlusCircle,
   CalendarDays,
-  Repeat2
+  Repeat2,
+  CalendarPlus,
+  SlidersHorizontal,
+  Coffee
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -1053,7 +1056,12 @@ export default function App() {
               <DashboardView 
                 profile={profile} 
                 onUpgrade={() => openPricing('dashboard')}
-                onStartWorkout={() => setActiveTab('workouts')}
+                onStartWorkout={(workoutId, mode) => {
+                  if (workoutId) {
+                    localStorage.setItem('pending_workout_selection', JSON.stringify({ workoutId, mode }));
+                  }
+                  setActiveTab('workouts');
+                }}
                 onViewNutrition={() => setActiveTab('nutrition')}
               />
             )}
@@ -2458,8 +2466,13 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
   );
 }
 
-function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: { profile: UserProfile, onUpgrade: () => void, onStartWorkout: () => void, onViewNutrition: () => void }) {
-  const { isAdmin, simulatedPlan, user } = useAuth();
+function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: {
+  profile: UserProfile,
+  onUpgrade: () => void,
+  onStartWorkout: (workoutId?: string, mode?: HomeTrainingMode) => void,
+  onViewNutrition: () => void
+}) {
+  const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
   const getFirstName = () => {
@@ -2470,6 +2483,12 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   const [weeklyCalData, setWeeklyCalData] = useState<{ day: string; date: string; calories: number; protein: number; carbs: number; fat: number; isToday: boolean; isFuture: boolean }[]>([]);
   const [weeklyCount, setWeeklyCount] = useState(0);
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
+  const storageUserId = user?.id || profile.id || 'guest';
+  const weeklyStorageKey = `weekly_workouts_${storageUserId}`;
+  const weeklyDoneStorageKey = `weekly_workouts_done_${storageUserId}`;
+  const [savedWeeklyWorkouts, setSavedWeeklyWorkouts] = useState<WeeklyWorkoutSlot[]>(() => safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
+  const [savedWeeklyDoneIds, setSavedWeeklyDoneIds] = useState<string[]>(() => safeParseArray<string>(weeklyDoneStorageKey));
+  const [dashboardWorkoutPendingId, setDashboardWorkoutPendingId] = useState<string | null>(null);
 
   const resolveWorkoutsByPlan = (plan: string | undefined) => {
     const p = plan || 'Iniciante';
@@ -2485,6 +2504,28 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     // Garante que sempre retorna pelo menos os treinos Iniciante
     return filtered.length > 0 ? filtered : ALL_WORKOUTS.filter(w => w.planRequired === 'Iniciante');
   };
+
+  const resolveAllHomeWorkouts = () => {
+    if (trainingOnboarding?.trainingPlace !== 'home') return [];
+    const plan = (effectivePlan === 'free' ? 'Iniciante' : effectivePlan) as Plan;
+    const level: Level = plan === 'Elite' || plan === 'Admin' ? 'Avançado' : plan === 'Pro' ? 'Intermediário' : 'Iniciante';
+    return [
+      ...buildHomeWorkouts(profile, trainingOnboarding, plan, level),
+      ...buildHomeRecoveryWorkouts(trainingOnboarding, plan, level, 'mobility'),
+      ...buildHomeRecoveryWorkouts(trainingOnboarding, plan, level, 'stretching'),
+    ];
+  };
+
+  const dashboardWorkoutCatalog = [...resolveAllHomeWorkouts(), ...ALL_WORKOUTS];
+  const scheduledWorkoutDetails = savedWeeklyWorkouts
+    .map(slot => ({
+      ...slot,
+      workout: dashboardWorkoutCatalog.find(workout => workout.id === slot.workoutId),
+    }))
+    .filter((slot): slot is WeeklyWorkoutSlot & { workout: Workout } => Boolean(slot.workout))
+    .sort((a, b) => WEEK_DAYS.indexOf(a.day) - WEEK_DAYS.indexOf(b.day));
+  const todayName = WEEK_DAYS[(new Date().getDay() + 6) % 7];
+  const todayScheduledWorkout = scheduledWorkoutDetails.find(slot => slot.day === todayName);
 
   const firstWorkout = resolveWorkoutsByPlan(effectivePlan || 'Iniciante')[0] ?? ALL_WORKOUTS[0];
   const [nextWorkout, setNextWorkout] = useState({
@@ -2529,6 +2570,79 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   const WEEKLY_TARGET = 5;
   const weeklyPercent = Math.min(100, Math.round((weeklyCount / WEEKLY_TARGET) * 100));
 
+  const getScheduledWorkoutMode = (workoutId: string): HomeTrainingMode => {
+    if (workoutId.startsWith('home-mobility')) return 'mobility';
+    if (workoutId.startsWith('home-stretch')) return 'stretching';
+    return 'training';
+  };
+
+  const toggleDashboardWorkoutDone = async (workoutId: string) => {
+    if (dashboardWorkoutPendingId) return;
+    const alreadyDone = savedWeeklyDoneIds.includes(workoutId);
+    const nextDoneIds = savedWeeklyDoneIds.includes(workoutId)
+      ? savedWeeklyDoneIds.filter(id => id !== workoutId)
+      : [...savedWeeklyDoneIds, workoutId];
+    setSavedWeeklyDoneIds(nextDoneIds);
+    localStorage.setItem(weeklyDoneStorageKey, JSON.stringify(nextDoneIds));
+    window.dispatchEvent(new Event('ironshape:weekly-plan-updated'));
+
+    if (alreadyDone || !user) return;
+    const workout = dashboardWorkoutCatalog.find(item => item.id === workoutId);
+    if (!workout) return;
+
+    const completedIds = safeParseArray<string>('completedWorkouts');
+    const awardedIds = safeParseArray<string>('awardedWorkoutPoints');
+    const alreadyAwarded = awardedIds.includes(workoutId);
+    const isFreePlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
+    const nextPoints = alreadyAwarded
+      ? profile.points || 0
+      : isFreePlan
+        ? Math.min(2000, (profile.points || 0) + 100)
+        : (profile.points || 0) + 100;
+
+    setDashboardWorkoutPendingId(workoutId);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const isConsecutive = profile.lastWorkoutDate === yesterday.toISOString().split('T')[0];
+      const nextStreak = profile.lastWorkoutDate === today ? profile.streak : isConsecutive ? profile.streak + 1 : 1;
+      await dataService.addWorkoutLog({
+        userUid: user.id,
+        workoutId,
+        workoutName: workout.name,
+        completedAt: new Date().toISOString(),
+        duration: parseInt(workout.duration) || 0,
+      });
+      await updateProfile({
+        points: nextPoints,
+        streak: nextStreak,
+        lastWorkoutDate: today,
+      });
+      localStorage.setItem('completedWorkouts', JSON.stringify(Array.from(new Set([...completedIds, workoutId]))));
+      if (!alreadyAwarded && nextPoints > (profile.points || 0)) {
+        localStorage.setItem('awardedWorkoutPoints', JSON.stringify(Array.from(new Set([...awardedIds, workoutId]))));
+      }
+      setWeeklyCount(prev => prev + 1);
+      trackEvent('workout_completed', {
+        workout_id: workoutId,
+        workout_name: workout.name,
+        muscle_group: workout.muscleGroup,
+        plan: effectivePlan,
+        points_after: nextPoints,
+        source: 'dashboard_weekly_plan',
+      });
+    } catch (error) {
+      console.error('Erro ao concluir treino pela tela inicial:', error);
+      const rollbackIds = nextDoneIds.filter(id => id !== workoutId);
+      setSavedWeeklyDoneIds(rollbackIds);
+      localStorage.setItem(weeklyDoneStorageKey, JSON.stringify(rollbackIds));
+    } finally {
+      setDashboardWorkoutPendingId(null);
+      window.dispatchEvent(new Event('ironshape:weekly-plan-updated'));
+    }
+  };
+
   const calorieGoal = (() => {
     const w = profile.weight || 70;
     const h = profile.height || 175;
@@ -2554,6 +2668,20 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     window.addEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
     return () => window.removeEventListener('ironshape:training-place-changed', syncTrainingOnboarding);
   }, [user?.id]);
+
+  useEffect(() => {
+    const syncWeeklyPlan = () => {
+      setSavedWeeklyWorkouts(safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
+      setSavedWeeklyDoneIds(safeParseArray<string>(weeklyDoneStorageKey));
+    };
+    syncWeeklyPlan();
+    window.addEventListener('storage', syncWeeklyPlan);
+    window.addEventListener('ironshape:weekly-plan-updated', syncWeeklyPlan);
+    return () => {
+      window.removeEventListener('storage', syncWeeklyPlan);
+      window.removeEventListener('ironshape:weekly-plan-updated', syncWeeklyPlan);
+    };
+  }, [weeklyStorageKey, weeklyDoneStorageKey]);
 
   useEffect(() => {
     const today = new Date();
@@ -2638,7 +2766,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
               </div>
             </div>
             <button
-              onClick={onStartWorkout}
+              onClick={() => onStartWorkout()}
               className="bg-primary text-text-primary px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all min-h-[48px]"
             >
               Começar Protocolo
@@ -2682,7 +2810,9 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <button 
-                onClick={onStartWorkout}
+                onClick={() => todayScheduledWorkout
+                  ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))
+                  : onStartWorkout()}
                 className="bg-primary text-text-primary px-8 py-4 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto min-h-[56px]"
               >
                 INICIAR TREINO DE HOJE
@@ -2724,6 +2854,158 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
         </div>
       </section>
 
+      <section className="bg-surface border border-white/10 rounded-[28px] md:rounded-[40px] p-4 sm:p-6 md:p-8 space-y-5 shadow-xl shadow-black/10">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+              <CalendarDays size={21} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight">Seus treinos da semana</h2>
+                {scheduledWorkoutDetails.length > 0 && (
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-text-muted">
+                    {savedWeeklyDoneIds.filter(id => scheduledWorkoutDetails.some(slot => slot.workoutId === id)).length}/{scheduledWorkoutDetails.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-text-secondary mt-1 leading-relaxed">
+                Sua rotina organizada para abrir e começar sem precisar procurar.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onStartWorkout()}
+            className="hidden sm:flex min-h-[44px] px-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-primary/30 transition-all items-center gap-2 shrink-0"
+          >
+            <SlidersHorizontal size={15} />
+            Organizar
+          </button>
+        </div>
+
+        {scheduledWorkoutDetails.length > 0 ? (
+          <>
+            <div className={`rounded-[24px] border p-4 sm:p-5 ${
+              todayScheduledWorkout && savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId)
+                ? 'bg-success/10 border-success/25'
+                : 'bg-gradient-to-br from-primary/15 to-primary/[0.04] border-primary/25'
+            }`}>
+              {todayScheduledWorkout ? (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest">Hoje</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{todayName}</span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">{todayScheduledWorkout.workout.name}</h3>
+                      <p className="text-xs sm:text-sm text-text-secondary mt-1">
+                        {todayScheduledWorkout.workout.muscleGroup} • {todayScheduledWorkout.workout.duration} • {todayScheduledWorkout.workout.exercises.length} exercícios
+                      </p>
+                    </div>
+                    {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) && (
+                      <div className="w-10 h-10 rounded-2xl bg-success text-white flex items-center justify-center shrink-0">
+                        <Check size={20} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <button
+                      onClick={() => onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))}
+                      className="min-h-[50px] rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      <Play size={17} />
+                      {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? 'Abrir treino' : 'Começar agora'}
+                    </button>
+                    <button
+                      onClick={() => toggleDashboardWorkoutDone(todayScheduledWorkout.workoutId)}
+                      disabled={dashboardWorkoutPendingId === todayScheduledWorkout.workoutId}
+                      className={`min-w-[50px] min-h-[50px] rounded-2xl border flex items-center justify-center transition-all ${
+                        savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId)
+                          ? 'bg-success/15 border-success/30 text-success'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:text-success'
+                      }`}
+                      aria-label={savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? 'Desmarcar treino concluído' : 'Marcar treino como concluído'}
+                    >
+                      {dashboardWorkoutPendingId === todayScheduledWorkout.workoutId
+                        ? <Loader2 size={20} className="animate-spin" />
+                        : <CheckCircle2 size={20} />}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 text-text-muted flex items-center justify-center shrink-0">
+                    <Coffee size={20} />
+                  </div>
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-primary">Hoje</div>
+                    <h3 className="text-lg font-black">Dia de descanso</h3>
+                    <p className="text-xs text-text-muted mt-1">Recupere o corpo e mantenha sua rotina.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 -mx-1 px-1">
+              {WEEK_DAYS.map(day => {
+                const slot = scheduledWorkoutDetails.find(item => item.day === day);
+                const isToday = day === todayName;
+                const isDone = !!slot && savedWeeklyDoneIds.includes(slot.workoutId);
+                return (
+                  <button
+                    key={day}
+                    onClick={() => slot && onStartWorkout(slot.workoutId, getScheduledWorkoutMode(slot.workoutId))}
+                    disabled={!slot}
+                    className={`shrink-0 w-[138px] sm:w-[160px] min-h-[118px] rounded-2xl border p-3.5 text-left snap-start transition-all ${
+                      isDone
+                        ? 'bg-success/10 border-success/25'
+                        : isToday
+                          ? 'bg-primary/10 border-primary/30'
+                          : slot
+                            ? 'bg-white/5 border-white/10 hover:border-white/20'
+                            : 'bg-white/[0.02] border-white/5 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${isToday ? 'text-primary' : 'text-text-muted'}`}>{day.slice(0, 3)}</span>
+                      {isDone && <CheckCircle2 size={15} className="text-success" />}
+                    </div>
+                    <div className="mt-3 text-sm font-black leading-tight line-clamp-2">{slot?.workout.name || 'Descanso'}</div>
+                    <div className="mt-2 text-[9px] font-bold text-text-muted line-clamp-1">{slot ? slot.workout.muscleGroup : 'Sem treino'}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => onStartWorkout()}
+              className="sm:hidden w-full min-h-[46px] rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary flex items-center justify-center gap-2"
+            >
+              <SlidersHorizontal size={15} />
+              Organizar semana
+            </button>
+          </>
+        ) : (
+          <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-6 text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
+              <CalendarPlus size={25} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black">Monte sua semana</h3>
+              <p className="text-xs sm:text-sm text-text-muted mt-1 max-w-md mx-auto leading-relaxed">Escolha seus treinos uma vez e encontre cada dia pronto aqui na tela inicial.</p>
+            </div>
+            <button
+              onClick={() => onStartWorkout()}
+              className="w-full sm:w-auto min-h-[50px] px-6 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all inline-flex items-center justify-center gap-2"
+            >
+              <PlusCircle size={17} />
+              Escolher treinos
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <DashboardMetricCard 
@@ -2735,10 +3017,12 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
         />
         <DashboardMetricCard
           label="Próximo Treino"
-          value={nextWorkout.name}
-          subValue={nextWorkout.muscleGroup}
+          value={todayScheduledWorkout?.workout.name || nextWorkout.name}
+          subValue={todayScheduledWorkout ? `${todayName} • ${todayScheduledWorkout.workout.muscleGroup}` : nextWorkout.muscleGroup}
           icon={<Calendar size={20} />}
-          onClick={onStartWorkout}
+          onClick={() => todayScheduledWorkout
+            ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))
+            : onStartWorkout()}
         />
         <DashboardMetricCard 
           label="Calorias Diárias" 
@@ -3155,14 +3439,17 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
 
   useEffect(() => {
     localStorage.setItem(favoriteStorageKey, JSON.stringify(favoriteWorkoutIds));
+    window.dispatchEvent(new Event('ironshape:weekly-plan-updated'));
   }, [favoriteStorageKey, favoriteWorkoutIds]);
 
   useEffect(() => {
     localStorage.setItem(weeklyStorageKey, JSON.stringify(weeklyWorkouts));
+    window.dispatchEvent(new Event('ironshape:weekly-plan-updated'));
   }, [weeklyStorageKey, weeklyWorkouts]);
 
   useEffect(() => {
     localStorage.setItem(weeklyDoneStorageKey, JSON.stringify(weeklyCompletedIds));
+    window.dispatchEvent(new Event('ironshape:weekly-plan-updated'));
   }, [weeklyDoneStorageKey, weeklyCompletedIds]);
 
   useEffect(() => {
@@ -3220,6 +3507,11 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const homeRecoveryWorkouts = activeHomeMode === 'training'
     ? []
     : buildHomeRecoveryWorkouts(trainingOnboarding, selectedPlanTab, selectedLevel, activeHomeMode);
+  const allHomeWorkouts = usesHomeProtocol ? [
+    ...homeWorkouts,
+    ...buildHomeRecoveryWorkouts(trainingOnboarding, selectedPlanTab, selectedLevel, 'mobility'),
+    ...buildHomeRecoveryWorkouts(trainingOnboarding, selectedPlanTab, selectedLevel, 'stretching'),
+  ] : [];
   const workoutSource = usesHomeProtocol
     ? activeHomeMode === 'training' ? homeWorkouts : homeRecoveryWorkouts
     : ALL_WORKOUTS;
@@ -3239,7 +3531,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
   const freeTrainingPhaseComplete = freePointsLimitReached;
   const weeklyWorkoutIds = weeklyWorkouts.map(item => item.workoutId);
-  const allAvailableWorkouts = [...workoutSource, ...ALL_WORKOUTS];
+  const allAvailableWorkouts = [...allHomeWorkouts, ...workoutSource, ...ALL_WORKOUTS];
   const favoriteWorkouts = favoriteWorkoutIds
     .map(id => allAvailableWorkouts.find(workout => workout.id === id))
     .filter((workout): workout is Workout => Boolean(workout));
@@ -3250,6 +3542,21 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     }))
     .filter((slot): slot is WeeklyWorkoutSlot & { workout: Workout } => Boolean(slot.workout));
   const weeklyCompletedCount = weeklyWorkoutDetails.filter(slot => weeklyCompletedIds.includes(slot.workoutId)).length;
+
+  useEffect(() => {
+    const rawSelection = localStorage.getItem('pending_workout_selection');
+    if (!rawSelection) return;
+    try {
+      const selection = JSON.parse(rawSelection) as { workoutId?: string; mode?: HomeTrainingMode };
+      const workout = allAvailableWorkouts.find(item => item.id === selection.workoutId);
+      if (!workout) return;
+      if (usesHomeProtocol && selection.mode) setActiveHomeMode(selection.mode);
+      setSelectedWorkout(workout);
+      localStorage.removeItem('pending_workout_selection');
+    } catch {
+      localStorage.removeItem('pending_workout_selection');
+    }
+  }, [trainingOnboarding, selectedPlanTab, selectedLevel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setWeeklyWorkouts(prev => prev.length > weeklyWorkoutLimit ? prev.slice(0, weeklyWorkoutLimit) : prev);
@@ -3852,7 +4159,12 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                                 workout={workout}
                                 mode={activeHomeMode}
                                 isCompleted={completedWorkouts.includes(workout.id)}
+                                isFavorite={favoriteWorkoutIds.includes(workout.id)}
+                                isInWeeklyPlan={weeklyWorkoutIds.includes(workout.id)}
+                                weeklyLimitReached={weeklyWorkouts.length >= weeklyWorkoutLimit}
                                 onClick={() => setSelectedWorkout(workout)}
+                                onToggleFavorite={() => toggleFavoriteWorkout(workout.id)}
+                                onToggleWeekly={() => addWorkoutToWeek(workout)}
                               />
                             ) : (
                               <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
@@ -4076,12 +4388,22 @@ function HomeRoutineCard({
   workout,
   mode,
   isCompleted,
+  isFavorite,
+  isInWeeklyPlan,
+  weeklyLimitReached,
   onClick,
+  onToggleFavorite,
+  onToggleWeekly,
 }: {
   workout: Workout,
   mode: HomeTrainingMode,
   isCompleted: boolean,
+  isFavorite: boolean,
+  isInWeeklyPlan: boolean,
+  weeklyLimitReached: boolean,
   onClick: () => void,
+  onToggleFavorite: () => void,
+  onToggleWeekly: () => void,
 }) {
   const config = mode === 'mobility'
     ? {
@@ -4119,21 +4441,51 @@ function HomeRoutineCard({
         <div className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 ${config.soft} ${config.accent}`}>
           {config.icon}
         </div>
-        {isCompleted && <CheckCircle2 size={20} className="text-success shrink-0" />}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleFavorite();
+            }}
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all ${
+              isFavorite
+                ? 'bg-primary/15 border-primary/30 text-primary'
+                : 'bg-background/70 border-white/10 text-text-muted hover:text-text-primary'
+            }`}
+            aria-label={isFavorite ? 'Remover dos favoritos' : 'Favoritar treino'}
+          >
+            <Star size={16} className={isFavorite ? 'fill-current' : ''} />
+          </button>
+          {isCompleted && <CheckCircle2 size={20} className="text-success shrink-0" />}
+        </div>
       </div>
       <div>
         <p className={`text-[9px] font-black uppercase tracking-widest mb-2 ${config.accent}`}>{config.label}</p>
         <h3 className="text-xl font-black tracking-tight leading-tight text-text-primary">{workout.name}</h3>
         <p className="text-xs text-text-secondary leading-relaxed mt-2 line-clamp-2">{workout.description}</p>
       </div>
-      <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/5">
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold text-text-muted">
           <span className="flex items-center gap-1.5"><Clock size={13} />{workout.duration}</span>
           <span className="flex items-center gap-1.5"><Activity size={13} />{workout.exercises.length} movimentos</span>
         </div>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${config.soft} ${config.accent}`}>
-          <ChevronRight size={18} />
-        </div>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleWeekly();
+          }}
+          disabled={!isInWeeklyPlan && weeklyLimitReached}
+          className={`min-h-[42px] px-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shrink-0 ${
+            isInWeeklyPlan
+              ? 'bg-success/10 border-success/25 text-success'
+              : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/15 disabled:opacity-40 disabled:cursor-not-allowed'
+          }`}
+        >
+          {isInWeeklyPlan ? <CheckCircle2 size={15} /> : <PlusCircle size={15} />}
+          {isInWeeklyPlan ? 'Na semana' : 'Adicionar'}
+        </button>
       </div>
       <span className="sr-only">{config.benefit}</span>
     </div>

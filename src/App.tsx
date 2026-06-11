@@ -4248,6 +4248,12 @@ function RestTimer({ restTime, onStateChange }: { restTime: string, onStateChang
 }
 
 type ExerciseAnimationType = 'dumbbellBenchPress';
+const EXERCISE_MEDIA_PLAYBACK_RATE = 1.75;
+
+function setExerciseVideoSpeed(video: HTMLVideoElement) {
+  video.defaultPlaybackRate = EXERCISE_MEDIA_PLAYBACK_RATE;
+  video.playbackRate = EXERCISE_MEDIA_PLAYBACK_RATE;
+}
 
 function normalizeExerciseKey(value: string) {
   return value
@@ -4303,30 +4309,30 @@ function DumbbellBenchPressAnimation() {
 
         <g strokeLinecap="round" strokeLinejoin="round" filter="url(#demoShadow)">
           <line x1="275" y1="204" x2="242" y2="142" stroke="url(#demoSkin)" strokeWidth="20">
-            <animate attributeName="x2" values="242;252;242" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="x2" values="242;252;242" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
           </line>
           <line x1="242" y1="142" x2="242" y2="76" stroke="url(#demoSkin)" strokeWidth="18">
-            <animate attributeName="x1" values="242;252;242" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="y1" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="x2" values="242;252;242" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="76;128;76" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="x1" values="242;252;242" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="y1" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="x2" values="242;252;242" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="76;128;76" dur="1.2s" repeatCount="indefinite" />
           </line>
           <line x1="365" y1="204" x2="398" y2="142" stroke="url(#demoSkin)" strokeWidth="20">
-            <animate attributeName="x2" values="398;388;398" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="x2" values="398;388;398" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
           </line>
           <line x1="398" y1="142" x2="398" y2="76" stroke="url(#demoSkin)" strokeWidth="18">
-            <animate attributeName="x1" values="398;388;398" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="y1" values="142;178;142" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="x2" values="398;388;398" dur="2.1s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="76;128;76" dur="2.1s" repeatCount="indefinite" />
+            <animate attributeName="x1" values="398;388;398" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="y1" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="x2" values="398;388;398" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="76;128;76" dur="1.2s" repeatCount="indefinite" />
           </line>
         </g>
 
         <g filter="url(#demoShadow)">
           <g>
-            <animateTransform attributeName="transform" type="translate" values="0 0;10 52;0 0" dur="2.1s" repeatCount="indefinite" />
+            <animateTransform attributeName="transform" type="translate" values="0 0;10 52;0 0" dur="1.2s" repeatCount="indefinite" />
             <rect x="214" y="56" width="56" height="18" rx="9" fill="#191919" />
             <circle cx="214" cy="65" r="22" fill="#111" />
             <circle cx="270" cy="65" r="22" fill="#111" />
@@ -4334,7 +4340,7 @@ function DumbbellBenchPressAnimation() {
             <circle cx="270" cy="65" r="10" fill="#333" />
           </g>
           <g>
-            <animateTransform attributeName="transform" type="translate" values="0 0;-10 52;0 0" dur="2.1s" repeatCount="indefinite" />
+            <animateTransform attributeName="transform" type="translate" values="0 0;-10 52;0 0" dur="1.2s" repeatCount="indefinite" />
             <rect x="370" y="56" width="56" height="18" rx="9" fill="#191919" />
             <circle cx="370" cy="65" r="22" fill="#111" />
             <circle cx="426" cy="65" r="22" fill="#111" />
@@ -4378,7 +4384,7 @@ function ExecutionModal({
     setGifUrl(null);
     setApiVideoUrl(null);
     setCuratedVideoFailed(false);
-    setGifLoading(!exercise.videoUrl && !animationType);
+    setGifLoading(!animationType);
     if (animationType) return () => { cancelled = true; };
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
@@ -4423,17 +4429,6 @@ function ExecutionModal({
             </div>
           ) : animationType ? (
             <ExerciseAnimation type={animationType} />
-          ) : exercise.videoUrl && !curatedVideoFailed ? (
-            <video
-              src={exercise.videoUrl}
-              autoPlay
-              loop
-              muted
-              playsInline
-              controls
-              onError={() => setCuratedVideoFailed(true)}
-              className="w-full h-full object-contain"
-            />
           ) : apiVideoUrl ? (
             <video
               src={apiVideoUrl}
@@ -4442,10 +4437,23 @@ function ExecutionModal({
               muted
               playsInline
               controls
+              onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
               className="w-full h-full object-contain"
             />
           ) : gifUrl ? (
             <img src={gifUrl} alt={exercise.name} className="w-full h-full object-contain" />
+          ) : exercise.videoUrl && !curatedVideoFailed ? (
+            <video
+              src={exercise.videoUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              controls
+              onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
+              onError={() => setCuratedVideoFailed(true)}
+              className="w-full h-full object-contain"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-5 p-8 text-center">
               <div className="w-20 h-20 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
@@ -4576,7 +4584,7 @@ function ExerciseCard({
       setGifUrl(localMedia);
     }
     const searchName = translateExerciseName(exercise.name);
-    setGifLoading(!exercise.videoUrl);
+    setGifLoading(true);
     try {
       const results = await searchExercisesByName(exercise.name, shouldPreferRapidApiMedia(exercise) ? { source: 'rapidapi' } : undefined);
       const list = Array.isArray(results) ? results : results?.data;
@@ -4741,17 +4749,6 @@ function ExerciseCard({
                   </div>
                 ) : animationType ? (
                   <ExerciseAnimation type={animationType} />
-                ) : exercise.videoUrl && !curatedVideoFailed ? (
-                  <video
-                    src={exercise.videoUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    controls
-                    onError={() => setCuratedVideoFailed(true)}
-                    className="w-full h-full object-contain"
-                  />
                 ) : apiVideoUrl ? (
                   <video
                     src={apiVideoUrl}
@@ -4760,12 +4757,25 @@ function ExerciseCard({
                     muted
                     playsInline
                     controls
+                    onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
                     className="w-full h-full object-contain"
                   />
                 ) : gifUrl ? (
                   <img
                     src={gifUrl}
                     alt={exercise.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : exercise.videoUrl && !curatedVideoFailed ? (
+                  <video
+                    src={exercise.videoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
+                    onError={() => setCuratedVideoFailed(true)}
                     className="w-full h-full object-contain"
                   />
                 ) : (

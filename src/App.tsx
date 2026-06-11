@@ -2593,12 +2593,10 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     const completedIds = safeParseArray<string>('completedWorkouts');
     const awardedIds = safeParseArray<string>('awardedWorkoutPoints');
     const alreadyAwarded = awardedIds.includes(workoutId);
-    const isFreePlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
+    const planPointsLimit = getPlanPointsLimit(effectivePlan);
     const nextPoints = alreadyAwarded
       ? profile.points || 0
-      : isFreePlan
-        ? Math.min(2000, (profile.points || 0) + 100)
-        : (profile.points || 0) + 100;
+      : Math.min(planPointsLimit, (profile.points || 0) + 100);
 
     setDashboardWorkoutPendingId(workoutId);
     try {
@@ -3210,6 +3208,12 @@ function getWeeklyWorkoutLimit(plan: Plan, isAdmin = false) {
   return 3;
 }
 
+function getPlanPointsLimit(plan: Plan) {
+  if (plan === 'Elite' || plan === 'Admin') return 20000;
+  if (plan === 'Pro') return 10000;
+  return 2000;
+}
+
 function safeParseArray<T>(key: string, fallback: T[] = []): T[] {
   try {
     const saved = localStorage.getItem(key);
@@ -3377,6 +3381,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || isAdmin;
   const isFreePointsPlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
   const FREE_POINTS_LIMIT = 2000;
+  const planPointsLimit = getPlanPointsLimit(effectivePlan);
   const storageUserId = user?.id || profile.id || 'guest';
   const weeklyStorageKey = `weekly_workouts_${storageUserId}`;
   const favoriteStorageKey = `favorite_workouts_${storageUserId}`;
@@ -3478,7 +3483,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     if (missingAwards.length === 0) return;
 
     const basePoints = Math.max(livePointsRef.current, profile.points || 0);
-    const availablePoints = isFreePointsPlan ? Math.max(0, FREE_POINTS_LIMIT - basePoints) : missingAwards.length * 100;
+    const availablePoints = Math.max(0, planPointsLimit - basePoints);
     const awardsToApply = Math.min(missingAwards.length, Math.floor(availablePoints / 100));
     if (awardsToApply <= 0) return;
 
@@ -3497,7 +3502,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
       setAwardedWorkoutPoints(prev => prev.filter(id => !awardedIds.includes(id)));
       reconciledCompletedPointsRef.current = false;
     });
-  }, [user?.id, completedWorkouts, awardedWorkoutPoints, profile.points, isFreePointsPlan, updateProfile]);
+  }, [user?.id, completedWorkouts, awardedWorkoutPoints, profile.points, planPointsLimit, updateProfile]);
 
   const muscleGroups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen', 'Full Body'];
   const trainingPlace = trainingOnboarding?.trainingPlace;
@@ -3522,12 +3527,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
     : muscleGroups;
   const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
   const points = livePoints;
-  const POINTS_MILESTONE_STEP = 100;
-  const nextPointsMilestone = isFreePointsPlan
-    ? FREE_POINTS_LIMIT
-    : Math.max(POINTS_MILESTONE_STEP, Math.ceil((points + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
-  const previousPointsMilestone = isFreePointsPlan ? 0 : Math.max(0, nextPointsMilestone - POINTS_MILESTONE_STEP);
-  const pointsProgress = Math.min(100, Math.round(((points - previousPointsMilestone) / (nextPointsMilestone - previousPointsMilestone)) * 100));
+  const pointsProgress = Math.min(100, Math.round((points / planPointsLimit) * 100));
   const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
   const freeTrainingPhaseComplete = freePointsLimitReached;
   const weeklyWorkoutIds = weeklyWorkouts.map(item => item.workoutId);
@@ -3655,13 +3655,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
 
     if (!alreadyAwarded && user) {
       const basePoints = Math.max(livePointsRef.current, profile.points || 0);
-      if (isFreePointsPlan && basePoints >= FREE_POINTS_LIMIT) {
+      if (basePoints >= planPointsLimit) {
         return null;
       }
 
       const workout = workoutSource.find(w => w.id === workoutId) ?? ALL_WORKOUTS.find(w => w.id === workoutId);
       const today = new Date().toISOString().split('T')[0];
-      const nextPoints = isFreePointsPlan ? Math.min(FREE_POINTS_LIMIT, basePoints + 100) : basePoints + 100;
+      const nextPoints = Math.min(planPointsLimit, basePoints + 100);
       const willCompleteFreePhase = isFreePointsPlan && nextPoints >= FREE_POINTS_LIMIT;
 
       livePointsRef.current = nextPoints;
@@ -3745,6 +3745,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         currentPoints={livePoints}
         isFreePointsPlan={isFreePointsPlan}
         freePointsLimit={FREE_POINTS_LIMIT}
+        planPointsLimit={planPointsLimit}
         onUpgrade={onUpgrade}
       />
     );
@@ -3771,7 +3772,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Pontos</div>
-                <div className="text-lg font-black leading-tight">{points} pts</div>
+                <div className="text-lg font-black leading-tight">{points.toLocaleString('pt-BR')} pts</div>
               </div>
             </div>
             <span className="text-[10px] font-black text-primary uppercase tracking-widest shrink-0">
@@ -3786,8 +3787,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
             />
           </div>
           <div className="flex items-center justify-between mt-2 text-[9px] font-black uppercase tracking-widest text-text-muted">
-            <span>{previousPointsMilestone}</span>
-            <span>{isFreePointsPlan ? `Fase 1: ${FREE_POINTS_LIMIT} pts` : `Meta ${nextPointsMilestone} pts`}</span>
+            <span>0</span>
+            <span>{isFreePointsPlan ? `Fase 1: ${FREE_POINTS_LIMIT.toLocaleString('pt-BR')} pts` : `Meta ${planPointsLimit.toLocaleString('pt-BR')} pts`}</span>
           </div>
           {freeTrainingPhaseComplete && (
             <button
@@ -5209,6 +5210,7 @@ function WorkoutDetailView({
   currentPoints,
   isFreePointsPlan,
   freePointsLimit,
+  planPointsLimit,
   onUpgrade
 }: {
   workout: Workout,
@@ -5220,6 +5222,7 @@ function WorkoutDetailView({
   currentPoints: number,
   isFreePointsPlan: boolean,
   freePointsLimit: number,
+  planPointsLimit: number,
   onUpgrade: () => void
 }) {
   const [exercises, setExercises] = useState(workout.exercises);
@@ -5232,7 +5235,6 @@ function WorkoutDetailView({
   const [isAwardingWorkout, setIsAwardingWorkout] = useState(false);
 
   const POINTS_PER_WORKOUT = 100;
-  const POINTS_MILESTONE_STEP = 100;
 
   useEffect(() => {
     setExercises(workout.exercises);
@@ -5261,15 +5263,9 @@ function WorkoutDetailView({
   const completedCount = completedExercises.length;
   const totalExercises = exercises.length || 1;
   const workoutProgress = Math.round((completedCount / totalExercises) * 100);
-  const reachedMilestone = isFreePointsPlan
-    ? Math.min(freePointsLimit, Math.max(POINTS_MILESTONE_STEP, Math.floor(displayPoints / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP))
-    : Math.max(POINTS_MILESTONE_STEP, Math.floor(displayPoints / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
-  const nextMilestone = isFreePointsPlan
-    ? freePointsLimit
-    : Math.max(POINTS_MILESTONE_STEP, Math.ceil((displayPoints + 1) / POINTS_MILESTONE_STEP) * POINTS_MILESTONE_STEP);
-  const previousMilestone = isFreePointsPlan ? 0 : Math.max(0, nextMilestone - POINTS_MILESTONE_STEP);
-  const milestoneProgress = Math.min(100, Math.round(((displayPoints - previousMilestone) / (nextMilestone - previousMilestone)) * 100));
+  const milestoneProgress = Math.min(100, Math.round((displayPoints / planPointsLimit) * 100));
   const freeLimitReached = isFreePointsPlan && displayPoints >= freePointsLimit;
+  const planLimitReached = displayPoints >= planPointsLimit;
   const isLimitNotice = pointsNoticeMode === 'limit';
   const isEarnedLimitNotice = pointsNoticeMode === 'earnedLimit';
   const isCompleteNotice = pointsNoticeMode === 'complete';
@@ -5283,7 +5279,7 @@ function WorkoutDetailView({
       setTimeout(() => setShowPointsNotice(false), 4500);
       return false;
     }
-    if (freeLimitReached && !hasAwardedPoints) {
+    if (planLimitReached && !hasAwardedPoints) {
       setPointsNoticeMode('limit');
       setShowPointsNotice(true);
       return false;
@@ -5449,11 +5445,17 @@ function WorkoutDetailView({
                 <div className="space-y-2">
                   <div className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">Parabéns</div>
                   <h2 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase">
-                    {isLimitNotice || isEarnedLimitNotice ? 'Primeira fase concluída!' : isCompleteNotice ? 'Treino já registrado!' : 'Treino concluído!'}
+                    {isLimitNotice
+                      ? isFreePointsPlan ? 'Primeira fase concluída!' : 'Meta do plano concluída!'
+                      : isEarnedLimitNotice ? 'Primeira fase concluída!'
+                      : isCompleteNotice ? 'Treino já registrado!'
+                      : 'Treino concluído!'}
                   </h2>
                   <p className="text-sm text-text-secondary leading-relaxed">
                     {isLimitNotice
-                      ? `Você chegou aos ${freePointsLimit} pontos e completou sua jornada inicial. Assine Pro ou Elite para continuar com novos protocolos e evolução contínua.`
+                      ? isFreePointsPlan
+                        ? `Você chegou aos ${freePointsLimit} pontos e completou sua jornada inicial. Assine Pro ou Elite para continuar com novos protocolos e evolução contínua.`
+                        : `Você alcançou a meta máxima de ${planPointsLimit.toLocaleString('pt-BR')} pontos do seu plano.`
                       : isEarnedLimitNotice
                       ? `Você ganhou +${POINTS_PER_WORKOUT} pontos e fechou a primeira fase do IronShape. Agora desbloqueie Pro ou Elite para seguir para a próxima etapa.`
                       : isCompleteNotice
@@ -5471,7 +5473,7 @@ function WorkoutDetailView({
                   <div className="flex items-center justify-center gap-3">
                     <Zap size={22} className="text-primary" />
                     <div className="text-5xl font-black text-primary tracking-tighter">
-                      {isLimitNotice ? freePointsLimit : isCompleteNotice ? displayPoints : `+${POINTS_PER_WORKOUT}`}
+                      {isLimitNotice ? planPointsLimit.toLocaleString('pt-BR') : isCompleteNotice ? displayPoints.toLocaleString('pt-BR') : `+${POINTS_PER_WORKOUT}`}
                     </div>
                     <span className="text-xs font-black uppercase tracking-widest text-text-muted">pts</span>
                   </div>
@@ -5480,7 +5482,7 @@ function WorkoutDetailView({
                 <div className="space-y-3 text-left">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Seu progresso</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{displayPoints} pts</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{displayPoints.toLocaleString('pt-BR')} pts</span>
                   </div>
                   <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
                     <motion.div
@@ -5491,12 +5493,12 @@ function WorkoutDetailView({
                     />
                   </div>
                   <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-text-muted">
-                    <span>{previousMilestone}</span>
-                    <span>{isFreePointsPlan ? `Fase 1: ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}</span>
+                    <span>0</span>
+                    <span>{isFreePointsPlan ? `Fase 1: ${freePointsLimit.toLocaleString('pt-BR')} pts` : `Meta ${planPointsLimit.toLocaleString('pt-BR')} pts`}</span>
                   </div>
                 </div>
 
-                {isLimitNotice || isEarnedLimitNotice ? (
+                {(isLimitNotice && isFreePointsPlan) || isEarnedLimitNotice ? (
                   <button
                     onClick={onUpgrade}
                     className="w-full min-h-[52px] bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-95"
@@ -5541,11 +5543,11 @@ function WorkoutDetailView({
               <Trophy size={18} className="text-primary" />
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Pontos</div>
-                <div className="text-sm font-black">{displayPoints} pts</div>
+                <div className="text-sm font-black">{displayPoints.toLocaleString('pt-BR')} pts</div>
               </div>
             </div>
             <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">
-              {isFreePointsPlan ? `Fase 1: ${freePointsLimit} pts` : `Meta ${nextMilestone} pts`}
+              {isFreePointsPlan ? `Fase 1: ${freePointsLimit.toLocaleString('pt-BR')} pts` : `Meta ${planPointsLimit.toLocaleString('pt-BR')} pts`}
             </span>
           </div>
           <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -6700,7 +6702,7 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
             </span>
           </div>
 
-          <div className="bg-surface p-6 sm:p-10 rounded-[32px] sm:rounded-[48px] border border-white/5 shadow-2xl space-y-10 relative z-10 h-auto overflow-visible">
+          <div className="bg-surface p-4 sm:p-10 rounded-[28px] sm:rounded-[48px] border border-white/5 shadow-2xl space-y-8 sm:space-y-10 relative z-10 h-auto overflow-visible">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {/* Calorias */}
               <div className="space-y-4">
@@ -6789,12 +6791,12 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
               ))}
             </div>
 
-            <div className="pt-6 border-t border-white/5">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-xs font-black uppercase tracking-widest text-text-muted">Refeições Registradas Hoje</h4>
+            <div className="pt-5 sm:pt-6 border-t border-white/5">
+              <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-3 mb-5 sm:mb-6">
+                <h4 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-text-muted">Refeições registradas hoje</h4>
                 <button
                   onClick={() => setIsAddMealModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
+                  className="w-full min-[380px]:w-auto min-h-[42px] flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
                 >
                   <Plus size={14} />
                   Adicionar Refeição
@@ -6829,17 +6831,17 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
               )}
 
               {/* AI Food Analyzer — always visible */}
-              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
                       <Zap size={16} />
                     </div>
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-primary leading-relaxed">
                         {isFreePlan ? 'Registrar refeição com IA' : 'Calcular macros com IA'}
                       </span>
-                      <p className="text-[10px] text-text-muted mt-0.5">
+                      <p className="text-[9px] sm:text-[10px] text-text-muted mt-1 leading-relaxed">
                         {isFreePlan
                           ? 'Descreva o que comeu e escolha uma porção. A IA estima os macros para voce.'
                           : 'Use gramas/ml para uma analise mais precisa de proteinas, carboidratos e gorduras.'}
@@ -6854,14 +6856,14 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                 </div>
 
                 {isFreePlan && (
-                  <div className="bg-background/70 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="bg-background/70 border border-white/10 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-text-primary">Quer pesar em gramas?</div>
                       <p className="text-[10px] text-text-muted mt-1">O registro exato por g/ml fica liberado nos planos Pro e Elite.</p>
                     </div>
                     <button
                       onClick={onUpgrade}
-                      className="px-4 py-2 bg-white/5 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all"
+                      className="w-full sm:w-auto min-h-[42px] px-4 py-2 bg-white/5 text-primary border border-primary/20 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all"
                     >
                       Liberar precisao
                     </button>
@@ -7048,8 +7050,21 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                     </div>
                   ))
                 ) : (
-                  <div className="py-4 text-center">
-                    <p className="text-text-muted font-bold text-sm uppercase tracking-widest">Nenhuma refeição registrada ainda.</p>
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-background/45 px-4 py-6 sm:p-7 text-center">
+                    <div className="w-11 h-11 mx-auto rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
+                      <Utensils size={20} />
+                    </div>
+                    <h5 className="mt-4 text-sm sm:text-base font-black tracking-tight text-text-primary">Nenhuma refeição registrada</h5>
+                    <p className="mt-1.5 mx-auto max-w-[260px] text-[11px] sm:text-xs leading-relaxed text-text-muted">
+                      Registre sua primeira refeição para acompanhar calorias e macros do dia.
+                    </p>
+                    <button
+                      onClick={() => setIsAddMealModalOpen(true)}
+                      className="mt-4 w-full sm:w-auto min-h-[44px] px-5 rounded-xl bg-white/5 border border-white/10 text-primary text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-white transition-all inline-flex items-center justify-center gap-2"
+                    >
+                      <Plus size={14} />
+                      Registrar refeição
+                    </button>
                   </div>
                 )}
               </div>
@@ -9541,55 +9556,64 @@ function PricingView({
     {
       id: 'Iniciante' as Plan,
       name: 'Iniciante',
+      eyebrow: 'Comece sem pagar',
       price: 'GRÁTIS',
       period: '',
-      description: 'Ideal para quem está começando sua jornada fitness.',
+      priceDetail: 'para sempre',
+      description: 'Crie sua base, organize a rotina e prove o método IronShape.',
       features: [
-        'Treinos de nível básico (Iniciante)',
-        'Calculadora de macros e nutrição',
-        'Dashboard de evolução de peso',
-        'Acesso à comunidade',
+        'Protocolos iniciais para casa, academia ou híbrido',
+        'Planejamento semanal com até 3 treinos',
+        'Calculadora e acompanhamento diário de macros',
+        '3 análises de refeições com IA por dia',
+        'Progresso corporal, pontos e comunidade',
         'Programa de afiliados'
       ],
       color: 'bg-white/5',
-      buttonText: currentPlan === 'Iniciante' ? 'Plano Atual' : 'Começar Agora'
+      buttonText: currentPlan === 'Iniciante' ? 'Plano Atual' : 'Começar Grátis'
     },
     {
       id: 'Pro' as Plan,
       name: 'Pro',
+      eyebrow: 'Melhor custo-benefício',
       price: hasReferral ? 'R$ 17,91' : 'R$ 19,90',
       originalPrice: hasReferral ? 'R$ 19,90' : null,
       period: '/mês',
-      description: 'Para quem busca performance e resultados consistentes.',
+      priceDetail: hasReferral ? 'menos de R$ 0,60 por dia' : 'menos de R$ 0,67 por dia',
+      description: 'Evolução contínua com IA, nutrição precisa e protocolos completos.',
       features: [
-        'Tudo do Iniciante',
-        'Treinos intermediários (Protocolo Pro)',
-        'IA Adaptativa — treinos gerados por IA',
-        'Histórico completo de treinos',
-        'Ranking global de pontos',
-        'Evolução de peso com filtros 7D / 1M / 6M'
+        'Tudo do plano Grátis',
+        'Protocolos Pro para casa e academia',
+        'Iron Coach IA 24h para adaptar seu treino',
+        'Planejamento semanal com até 5 treinos',
+        'Análises nutricionais ilimitadas por g/ml',
+        'Registro de cargas e histórico completo',
+        'Ranking global e evolução contínua'
       ],
       color: 'bg-primary/10 border-primary/30',
       highlight: true,
-      buttonText: currentPlan === 'Pro' ? 'Plano Atual' : 'Fazer Upgrade'
+      buttonText: currentPlan === 'Pro' ? 'Plano Atual' : 'Quero Evoluir com o Pro'
     },
     {
       id: 'Elite' as Plan,
       name: 'Elite',
+      eyebrow: 'Experiência completa',
       price: hasReferral ? 'R$ 26,91' : 'R$ 29,90',
       originalPrice: hasReferral ? 'R$ 29,90' : null,
       period: '/mês',
-      description: 'O protocolo definitivo para atletas e entusiastas de elite.',
+      priceDetail: hasReferral ? 'menos de R$ 0,90 por dia' : 'menos de R$ 1 por dia',
+      description: 'Máximo controle para quem quer treinar sem limites e ir além.',
       features: [
         'Tudo do Pro',
-        'Treinos avançados (Protocolo Elite)',
-        'Planilha Atleta semanal',
-        'Acesso antecipado a novos treinos',
+        'Protocolos Elite avançados e de competição',
+        'Rotina completa com até 7 treinos por semana',
+        'Planilha do Atleta para organizar sua semana',
         'Edição e personalização de treinos',
-        'Protocolos de Competição'
+        'Mobilidade e alongamento em nível avançado',
+        'Acesso antecipado aos novos protocolos'
       ],
       color: 'bg-white/5',
-      buttonText: currentPlan === 'Elite' ? 'Plano Atual' : 'Seja Elite'
+      buttonText: currentPlan === 'Elite' ? 'Plano Atual' : 'Quero a Experiência Completa'
     }
   ];
 
@@ -9695,7 +9719,10 @@ function PricingView({
             <ArrowLeft size={20} />
             Voltar ao Dashboard
           </button>
-          <h1 className="text-3xl md:text-6xl font-black tracking-tighter uppercase">Escolha seu Protocolo</h1>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.22em]">
+            <Zap size={14} /> Um plano para cada fase da sua evolução
+          </div>
+          <h1 className="text-3xl md:text-6xl font-black tracking-tighter uppercase">Escolha como você quer evoluir</h1>
           {hasReferral && (
             <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-500 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border border-green-500/20">
               <Check size={14} /> Desconto de 10% Aplicado via Indicação
@@ -9704,34 +9731,38 @@ function PricingView({
           <p className="text-text-secondary text-base md:text-lg max-w-2xl mx-auto">
             {initialCheckoutPlan && initialCheckoutPlan !== 'Iniciante'
               ? `Estamos preparando o checkout do plano ${initialCheckoutPlan}. O acesso premium só libera após o pagamento aprovado.`
-              : 'Selecione o plano que melhor se adapta aos seus objetivos e comece sua transformação hoje mesmo.'}
+              : 'Comece grátis ou acelere seus resultados com IA, nutrição precisa e protocolos que acompanham o seu nível.'}
           </p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
           {plans.map((plan) => (
             <motion.div
               key={plan.id}
               whileHover={{ y: -10 }}
-              className={`relative p-8 md:p-10 rounded-[32px] md:rounded-[48px] border flex flex-col justify-between gap-8 transition-all duration-500 ${
+              className={`relative p-7 lg:p-9 rounded-[32px] md:rounded-[40px] border flex flex-col justify-between gap-8 transition-all duration-500 ${
                 plan.highlight 
                   ? 'bg-surface border-primary shadow-2xl shadow-primary/20' 
                   : 'bg-surface/40 border-white/5 hover:border-white/10'
               }`}
             >
+              {plan.highlight && <div className="absolute inset-x-0 top-0 h-1 bg-primary" />}
               {plan.highlight && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-text-primary text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/30">
-                  POPULAR
+                  Mais escolhido
                 </div>
               )}
 
               <div className="space-y-6">
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${plan.highlight ? 'text-primary' : 'text-text-muted'}`}>
+                    {plan.eyebrow}
+                  </span>
                   <h3 className="text-2xl font-black uppercase tracking-tight">{plan.name}</h3>
-                  <p className="text-sm text-text-muted leading-relaxed">{plan.description}</p>
+                  <p className="text-sm text-text-secondary leading-relaxed min-h-[44px]">{plan.description}</p>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-2 pb-2 border-b border-white/5">
                   {plan.originalPrice && (
                     <span className="text-sm text-text-muted line-through font-bold">{plan.originalPrice}</span>
                   )}
@@ -9739,13 +9770,16 @@ function PricingView({
                     <span className="text-4xl font-black">{plan.price}</span>
                     <span className="text-text-muted font-bold">{plan.period}</span>
                   </div>
+                  <p className="text-[10px] text-text-muted font-black uppercase tracking-widest">{plan.priceDetail}</p>
                 </div>
 
-                <div className="space-y-4 pt-4">
+                <div className="space-y-4 pt-2">
                   {plan.features.map((feature, i) => (
-                    <div key={i} className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 size={18} className="text-primary shrink-0" />
-                      <span className="text-text-secondary">{feature}</span>
+                    <div key={i} className="flex items-start gap-3 text-sm">
+                      <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${plan.highlight ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                      <span className={`${i === 0 && plan.id !== 'Iniciante' ? 'text-text-primary font-bold' : 'text-text-secondary'} leading-relaxed`}>{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -9754,7 +9788,7 @@ function PricingView({
               <button
                 onClick={() => handleUpgrade(plan.id)}
                 disabled={isProcessing || ((plan.id !== 'Elite' && plan.id !== 'Pro') && currentPlan === plan.id)}
-                className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
+                className={`w-full min-h-[58px] px-4 py-4 rounded-2xl font-black text-[10px] lg:text-xs uppercase tracking-wider transition-all active:scale-95 ${
                   plan.buttonText === 'Plano Atual'
                     ? 'bg-white text-black border border-white cursor-default'
                     : plan.highlight
@@ -9768,8 +9802,10 @@ function PricingView({
           ))}
         </div>
 
-        <div className="text-center text-text-muted text-xs">
-          <p>Pagamento seguro e processamento criptografado. Cancele quando quiser.</p>
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-text-muted text-xs font-bold">
+          <span className="flex items-center gap-2"><ShieldCheck size={15} className="text-success" /> Pagamento seguro</span>
+          <span className="flex items-center gap-2"><Check size={15} className="text-success" /> Acesso liberado após aprovação</span>
+          <span className="flex items-center gap-2"><RefreshCw size={15} className="text-success" /> Cancele quando quiser</span>
         </div>
       </div>
 

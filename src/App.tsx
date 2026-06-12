@@ -6045,7 +6045,9 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
 }) {
   const { isAdmin, simulatedPlan } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
-  const hasIronCoachAccess = effectivePlan === 'Pro' || effectivePlan === 'Elite' || effectivePlan === 'Admin' || isAdmin;
+  const hasIronCoachAccess = simulatedPlan
+    ? simulatedPlan === 'Pro' || simulatedPlan === 'Elite' || simulatedPlan === 'Admin'
+    : effectivePlan === 'Pro' || effectivePlan === 'Elite' || effectivePlan === 'Admin' || isAdmin;
 
   type MacroResults = {
     bmr: number;

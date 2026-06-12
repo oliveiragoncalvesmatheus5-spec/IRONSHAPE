@@ -6105,6 +6105,20 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
 
   const [calcData, setCalcData] = useState<NutritionCalcData>(savedProtocol?.calcData || defaultCalcData);
   const [results, setResults] = useState<MacroResults | null>(savedProtocol?.results || null);
+  const [showCoachUpgradeModal, setShowCoachUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    if (!showCoachUpgradeModal) return;
+    trackEvent('nutrition_iron_coach_upgrade_view', {
+      plan: effectivePlan,
+      goal: calcData.goal,
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowCoachUpgradeModal(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showCoachUpgradeModal, effectivePlan, calcData.goal]);
 
   const mealPlanStorageKey = `meal_plan_${profile.id}`;
   const favoriteFoodsKey = `nutrition_favorites_${profile.id}`;
@@ -6732,7 +6746,7 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                           has_access: hasIronCoachAccess,
                         });
                         if (!hasIronCoachAccess) {
-                          onUpgrade();
+                          setShowCoachUpgradeModal(true);
                           return;
                         }
                         const goalLabel = calcData.goal === 'lose' ? 'emagrecer' : calcData.goal === 'gain' ? 'ganhar massa' : 'manter o peso';
@@ -7457,6 +7471,82 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
           </div>
         </section>
       )}
+
+      <AnimatePresence>
+        {showCoachUpgradeModal && (
+          <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCoachUpgradeModal(false)}
+              className="absolute inset-0 bg-background/90 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 48, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 48, scale: 0.98 }}
+              transition={{ duration: 0.22 }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="nutrition-coach-upgrade-title"
+              className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-zinc-950 border border-white/10 border-b-0 sm:border-b rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 sm:p-8"
+            >
+              <button
+                onClick={() => setShowCoachUpgradeModal(false)}
+                aria-label="Fechar"
+                className="absolute top-5 right-5 w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary hover:bg-white/10 transition-all flex items-center justify-center"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="space-y-6 pr-10">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-lg shadow-primary/10">
+                  <Lock size={25} />
+                </div>
+                <div className="space-y-3">
+                  <span className="inline-flex px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.2em]">
+                    Recurso exclusivo Pro
+                  </span>
+                  <h3 id="nutrition-coach-upgrade-title" className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-tight">
+                    Entenda seu protocolo com o Iron Coach
+                  </h3>
+                  <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
+                    Seu protocolo já está pronto. No plano Pro, o Iron Coach explica suas calorias e macros, responde suas dúvidas e ajuda você a aplicar tudo na rotina.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-7 space-y-3">
+                <button
+                  onClick={() => {
+                    trackEvent('nutrition_iron_coach_upgrade_confirm', {
+                      plan: effectivePlan,
+                      goal: calcData.goal,
+                    });
+                    setShowCoachUpgradeModal(false);
+                    onUpgrade();
+                  }}
+                  className="w-full min-h-[52px] px-5 rounded-2xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-primary/20"
+                >
+                  Desbloquear Iron Coach
+                  <ArrowRight size={16} />
+                </button>
+                <button
+                  onClick={() => setShowCoachUpgradeModal(false)}
+                  className="w-full min-h-[48px] px-5 rounded-2xl bg-white/5 border border-white/10 text-text-secondary text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-text-primary transition-all"
+                >
+                  Continuar com meu protocolo
+                </button>
+              </div>
+
+              <p className="mt-6 pt-5 border-t border-white/5 text-[10px] sm:text-xs text-text-muted leading-relaxed">
+                Orientações educativas que não substituem o acompanhamento de um nutricionista.
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -471,6 +471,7 @@ export default function AIChat({
   const [history, setHistory] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const consumedPendingPrompt = useRef(false);
 
   const isPro = hasPaidAccess(profile) || isAdmin;
 
@@ -510,6 +511,16 @@ export default function AIChat({
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!profile || !aiProfile || loading || consumedPendingPrompt.current) return;
+    const key = `ironcoach_pending_prompt_${profile.id}`;
+    const pendingPrompt = localStorage.getItem(key);
+    if (!pendingPrompt) return;
+    consumedPendingPrompt.current = true;
+    localStorage.removeItem(key);
+    void handleSend(pendingPrompt);
+  }, [profile?.id, aiProfile, loading]);
 
   function handleReset() {
     if (!profile) return;

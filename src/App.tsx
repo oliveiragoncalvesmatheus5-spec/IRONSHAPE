@@ -1066,7 +1066,18 @@ export default function App() {
               />
             )}
             {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => openPricing('workouts')} /></ViewErrorBoundary>}
-            {activeTab === 'nutrition' && <NutritionView profile={profile} onUpgrade={() => openPricing('nutrition')} updateProfile={updateProfile} />}
+            {activeTab === 'nutrition' && (
+              <NutritionView
+                profile={profile}
+                onUpgrade={() => openPricing('nutrition_iron_coach')}
+                updateProfile={updateProfile}
+                onOpenIronCoach={(prompt) => {
+                  localStorage.setItem(`ironcoach_pending_prompt_${profile.id}`, prompt);
+                  localStorage.setItem('ironshape_pending_workouts_tab', 'ia');
+                  setActiveTab('workouts');
+                }}
+              />
+            )}
             {activeTab === 'progress' && <BodyProgressView userId={profile.id} />}
             {activeTab === 'community' && <CommunityView profile={profile} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} />}
@@ -3404,6 +3415,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
   const [livePoints, setLivePoints] = useState(profile.points || 0);
   const livePointsRef = useRef(profile.points || 0);
   const reconciledCompletedPointsRef = useRef(false);
+
+  useEffect(() => {
+    if (localStorage.getItem('ironshape_pending_workouts_tab') !== 'ia') return;
+    localStorage.removeItem('ironshape_pending_workouts_tab');
+    setSelectedPlanTab(effectivePlan === 'Elite' ? 'Elite' : 'Pro');
+    setActiveSubTab('ia');
+  }, [effectivePlan]);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
@@ -6019,9 +6037,15 @@ function BodyProgressView({ userId }: { userId: string }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserProfile, onUpgrade: () => void, updateProfile: (u: Partial<UserProfile>) => Promise<void> }) {
+function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
+  profile: UserProfile;
+  onUpgrade: () => void;
+  updateProfile: (u: Partial<UserProfile>) => Promise<void>;
+  onOpenIronCoach: (prompt: string) => void;
+}) {
   const { isAdmin, simulatedPlan } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
+  const hasIronCoachAccess = effectivePlan === 'Pro' || effectivePlan === 'Elite' || effectivePlan === 'Admin' || isAdmin;
 
   type MacroResults = {
     bmr: number;
@@ -6680,6 +6704,56 @@ function NutritionView({ profile, onUpgrade, updateProfile }: { profile: UserPro
                       Mantenha a consistência por pelo menos 14 dias para observar as primeiras adaptações metabólicas.
                     </p>
                   </div>
+                </div>
+
+                <div className="p-5 sm:p-7 rounded-[24px] sm:rounded-[32px] border border-primary/20 bg-gradient-to-br from-primary/10 via-white/[0.03] to-transparent shadow-xl shadow-primary/5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                    <div className="p-4 bg-primary/10 rounded-2xl text-primary border border-primary/20 shrink-0 self-start">
+                      {hasIronCoachAccess ? <Zap size={26} /> : <Lock size={26} />}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">Ficou com alguma dúvida?</h4>
+                        {!hasIronCoachAccess && (
+                          <span className="px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">
+                            Recurso Pro
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-text-secondary text-sm leading-relaxed">
+                        O Iron Coach explica suas calorias e macros e ajuda a aplicar este protocolo na rotina.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        trackEvent('nutrition_iron_coach_click', {
+                          plan: effectivePlan,
+                          goal: calcData.goal,
+                          has_access: hasIronCoachAccess,
+                        });
+                        if (!hasIronCoachAccess) {
+                          onUpgrade();
+                          return;
+                        }
+                        const goalLabel = calcData.goal === 'lose' ? 'emagrecer' : calcData.goal === 'gain' ? 'ganhar massa' : 'manter o peso';
+                        onOpenIronCoach(
+                          `Analise meu protocolo nutricional e explique de forma simples. Meu objetivo é ${goalLabel}. ` +
+                          `Dados: ${calcData.weight} kg, ${calcData.height} cm, ${calcData.age} anos, ` +
+                          `atividade ${calcData.activityLevel}, TMB ${results.bmr} kcal, TDEE ${results.tdee} kcal, ` +
+                          `meta ${results.calories} kcal, proteínas ${results.protein} g, carboidratos ${results.carbs} g e gorduras ${results.fat} g. ` +
+                          `Explique por que esses valores foram sugeridos, como distribuí-los nas refeições e quais sinais indicam necessidade de ajuste. ` +
+                          `Trate como orientação educativa e recomende acompanhamento profissional em caso de condição clínica.`
+                        );
+                      }}
+                      className="w-full sm:w-auto min-h-[50px] px-5 rounded-2xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover active:scale-[0.98] transition-all flex items-center justify-center gap-2 shrink-0"
+                    >
+                      {hasIronCoachAccess ? 'Conversar com o Iron Coach' : 'Desbloquear Iron Coach'}
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                  <p className="mt-4 text-[10px] sm:text-xs text-text-muted leading-relaxed border-t border-white/5 pt-4">
+                    Orientações educativas. Para diagnóstico, condições clínicas ou plano alimentar individual, consulte um nutricionista.
+                  </p>
                 </div>
               </div>
             )}

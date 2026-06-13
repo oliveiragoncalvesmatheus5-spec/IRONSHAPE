@@ -23,6 +23,9 @@ const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_p
 const ADMIN_EMAIL = "carlosalbertojuniorourak@gmail.com";
 const SUPABASE_PROJECT_URL = process.env.VITE_SUPABASE_URL || "https://olelsxjkoktjabyfgtoo.supabase.co";
 const SUPABASE_PUBLIC_KEY = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_Kah8D1eadG41rgfXhnztIQ_s4qc2ax9";
+const EXERCISE_MEDIA_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+const EXERCISE_MEDIA_EMPTY_CACHE_TTL = 60 * 60 * 1000;
+const exerciseMediaCache = new Map<string, { expiresAt: number; data: any[] }>();
 
 function getPlanValue(plan: string) {
   if (plan === "Pro") return 19.9;
@@ -515,6 +518,13 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
   app.get("/api/workout-gif", async (req, res) => {
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
+    const cacheKey = name.toLowerCase().trim();
+    const cached = exerciseMediaCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.setHeader("X-Exercise-Media-Cache", "HIT");
+      return res.json(cached.data);
+    }
+    if (cached) exerciseMediaCache.delete(cacheKey);
 
     const rapidApiKey = process.env.RAPIDAPI_KEY;
     const rapidHost = process.env.RAPIDAPI_HOST || "edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
@@ -593,14 +603,20 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     };
 
     const fetchExerciseDetail = async (item: any) => {
-      if (!rapidHost.includes("ascendapi") || !item?.exerciseId) return item;
+      if (!rapidHost.includes("ascendapi") || !item?.exerciseId || pickMedia(item)) return item;
       try {
         const url = `https://${rapidHost}/api/v1/exercises/${encodeURIComponent(item.exerciseId)}`;
         const response = await fetch(url, { headers: rapidHeaders });
+        if (response.status === 429) {
+          const error: any = new Error("Cota mensal da API de exercícios atingida.");
+          error.status = 429;
+          throw error;
+        }
         if (!response.ok) return item;
         const payload = await response.json();
         return { ...item, ...(payload?.data || payload) };
       } catch (error: any) {
+        if (error?.status === 429) throw error;
         console.warn(`[workout-gif] Detail fetch failed for ${item.exerciseId}:`, error?.message);
         return item;
       }
@@ -655,15 +671,26 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       console.log(`[workout-gif] Searching ${rapidHost} for: "${searchName}"`);
       const response = await fetch(url, { headers: rapidHeaders });
       const data = await response.json();
-      const listBase = pickArray(data).map(normalizeMediaResult);
-      const detailLimit = rapidHost.includes("ascendapi") ? 8 : 5;
-      const list = (await Promise.all(listBase.slice(0, detailLimit).map(fetchExerciseDetail)))
+      if (response.status === 429) {
+        const error: any = new Error("Cota mensal da API de exercícios atingida.");
+        error.status = 429;
+        throw error;
+      }
+      if (!response.ok) return null;
+
+      const listBase = pickArray(data)
+        .map(normalizeMediaResult)
+        .map((item: any) => ({ ...item, matchScore: scoreResult(item, searchName) }))
+        .sort((a, b) => b.matchScore - a.matchScore);
+      const detailLimit = rapidHost.includes("ascendapi") ? 3 : 2;
+      const detailCandidates = listBase.filter((item: any) => item.matchScore >= 12).slice(0, detailLimit);
+      const list = (await Promise.all(detailCandidates.map(fetchExerciseDetail)))
         .map(normalizeMediaResult)
         .map((item: any) => ({ ...item, provider: "rapidapi", matchScore: scoreResult(item, searchName) }))
         .sort((a, b) => b.matchScore - a.matchScore);
       const safeList = list.filter((item: any) => item.matchScore >= 35);
       console.log(`[workout-gif] Status: ${response.status}, Results: ${list.length}, Safe: ${safeList.length}`);
-      if (response.ok && safeList.length > 0) return { status: response.status, data: safeList.slice(0, 5) };
+      if (safeList.length > 0) return { status: response.status, data: safeList.slice(0, 5) };
       return null;
     };
 
@@ -728,11 +755,16 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
         if (result) break;
       }
 
-      if (result) return res.status(result.status).json(result.data);
-      return res.json([]);
+      const data = result?.data || [];
+      exerciseMediaCache.set(cacheKey, {
+        data,
+        expiresAt: Date.now() + (data.length > 0 ? EXERCISE_MEDIA_CACHE_TTL : EXERCISE_MEDIA_EMPTY_CACHE_TTL),
+      });
+      res.setHeader("X-Exercise-Media-Cache", "MISS");
+      return res.status(result?.status || 200).json(data);
     } catch (error: any) {
       console.error(`[workout-gif] Error for "${name}":`, error.message);
-      return res.status(500).json({ error: error.message });
+      return res.status(error?.status || 500).json({ error: error.message });
     }
   });
 

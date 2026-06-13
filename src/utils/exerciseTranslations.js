@@ -73,10 +73,18 @@ export const exerciseTranslations = {
 
   // Pro
   "agachamento búlgaro":                             "bulgarian split squat",
+  "passada caminhando":                              "walking lunge",
   "leg press 45 (pés baixos)":                       "leg press",
+  "leg press horizontal":                            "leg press",
   "cadeira extensora (drop-set)":                    "leg extension",
   "stiff com barra":                                 "romanian deadlift",
+  "mesa flexora":                                    "lying leg curl",
+  "flexora unilateral":                              "single leg curl",
   "hip thrust com barra":                            "barbell hip thrust",
+  "elevação pélvica unilateral":                     "single leg glute bridge",
+  "cadeira abdutora":                                "seated hip abduction",
+  "coice na polia":                                  "cable glute kickback",
+  "abdução de quadril na polia":                     "cable hip abduction",
   "avanço com halteres":                             "dumbbell lunge",
 
   // Elite

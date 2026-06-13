@@ -7,6 +7,23 @@ import { ALL_WORKOUTS } from './data/workouts';
 import { PHYSICAL_LIMITATION_OPTIONS } from './data/physicalLimitations';
 import { sendMessage, AIProfile, Message } from './services/claudeService';
 
+const IRON_COACH_LIMITATION_OPTIONS = PHYSICAL_LIMITATION_OPTIONS.filter(option => ![
+  'Costas/dorsal',
+  'Cervical/pescoço',
+  'Cotovelo',
+  'Punho/mão',
+  'Quadril',
+  'Tornozelo',
+  'Pé/fascite plantar',
+  'Dor ciática',
+  'Tendinite/bursite',
+  'Artrose/artrite',
+  'Pós-cirúrgico',
+  'Asma/respiratória',
+  'Gestação/pós-parto',
+  'Mais de uma limitação',
+].includes(option));
+
 // ─── Onboarding config ────────────────────────────────────────────────────────
 
 const STEPS = [
@@ -29,7 +46,7 @@ const STEPS = [
     title: 'Você tem alguma limitação física?',
     subtitle: 'Selecione todas que se aplicam.',
     type: 'multi' as const,
-    options: PHYSICAL_LIMITATION_OPTIONS,
+    options: IRON_COACH_LIMITATION_OPTIONS,
   },
   {
     id: 'priorityMuscles',
@@ -209,9 +226,9 @@ function Onboarding({ onComplete }: { onComplete: (answers: Record<string, strin
   const isLast = step === STEPS.length - 1;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-4 sm:mb-8 flex-shrink-0">
         <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
           <Sparkles size={20} className="text-primary" />
         </div>
@@ -222,7 +239,7 @@ function Onboarding({ onComplete }: { onComplete: (answers: Record<string, strin
       </div>
 
       {/* Progress */}
-      <div className="flex gap-1.5 mb-8">
+      <div className="flex gap-1.5 mb-5 sm:mb-8 flex-shrink-0">
         {STEPS.map((_, i) => (
           <div
             key={i}
@@ -239,12 +256,12 @@ function Onboarding({ onComplete }: { onComplete: (answers: Record<string, strin
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.2 }}
-          className="flex-1 flex flex-col"
+          className="flex-1 min-h-0 flex flex-col"
         >
           <h3 className="text-text-primary font-bold text-xl mb-1">{current.title}</h3>
           <p className="text-text-muted text-sm mb-6">{current.subtitle}</p>
 
-          <div className="flex flex-col gap-3 flex-1">
+          <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 pb-2">
             {current.options.map(option => (
               <OptionButton
                 key={option}
@@ -262,7 +279,7 @@ function Onboarding({ onComplete }: { onComplete: (answers: Record<string, strin
       <button
         onClick={next}
         disabled={!canAdvance()}
-        className={`mt-8 w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200
+        className={`mt-4 sm:mt-8 w-full min-h-[56px] px-5 py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 flex-shrink-0 touch-manipulation
           ${canAdvance()
             ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]'
             : 'bg-white/5 text-text-muted cursor-not-allowed'

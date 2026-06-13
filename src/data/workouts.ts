@@ -1706,38 +1706,37 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "ex-20",
-        name: "Agachamento Búlgaro",
+        name: "Agachamento Livre",
         series: 4,
-        reps: "10 cada",
+        reps: "8-10",
         restTime: "90s",
         muscleGroup: "Pernas",
-        description: "Foco em equilíbrio e força unilateral no quadríceps.",
-        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-bulgarian-split-squat-23439-large.mp4",
-        thumbnail: "https://images.pexels.com/photos/4162454/pexels-photo-4162454.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        description: "Movimento base para desenvolver força e massa nos quadríceps com técnica controlada.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
-          "Apoie o pé traseiro em um banco ou superfície elevada atrás de você.",
-          "Posicione o pé da frente à frente o suficiente para manter o joelho atrás da linha dos dedos.",
-          "Desça o quadril em direção ao chão flexionando o joelho da frente a 90 graus.",
-          "Empurre com o calcanhar do pé da frente para retornar à posição inicial."
+          "Posicione os pés na largura dos ombros e mantenha o peito elevado.",
+          "Ative o abdômen antes de iniciar a descida.",
+          "Flexione joelhos e quadril até atingir uma amplitude confortável.",
+          "Empurre o chão com os pés para retornar sem deixar os joelhos fecharem."
         ],
         proTips: [
-          "Tronco ereto = mais quadríceps. Tronco inclinado = mais glúteos.",
-          "Segure halteres nas laterais para aumentar a carga."
+          "Aumente a carga somente quando conseguir repetir a mesma amplitude.",
+          "Mantenha os joelhos alinhados com a direção dos pés."
         ],
         commonErrors: [
-          "Deixar o joelho da frente colapsar para dentro.",
-          "Posicionar o pé da frente muito perto do banco, sobrecarregando o joelho.",
-          "Não atingir a profundidade suficiente."
+          "Arredondar a lombar durante a descida.",
+          "Levantar os calcanhares ou deixar os joelhos colapsarem para dentro."
         ]
       },
       {
         id: "ex-pro-q-2",
-        name: "Leg Press 45 (Pés Baixos)",
+        name: "Leg Press 45°",
         series: 4,
         reps: "10-12",
         restTime: "90s",
         muscleGroup: "Pernas",
-        description: "Pés baixos na plataforma = foco máximo no quadríceps.",
+        description: "Sobrecarga estável para quadríceps, com amplitude controlada e lombar apoiada.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-press-in-gym-23429-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
@@ -1757,27 +1756,52 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
       },
       {
         id: "ex-pro-q-3",
-        name: "Cadeira Extensora (Drop-set)",
-        series: 3,
-        reps: "12+12",
-        restTime: "75s",
+        name: "Cadeira Extensora",
+        series: 4,
+        reps: "12-15",
+        restTime: "60s",
         muscleGroup: "Pernas",
-        description: "Drop-set para exaustão total do quadríceps — sem descanso entre as cargas.",
+        description: "Isolamento do quadríceps com controle na subida e na descida.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-extensions-23430-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3837757/pexels-photo-3837757.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
-          "Execute 12 reps na carga normal com técnica perfeita.",
-          "Reduza imediatamente a carga em 30% sem descanso.",
-          "Execute mais 12 reps até a falha.",
-          "Contraia o quadríceps no pico de cada repetição por 1 segundo."
+          "Ajuste o banco para alinhar os joelhos ao eixo da máquina.",
+          "Estenda as pernas sem bater ou travar os joelhos.",
+          "Contraia o quadríceps no topo por 1 segundo.",
+          "Retorne lentamente mantendo a tensão muscular."
         ],
         proTips: [
-          "Tenha um parceiro para ajustar o pino da carga rapidamente.",
-          "A cadência lenta na descida maximiza a ativação do quadríceps."
+          "Use uma carga que permita completar toda a amplitude.",
+          "A cadência lenta na descida aumenta o controle."
         ],
         commonErrors: [
-          "Descansar entre as reduções de carga, quebrando o drop-set.",
-          "Usar impulso para completar as últimas reps."
+          "Tirar o quadril do banco para levantar a carga.",
+          "Deixar o peso cair rapidamente na descida."
+        ]
+      },
+      {
+        id: "ex-pro-q-4",
+        name: "Agachamento Goblet",
+        series: 3,
+        reps: "12",
+        restTime: "75s",
+        muscleGroup: "Pernas",
+        description: "Agachamento frontal com halter para reforçar amplitude, postura e controle do quadríceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Segure um halter junto ao peito com as duas mãos.",
+          "Mantenha os pés firmes e o abdômen contraído.",
+          "Desça entre as pernas mantendo o tronco ereto.",
+          "Suba empurrando o chão sem afastar o halter do corpo."
+        ],
+        proTips: [
+          "Use como finalizador com execução lenta e amplitude confortável.",
+          "Elevar levemente os calcanhares pode aumentar o foco no quadríceps."
+        ],
+        commonErrors: [
+          "Afastar o peso do peito e perder a postura.",
+          "Descer rápido demais ou deixar os joelhos fecharem."
         ]
       }
     ]
@@ -2499,44 +2523,44 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
     exercises: [
       {
         id: "ex-pro-pq-1",
-        name: "Leg Press 45°",
+        name: "Agachamento Búlgaro",
         series: 4,
-        reps: "12",
+        reps: "10 cada perna",
         restTime: "90s",
         muscleGroup: "Pernas",
-        description: "Agachamento na máquina para sobrecarga segura nos quadríceps.",
-        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
-        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        description: "Exercício unilateral para quadríceps, estabilidade e correção de assimetrias.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-bulgarian-split-squat-23439-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162454/pexels-photo-4162454.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
-          "Sente-se no leg press com os pés na plataforma na largura dos ombros.",
-          "Desça a plataforma controladamente até os joelhos formarem 90 graus.",
-          "Empurre a plataforma de volta sem travar completamente os joelhos no topo.",
-          "Mantenha a lombar encostada no encosto durante todo o movimento."
+          "Apoie o pé traseiro em um banco e firme o pé da frente.",
+          "Mantenha o tronco ereto para aumentar o foco no quadríceps.",
+          "Desça o joelho traseiro em direção ao chão.",
+          "Suba pressionando o calcanhar do pé da frente."
         ],
         proTips: [
-          "Pés mais altos na plataforma ativam mais os glúteos e posteriores.",
-          "Pés mais baixos intensificam o trabalho dos quadríceps."
+          "Comece sem carga para encontrar a distância correta do banco.",
+          "Complete todas as repetições de um lado antes de trocar."
         ],
         commonErrors: [
-          "Deixar os joelhos colapsarem durante o empurrão.",
-          "Retirar a lombar do encosto ao descer com carga pesada."
+          "Posicionar o pé da frente muito perto do banco.",
+          "Deixar o joelho da frente colapsar para dentro."
         ]
       },
       {
         id: "ex-pro-pq-2",
-        name: "Avanço com Halteres",
+        name: "Passada Caminhando",
         series: 4,
         reps: "10 cada perna",
         restTime: "75s",
         muscleGroup: "Pernas",
-        description: "Exercício unilateral para equilíbrio e força funcional.",
+        description: "Passadas alternadas para quadríceps, equilíbrio e coordenação.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
           "Fique em pé segurando um halter em cada mão ao lado do corpo.",
           "Dê um passo à frente e desça o joelho traseiro em direção ao chão.",
           "O joelho da frente deve ficar alinhado com o tornozelo — não ultrapasse.",
-          "Empurre com o calcanhar da frente para voltar à posição inicial."
+          "Empurre com o calcanhar da frente e avance diretamente para a próxima passada."
         ],
         proTips: [
           "Mantenha o tronco ereto durante todo o movimento.",
@@ -2549,27 +2573,27 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
       },
       {
         id: "ex-pro-pq-3",
-        name: "Cadeira Extensora",
-        series: 3,
-        reps: "15",
-        restTime: "60s",
+        name: "Leg Press Horizontal",
+        series: 4,
+        reps: "12-15",
+        restTime: "90s",
         muscleGroup: "Pernas",
-        description: "Isolamento do quadríceps em amplitude completa.",
-        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
-        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        description: "Pressão horizontal com estabilidade para acumular volume nos quadríceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-press-in-gym-23429-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
-          "Sente-se na cadeira extensora com os pés posicionados sob o rolo.",
-          "Estenda as pernas até a posição horizontal, contraindo o quadríceps no topo.",
-          "Segure a contração por 1 segundo antes de descer.",
-          "Desça lentamente até 90 graus — não solte o peso."
+          "Ajuste o assento para manter a lombar totalmente apoiada.",
+          "Posicione os pés na largura dos ombros na plataforma.",
+          "Empurre sem travar completamente os joelhos.",
+          "Retorne de forma controlada até uma amplitude confortável."
         ],
         proTips: [
-          "Fase excêntrica lenta (3-4 segundos) maximiza o crescimento muscular.",
-          "Mantenha os pés em posição neutra para trabalho equilibrado do quadríceps."
+          "Mantenha os pés um pouco mais baixos para enfatizar quadríceps.",
+          "Controle a volta por 2-3 segundos."
         ],
         commonErrors: [
-          "Usar impulso do tronco para erguer o peso.",
-          "Não atingir a extensão completa no topo."
+          "Retirar o quadril ou a lombar do encosto.",
+          "Travar os joelhos no final do empurrão."
         ]
       }
     ]

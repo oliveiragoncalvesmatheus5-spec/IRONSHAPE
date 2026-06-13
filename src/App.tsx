@@ -8877,6 +8877,10 @@ function AdminView() {
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [adminError, setAdminError] = useState('');
   const [showAllUsers, setShowAllUsers] = useState(false);
+  const [planUser, setPlanUser] = useState<UserProfile | null>(null);
+  const [selectedAdminPlan, setSelectedAdminPlan] = useState<'free' | 'Pro' | 'Elite'>('free');
+  const [savingUserPlan, setSavingUserPlan] = useState(false);
+  const [userPlanError, setUserPlanError] = useState('');
   const [adminData, setAdminData] = useState<{
     profiles: UserProfile[];
     workouts: WorkoutLog[];
@@ -8930,12 +8934,57 @@ function AdminView() {
     if (adminTab === 'general') fetchAdminData();
   }, [adminTab]);
 
+  const normalizeAdminPlan = (plan?: Plan): 'free' | 'Pro' | 'Elite' | 'Admin' => {
+    if (plan === 'Pro' || plan === 'Elite' || plan === 'Admin') return plan;
+    return 'free';
+  };
+
+  const openPlanManager = (target: UserProfile) => {
+    const currentPlan = normalizeAdminPlan(target.plano);
+    setPlanUser(target);
+    setSelectedAdminPlan(currentPlan === 'Admin' ? 'free' : currentPlan);
+    setUserPlanError('');
+  };
+
+  const saveUserPlan = async () => {
+    if (!planUser || planUser.role === 'admin') return;
+    setSavingUserPlan(true);
+    setUserPlanError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sua sessão expirou. Entre novamente para continuar.');
+      const response = await fetch('/api/admin/update-user-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId: planUser.id, plan: selectedAdminPlan }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Não foi possível alterar o plano.');
+      setAdminData(current => ({
+        ...current,
+        profiles: current.profiles.map(profile => profile.id === planUser.id ? payload.profile as UserProfile : profile),
+      }));
+      trackEvent('admin_user_plan_updated', {
+        previous_plan: normalizeAdminPlan(planUser.plano),
+        new_plan: selectedAdminPlan,
+      });
+      setPlanUser(null);
+    } catch (error: any) {
+      setUserPlanError(error.message || 'Erro ao alterar o plano.');
+    } finally {
+      setSavingUserPlan(false);
+    }
+  };
+
   const today = new Date().toISOString().split('T')[0];
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const paidProfiles = adminData.profiles.filter(p => p.plano === 'Pro' || p.plano === 'Elite' || p.subscriptionStatus === 'active');
+  const paidProfiles = adminData.profiles.filter(p => (p.plano === 'Pro' || p.plano === 'Elite') && p.subscriptionStatus === 'active');
   const onboardingStuck = adminData.profiles.filter(p => !p.age || !p.weight || !p.height || !p.goal);
   const activeToday = new Set([
     ...adminData.workouts.filter(w => w.completedAt?.startsWith(today)).map(w => w.userUid),
@@ -8945,9 +8994,9 @@ function AdminView() {
     .filter(c => c.created_at && new Date(c.created_at) >= startOfMonth)
     .reduce((sum, c) => sum + Number(c.valor_assinatura || 0), 0);
   const pendingAffiliates = adminData.affiliates.filter(a => a.status === 'pendente');
-  const planCounts = (['free', 'Iniciante', 'Pro', 'Elite', 'Admin'] as Plan[]).map(plan => ({
+  const planCounts = (['free', 'Pro', 'Elite', 'Admin'] as const).map(plan => ({
     plan,
-    count: adminData.profiles.filter(p => (p.plano || 'free') === plan).length,
+    count: adminData.profiles.filter(p => normalizeAdminPlan(p.plano) === plan).length,
   }));
   const recentUsers = showAllUsers ? adminData.profiles : adminData.profiles.slice(0, 6);
   const hasMoreUsers = adminData.profiles.length > 6;
@@ -9041,13 +9090,21 @@ function AdminView() {
                                 <div className="text-[10px] text-text-muted font-bold truncate">{user.email}</div>
                               </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">{user.plano || 'free'}</span>
-                              <span className={`px-3 py-1 border rounded-xl text-[10px] font-black uppercase tracking-widest ${user.subscriptionStatus === 'active' ? 'bg-success/10 border-success/20 text-success' : 'bg-white/5 border-white/10 text-text-muted'}`}>
-                                {user.subscriptionStatus || 'inactive'}
+                            <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                              <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">{normalizeAdminPlan(user.plano)}</span>
+                              <span className={`px-3 py-1 border rounded-xl text-[10px] font-black uppercase tracking-widest ${user.subscriptionStatus === 'active' ? 'bg-success/10 border-success/20 text-success' : user.subscriptionStatus === 'canceled' ? 'bg-error/10 border-error/20 text-error' : 'bg-white/5 border-white/10 text-text-muted'}`}>
+                                {user.subscriptionStatus === 'active' ? 'Ativa' : user.subscriptionStatus === 'canceled' ? 'Cancelada' : 'Inativa'}
                               </span>
-                              {(!user.age || !user.goal) && (
+                              {(!user.age || !user.weight || !user.height || !user.goal) && (
                                 <span className="px-3 py-1 bg-error/10 border border-error/20 text-error rounded-xl text-[10px] font-black uppercase tracking-widest">Onboarding</span>
+                              )}
+                              {user.role !== 'admin' && normalizeAdminPlan(user.plano) !== 'Admin' && (
+                                <button
+                                  onClick={() => openPlanManager(user)}
+                                  className="min-h-[34px] px-3 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all flex items-center gap-1.5"
+                                >
+                                  <Edit3 size={12} /> Gerenciar plano
+                                </button>
                               )}
                             </div>
                           </div>
@@ -9081,7 +9138,7 @@ function AdminView() {
                       return (
                         <div key={plan} className="space-y-2">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="font-black uppercase tracking-widest text-text-secondary">{plan}</span>
+                            <span className="font-black uppercase tracking-widest text-text-secondary">{plan === 'free' ? 'Free' : plan}</span>
                             <span className="font-black text-text-muted">{count} • {pct}%</span>
                           </div>
                           <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -9163,6 +9220,95 @@ function AdminView() {
       ) : (
         <AdminAffiliatesView />
       )}
+
+      <AnimatePresence>
+        {planUser && (
+          <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !savingUserPlan && setPlanUser(null)}
+              className="absolute inset-0 bg-background/90 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.98 }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-plan-title"
+              className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-zinc-950 border border-white/10 border-b-0 sm:border-b rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 sm:p-8"
+            >
+              <button
+                onClick={() => setPlanUser(null)}
+                disabled={savingUserPlan}
+                aria-label="Fechar"
+                className="absolute top-5 right-5 w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary flex items-center justify-center disabled:opacity-40"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="space-y-2 pr-12">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Ajuste administrativo</span>
+                <h3 id="admin-plan-title" className="text-2xl font-black uppercase tracking-tight">Gerenciar plano</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  {planUser.name || 'Usuário sem nome'} <span className="text-text-muted">({planUser.email})</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mt-7">
+                {(['free', 'Pro', 'Elite'] as const).map(plan => (
+                  <button
+                    key={plan}
+                    onClick={() => setSelectedAdminPlan(plan)}
+                    disabled={savingUserPlan}
+                    className={`min-h-[48px] rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${selectedAdminPlan === plan ? 'bg-primary border-primary text-text-primary shadow-lg shadow-primary/20' : 'bg-white/5 border-white/10 text-text-muted hover:text-text-primary hover:border-white/20'}`}
+                  >
+                    {plan === 'free' ? 'Free' : plan}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] text-text-muted font-black uppercase tracking-widest">Alteração</p>
+                  <p className="text-sm font-black mt-1 uppercase">{normalizeAdminPlan(planUser.plano)} → {selectedAdminPlan}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-xl border text-[9px] font-black uppercase tracking-widest ${selectedAdminPlan === 'free' ? 'bg-white/5 border-white/10 text-text-muted' : 'bg-success/10 border-success/20 text-success'}`}>
+                  {selectedAdminPlan === 'free' ? 'Ficará inativa' : 'Ficará ativa'}
+                </span>
+              </div>
+
+              {(!planUser.age || !planUser.weight || !planUser.height || !planUser.goal) && (
+                <div className="mt-4 p-4 rounded-2xl bg-error/10 border border-error/20 flex items-start gap-3 text-error">
+                  <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                  <p className="text-xs leading-relaxed"><span className="font-black uppercase">Onboarding pendente.</span> O aviso continuará ativo mesmo após a troca do plano.</p>
+                </div>
+              )}
+
+              {userPlanError && <p className="mt-4 text-xs font-bold text-error bg-error/10 border border-error/20 rounded-2xl p-4">{userPlanError}</p>}
+
+              <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={saveUserPlan}
+                  disabled={savingUserPlan || normalizeAdminPlan(planUser.plano) === selectedAdminPlan}
+                  className="flex-1 min-h-[52px] rounded-2xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {savingUserPlan ? <><Loader2 size={15} className="animate-spin" /> Salvando...</> : 'Confirmar alteração'}
+                </button>
+                <button
+                  onClick={() => setPlanUser(null)}
+                  disabled={savingUserPlan}
+                  className="flex-1 min-h-[48px] rounded-2xl bg-white/5 border border-white/10 text-text-secondary text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-40"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
 } from "./src/server/payment";
 
 const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
+const ADMIN_EMAIL = "carlosalbertojuniorourak@gmail.com";
 
 function getPlanValue(plan: string) {
   if (plan === "Pro") return 19.9;
@@ -204,6 +205,53 @@ async function startServer() {
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/admin/update-user-plan", async (req, res) => {
+    const url = process.env.VITE_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !serviceKey) {
+      return res.status(500).json({ error: "Configuração administrativa indisponível." });
+    }
+
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, "").trim();
+    if (!token) return res.status(401).json({ error: "Sessão administrativa ausente." });
+
+    const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+    const { data: authData, error: authError } = await admin.auth.getUser(token);
+    if (authError || authData.user?.email !== ADMIN_EMAIL) {
+      return res.status(403).json({ error: "Acesso restrito ao administrador." });
+    }
+
+    const userId = String(req.body?.userId || "").trim();
+    const plan = String(req.body?.plan || "").trim();
+    if (!userId) return res.status(400).json({ error: "Usuário não informado." });
+    if (!["free", "Pro", "Elite"].includes(plan)) {
+      return res.status(400).json({ error: "Plano inválido. Admin não pode ser concedido por esta operação." });
+    }
+
+    const { data: target, error: targetError } = await admin
+      .from("profiles")
+      .select("id,email,role,plano")
+      .eq("id", userId)
+      .maybeSingle();
+    if (targetError) return res.status(500).json({ error: targetError.message });
+    if (!target) return res.status(404).json({ error: "Usuário não encontrado." });
+    if (target.email === ADMIN_EMAIL || target.role === "admin" || target.plano === "Admin") {
+      return res.status(403).json({ error: "Contas administrativas não podem ser alteradas por esta operação." });
+    }
+
+    const subscriptionStatus = plan === "free" ? "inactive" : "active";
+    const { data, error } = await admin
+      .from("profiles")
+      .update({ plano: plan, subscriptionStatus, updatedAt: new Date().toISOString() })
+      .eq("id", userId)
+      .select()
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: "Usuário não encontrado." });
+    return res.json({ profile: data });
   });
 
   // Manual migration endpoint — POST /api/run-migration with { serviceRoleKey }

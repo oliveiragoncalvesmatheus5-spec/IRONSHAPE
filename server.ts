@@ -234,27 +234,19 @@ async function startServer() {
       return res.status(400).json({ error: "Plano inválido. Admin não pode ser concedido por esta operação." });
     }
 
-    const { data: target, error: targetError } = await admin
-      .from("profiles")
-      .select("id,email,role,plano")
-      .eq("id", userId)
-      .maybeSingle();
-    if (targetError) return res.status(500).json({ error: targetError.message });
-    if (!target) return res.status(404).json({ error: "Usuário não encontrado." });
-    if (target.email === ADMIN_EMAIL || target.role === "admin" || target.plano === "Admin") {
-      return res.status(403).json({ error: "Contas administrativas não podem ser alteradas por esta operação." });
+    const { data, error } = await admin.rpc("admin_update_user_plan", {
+      target_user_id: userId,
+      target_plan: plan,
+    });
+
+    if (error) {
+      if (error.code === "PGRST202") {
+        return res.status(503).json({ error: "Atualização administrativa ainda não foi instalada no banco." });
+      }
+      if (error.code === "42501") return res.status(403).json({ error: error.message });
+      if (error.code === "P0002") return res.status(404).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
-
-    const subscriptionStatus = plan === "free" ? "inactive" : "active";
-    const { data, error } = await admin
-      .from("profiles")
-      .update({ plano: plan, subscriptionStatus, updatedAt: new Date().toISOString() })
-      .eq("id", userId)
-      .select()
-      .maybeSingle();
-
-    if (error) return res.status(500).json({ error: error.message });
-    if (!data) return res.status(404).json({ error: "Usuário não encontrado." });
     return res.json({ profile: data });
   });
 

@@ -22,6 +22,7 @@ import {
 const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
 const ADMIN_EMAIL = "carlosalbertojuniorourak@gmail.com";
 const SUPABASE_PROJECT_URL = process.env.VITE_SUPABASE_URL || "https://olelsxjkoktjabyfgtoo.supabase.co";
+const SUPABASE_PUBLIC_KEY = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_Kah8D1eadG41rgfXhnztIQ_s4qc2ax9";
 
 function getPlanValue(plan: string) {
   if (plan === "Pro") return 19.9;
@@ -210,15 +211,17 @@ async function startServer() {
 
   app.post("/api/admin/update-user-plan", async (req, res) => {
     const url = SUPABASE_PROJECT_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !serviceKey) {
+    if (!url || !SUPABASE_PUBLIC_KEY) {
       return res.status(500).json({ error: "Configuração administrativa indisponível." });
     }
 
     const token = req.headers.authorization?.replace(/^Bearer\s+/i, "").trim();
     if (!token) return res.status(401).json({ error: "Sessão administrativa ausente." });
 
-    const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+    const admin = createClient(url, SUPABASE_PUBLIC_KEY, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
     const { data: authData, error: authError } = await admin.auth.getUser(token);
     if (authError || authData.user?.email !== ADMIN_EMAIL) {
       return res.status(403).json({ error: "Acesso restrito ao administrador." });

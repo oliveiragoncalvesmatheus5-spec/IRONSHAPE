@@ -1803,17 +1803,92 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
           "Afastar o peso do peito e perder a postura.",
           "Descer rápido demais ou deixar os joelhos fecharem."
         ]
+      },
+      {
+        id: "ex-pro-pq-1",
+        name: "Agachamento Búlgaro",
+        series: 4,
+        reps: "10 cada perna",
+        restTime: "90s",
+        muscleGroup: "Pernas",
+        description: "Exercício unilateral para quadríceps, estabilidade e correção de assimetrias.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-bulgarian-split-squat-23439-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162454/pexels-photo-4162454.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Apoie o pé traseiro em um banco e firme o pé da frente.",
+          "Mantenha o tronco ereto para aumentar o foco no quadríceps.",
+          "Desça o joelho traseiro em direção ao chão.",
+          "Suba pressionando o calcanhar do pé da frente."
+        ],
+        proTips: [
+          "Comece sem carga para encontrar a distância correta do banco.",
+          "Complete todas as repetições de um lado antes de trocar."
+        ],
+        commonErrors: [
+          "Posicionar o pé da frente muito perto do banco.",
+          "Deixar o joelho da frente colapsar para dentro."
+        ]
+      },
+      {
+        id: "ex-pro-pq-2",
+        name: "Passada Caminhando",
+        series: 4,
+        reps: "10 cada perna",
+        restTime: "75s",
+        muscleGroup: "Pernas",
+        description: "Passadas alternadas para quadríceps, equilíbrio e coordenação.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Fique em pé segurando um halter em cada mão ao lado do corpo.",
+          "Dê um passo à frente e desça o joelho traseiro em direção ao chão.",
+          "Mantenha o joelho da frente alinhado com o pé.",
+          "Empurre com o pé da frente e avance para a próxima passada."
+        ],
+        proTips: [
+          "Mantenha o tronco ereto durante todo o movimento.",
+          "Alterne as pernas de forma controlada, sem pressa."
+        ],
+        commonErrors: [
+          "Deixar o joelho da frente colapsar para dentro.",
+          "Inclinar excessivamente o tronco para frente."
+        ]
+      },
+      {
+        id: "ex-pro-pq-3",
+        name: "Leg Press Horizontal",
+        series: 4,
+        reps: "12-15",
+        restTime: "90s",
+        muscleGroup: "Pernas",
+        description: "Pressão horizontal com estabilidade para acumular volume nos quadríceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-press-in-gym-23429-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Ajuste o assento para manter a lombar totalmente apoiada.",
+          "Posicione os pés na largura dos ombros na plataforma.",
+          "Empurre sem travar completamente os joelhos.",
+          "Retorne de forma controlada até uma amplitude confortável."
+        ],
+        proTips: [
+          "Mantenha os pés um pouco mais baixos para enfatizar quadríceps.",
+          "Controle a volta por 2-3 segundos."
+        ],
+        commonErrors: [
+          "Retirar o quadril ou a lombar do encosto.",
+          "Travar os joelhos no final do empurrão."
+        ]
       }
     ]
   },
   {
     id: "pernas-pro-2",
-    name: "Posterior e Glúteos",
+    name: "Posterior",
     muscleGroup: "Pernas",
     level: "Intermediário",
-    duration: "55 min",
+    duration: "60 min",
     carga: "Alta",
-    description: "Isquiotibiais e glúteos com carga e volume intermediários.",
+    description: "Treino completo de posteriores de coxa com carga e controle intermediários.",
     planRequired: "Pro",
     authorUid: "system",
     exercises: [
@@ -1843,31 +1918,6 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         ]
       },
       {
-        id: "ex-pro-pg-2",
-        name: "Hip Thrust com Barra",
-        series: 4,
-        reps: "12",
-        restTime: "75s",
-        muscleGroup: "Pernas",
-        description: "O melhor exercício para glúteos com carga progressiva.",
-        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
-        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-        instructions: [
-          "Apoie as escápulas no banco com a barra sobre o quadril.",
-          "Pés na largura dos quadris, joelhos a 90 graus no topo.",
-          "Desça o quadril em direção ao chão e empurre explosivamente para cima.",
-          "Contraia os glúteos no pico e segure por 2 segundos."
-        ],
-        proTips: [
-          "Use um pad para conforto com cargas maiores.",
-          "No topo, o tronco deve estar paralelo ao chão."
-        ],
-        commonErrors: [
-          "Arquear a lombar no topo em vez de contrair os glúteos.",
-          "Posicionar os pés muito longe, sobrecarregando os isquiotibiais."
-        ]
-      },
-      {
         id: "ex-pro-pg-3",
         name: "Cadeira Flexora",
         series: 3,
@@ -1890,6 +1940,106 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         commonErrors: [
           "Levantar o quadril para completar as reps.",
           "Descer rápido demais sem controlar a fase excêntrica."
+        ]
+      },
+      {
+        id: "ex-pro-post-3",
+        name: "Mesa Flexora",
+        series: 4,
+        reps: "10-12",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Flexão de joelhos deitada para trabalhar os posteriores em amplitude completa.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-extensions-23430-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837757/pexels-photo-3837757.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Ajuste o rolo logo acima dos calcanhares e alinhe os joelhos ao eixo.",
+          "Mantenha o quadril apoiado durante toda a execução.",
+          "Flexione os joelhos até uma amplitude confortável.",
+          "Retorne lentamente sem deixar as placas baterem."
+        ],
+        proTips: [
+          "Segure a contração por 1 segundo no topo.",
+          "Controle a descida por 2-3 segundos."
+        ],
+        commonErrors: [
+          "Elevar o quadril para vencer a carga.",
+          "Usar impulso e perder o controle da descida."
+        ]
+      },
+      {
+        id: "ex-pro-post-4",
+        name: "Levantamento Terra Romeno com Halteres",
+        series: 4,
+        reps: "10-12",
+        restTime: "90s",
+        muscleGroup: "Pernas",
+        description: "Movimento de quadril com halteres para alongar e fortalecer os posteriores.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-deadlift-exercise-23441-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162587/pexels-photo-4162587.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Segure os halteres à frente das coxas com os joelhos levemente flexionados.",
+          "Leve o quadril para trás mantendo a coluna neutra.",
+          "Desça os halteres próximos às pernas até sentir alongamento.",
+          "Estenda o quadril para voltar à posição inicial."
+        ],
+        proTips: [
+          "Pense em afastar o quadril da cabeça durante a descida.",
+          "Pare antes de perder a posição neutra da coluna."
+        ],
+        commonErrors: [
+          "Transformar o movimento em agachamento.",
+          "Afastar os halteres do corpo."
+        ]
+      },
+      {
+        id: "ex-pro-post-5",
+        name: "Flexora Unilateral",
+        series: 3,
+        reps: "12 cada perna",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Trabalho isolado para equilibrar força e controle entre as pernas.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-extensions-23430-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837757/pexels-photo-3837757.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Ajuste a máquina e posicione uma perna por vez sob o apoio.",
+          "Mantenha o quadril firme e o joelho alinhado ao eixo.",
+          "Flexione a perna sem girar o tronco.",
+          "Retorne devagar antes de repetir."
+        ],
+        proTips: [
+          "Comece pelo lado mais fraco.",
+          "Use a mesma carga e o mesmo número de repetições nos dois lados."
+        ],
+        commonErrors: [
+          "Compensar girando o quadril.",
+          "Executar com carga que reduz a amplitude."
+        ]
+      },
+      {
+        id: "ex-pro-post-6",
+        name: "Good Morning com Barra",
+        series: 3,
+        reps: "10",
+        restTime: "90s",
+        muscleGroup: "Pernas",
+        description: "Extensão de quadril técnica para fortalecer posteriores e controle do tronco.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-deadlift-exercise-23441-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162587/pexels-photo-4162587.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Apoie a barra na parte alta das costas e firme os pés.",
+          "Flexione levemente os joelhos e leve o quadril para trás.",
+          "Incline o tronco mantendo a coluna neutra.",
+          "Contraia os posteriores e glúteos para retornar."
+        ],
+        proTips: [
+          "Use carga moderada e priorize a técnica.",
+          "Reduza a amplitude se sentir a lombar perder estabilidade."
+        ],
+        commonErrors: [
+          "Arredondar as costas durante a inclinação.",
+          "Usar carga excessiva antes de dominar o movimento."
         ]
       }
     ]
@@ -2512,88 +2662,163 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
   },
   {
     id: "pernas-pro-3",
-    name: "Quadríceps & Glúteos Pro",
+    name: "Glúteos",
     muscleGroup: "Pernas",
     level: "Intermediário",
-    duration: "55 min",
+    duration: "60 min",
     carga: "Alta",
-    description: "Protocolo avançado para desenvolvimento de quadríceps e glúteos.",
+    description: "Treino completo de glúteos com força, estabilidade e isolamento.",
     planRequired: "Pro",
     authorUid: "system",
     exercises: [
       {
-        id: "ex-pro-pq-1",
-        name: "Agachamento Búlgaro",
+        id: "ex-pro-gl-1",
+        name: "Hip Thrust com Barra",
         series: 4,
-        reps: "10 cada perna",
+        reps: "10-12",
         restTime: "90s",
         muscleGroup: "Pernas",
-        description: "Exercício unilateral para quadríceps, estabilidade e correção de assimetrias.",
-        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-bulgarian-split-squat-23439-large.mp4",
-        thumbnail: "https://images.pexels.com/photos/4162454/pexels-photo-4162454.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-        instructions: [
-          "Apoie o pé traseiro em um banco e firme o pé da frente.",
-          "Mantenha o tronco ereto para aumentar o foco no quadríceps.",
-          "Desça o joelho traseiro em direção ao chão.",
-          "Suba pressionando o calcanhar do pé da frente."
-        ],
-        proTips: [
-          "Comece sem carga para encontrar a distância correta do banco.",
-          "Complete todas as repetições de um lado antes de trocar."
-        ],
-        commonErrors: [
-          "Posicionar o pé da frente muito perto do banco.",
-          "Deixar o joelho da frente colapsar para dentro."
-        ]
-      },
-      {
-        id: "ex-pro-pq-2",
-        name: "Passada Caminhando",
-        series: 4,
-        reps: "10 cada perna",
-        restTime: "75s",
-        muscleGroup: "Pernas",
-        description: "Passadas alternadas para quadríceps, equilíbrio e coordenação.",
+        description: "Extensão de quadril com carga progressiva para força e volume dos glúteos.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
-          "Fique em pé segurando um halter em cada mão ao lado do corpo.",
-          "Dê um passo à frente e desça o joelho traseiro em direção ao chão.",
-          "O joelho da frente deve ficar alinhado com o tornozelo — não ultrapasse.",
-          "Empurre com o calcanhar da frente e avance diretamente para a próxima passada."
+          "Apoie as escápulas no banco e posicione a barra sobre o quadril.",
+          "Mantenha os pés firmes e os joelhos alinhados.",
+          "Eleve o quadril até alinhar tronco e coxas.",
+          "Contraia os glúteos no topo antes de descer com controle."
         ],
         proTips: [
-          "Mantenha o tronco ereto durante todo o movimento.",
-          "Alterne as pernas de forma controlada — sem pressa."
+          "Use uma proteção na barra para manter o conforto.",
+          "Evite aumentar a carga antes de dominar a contração no topo."
         ],
         commonErrors: [
-          "Deixar o joelho da frente ultrapassar a ponta dos pés.",
-          "Inclinar excessivamente o tronco para frente."
+          "Arquear a lombar no lugar de estender o quadril.",
+          "Deixar os joelhos fecharem durante a subida."
         ]
       },
       {
-        id: "ex-pro-pq-3",
-        name: "Leg Press Horizontal",
+        id: "ex-pro-gl-2",
+        name: "Agachamento Sumô com Halter",
         series: 4,
-        reps: "12-15",
-        restTime: "90s",
+        reps: "12",
+        restTime: "75s",
         muscleGroup: "Pernas",
-        description: "Pressão horizontal com estabilidade para acumular volume nos quadríceps.",
-        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-press-in-gym-23429-large.mp4",
-        thumbnail: "https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        description: "Agachamento com base ampla para enfatizar glúteos e adutores.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
-          "Ajuste o assento para manter a lombar totalmente apoiada.",
-          "Posicione os pés na largura dos ombros na plataforma.",
-          "Empurre sem travar completamente os joelhos.",
-          "Retorne de forma controlada até uma amplitude confortável."
+          "Afaste os pés além da largura dos ombros e gire as pontas para fora.",
+          "Segure o halter à frente do corpo com os braços estendidos.",
+          "Desça mantendo os joelhos alinhados com os pés.",
+          "Suba contraindo os glúteos sem perder a postura."
         ],
         proTips: [
-          "Mantenha os pés um pouco mais baixos para enfatizar quadríceps.",
-          "Controle a volta por 2-3 segundos."
+          "Use uma base confortável, sem forçar a abertura dos quadris.",
+          "Mantenha a pressão distribuída por todo o pé."
         ],
         commonErrors: [
-          "Retirar o quadril ou a lombar do encosto.",
-          "Travar os joelhos no final do empurrão."
+          "Deixar os joelhos caírem para dentro.",
+          "Arredondar a lombar no fim da descida."
+        ]
+      },
+      {
+        id: "ex-pro-gl-3",
+        name: "Elevação Pélvica Unilateral",
+        series: 3,
+        reps: "12 cada perna",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Extensão unilateral do quadril para estabilidade e correção de assimetrias.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Deite de costas, apoie um pé no chão e eleve a outra perna.",
+          "Mantenha o abdômen firme e o quadril nivelado.",
+          "Eleve o quadril pressionando o calcanhar apoiado.",
+          "Contraia o glúteo no topo e desça devagar."
+        ],
+        proTips: [
+          "Comece pelo lado mais fraco.",
+          "Adicione carga somente quando o quadril permanecer estável."
+        ],
+        commonErrors: [
+          "Girar o quadril durante a subida.",
+          "Empurrar com a ponta do pé em vez do calcanhar."
+        ]
+      },
+      {
+        id: "ex-pro-gl-4",
+        name: "Cadeira Abdutora",
+        series: 4,
+        reps: "15-20",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Isolamento do glúteo médio para estabilidade do quadril e volume lateral.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-leg-extensions-23430-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/3837757/pexels-photo-3837757.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Ajuste o encosto e apoie as pernas nas almofadas.",
+          "Mantenha o tronco estável e abra os joelhos com controle.",
+          "Segure a abertura por 1 segundo.",
+          "Retorne lentamente sem deixar a carga bater."
+        ],
+        proTips: [
+          "Use amplitude que permita manter o quadril apoiado.",
+          "Uma leve inclinação à frente pode melhorar a percepção muscular."
+        ],
+        commonErrors: [
+          "Balançar o tronco para mover mais carga.",
+          "Fechar as pernas rápido demais."
+        ]
+      },
+      {
+        id: "ex-pro-gl-5",
+        name: "Coice na Polia",
+        series: 3,
+        reps: "12-15 cada perna",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Extensão de quadril na polia para manter tensão constante nos glúteos.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Prenda a tornozeleira na polia baixa e apoie as mãos na estrutura.",
+          "Incline levemente o tronco e mantenha o abdômen firme.",
+          "Leve a perna para trás sem girar o quadril.",
+          "Retorne controlando a tensão do cabo."
+        ],
+        proTips: [
+          "Use carga que permita manter o joelho levemente flexionado.",
+          "Concentre-se na extensão do quadril, não na altura do pé."
+        ],
+        commonErrors: [
+          "Arquear a lombar para aumentar a amplitude.",
+          "Girar o corpo durante o movimento."
+        ]
+      },
+      {
+        id: "ex-pro-gl-6",
+        name: "Abdução de Quadril na Polia",
+        series: 3,
+        reps: "15 cada perna",
+        restTime: "60s",
+        muscleGroup: "Pernas",
+        description: "Abdução unilateral para trabalhar o glúteo médio com tensão contínua.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Prenda a tornozeleira e fique de lado para a polia.",
+          "Apoie-se na estrutura e mantenha o tronco ereto.",
+          "Afaste a perna lateralmente sem girar o pé.",
+          "Volte devagar mantendo a tensão."
+        ],
+        proTips: [
+          "Mantenha o movimento curto e controlado.",
+          "Evite inclinar o tronco para compensar a carga."
+        ],
+        commonErrors: [
+          "Usar impulso para afastar a perna.",
+          "Girar o quadril para fora durante a execução."
         ]
       }
     ]

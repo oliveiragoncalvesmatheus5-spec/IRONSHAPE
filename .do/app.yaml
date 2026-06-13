@@ -26,9 +26,6 @@ services:
       - key: IRON_COACH_MODEL
         value: claude-haiku-4-5
         scope: RUN_TIME
-      - key: WORKOUTX_API_KEY
-        scope: RUN_TIME
-        type: SECRET
       - key: RAPIDAPI_KEY
         scope: RUN_TIME
         type: SECRET

@@ -5,7 +5,7 @@ import { withTimeout } from './lib/utils';
 import { UserProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
-import { searchExercisesByName } from './services/workoutxApi';
+import { searchExercisesByName } from './services/exerciseMediaApi';
 import { getAnalyticsClientId, initAnalytics, trackEvent, trackPlanEvent } from './services/analytics';
 import { getLocalExerciseMedia, translateExerciseName } from './utils/exerciseTranslations';
 import AIChat from './AIChat';
@@ -4732,11 +4732,6 @@ function ExerciseAnimation({ type }: { type: ExerciseAnimationType }) {
   return null;
 }
 
-function shouldPreferRapidApiMedia(exercise: Exercise) {
-  const id = String(exercise.id || '').toLowerCase();
-  return id.startsWith('home-') || id.startsWith('mob-') || id.startsWith('stretch-');
-}
-
 function ExecutionModal({
   exercise,
   onClose
@@ -4763,7 +4758,7 @@ function ExecutionModal({
       setGifLoading(false);
     }
     const searchName = translateExerciseName(exercise.name);
-    searchExercisesByName(exercise.name, shouldPreferRapidApiMedia(exercise) ? { source: 'rapidapi' } : undefined)
+    searchExercisesByName(exercise.name)
       .then((results: any) => {
         if (cancelled) return;
         const list = Array.isArray(results) ? results : results?.data;
@@ -4957,7 +4952,7 @@ function ExerciseCard({
     const searchName = translateExerciseName(exercise.name);
     setGifLoading(true);
     try {
-      const results = await searchExercisesByName(exercise.name, shouldPreferRapidApiMedia(exercise) ? { source: 'rapidapi' } : undefined);
+      const results = await searchExercisesByName(exercise.name);
       const list = Array.isArray(results) ? results : results?.data;
       if (Array.isArray(list) && list.length > 0) {
         setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);

@@ -21,6 +21,7 @@ import {
 
 const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
 const ADMIN_EMAIL = "carlosalbertojuniorourak@gmail.com";
+const SUPABASE_PROJECT_URL = process.env.VITE_SUPABASE_URL || "https://olelsxjkoktjabyfgtoo.supabase.co";
 
 function getPlanValue(plan: string) {
   if (plan === "Pro") return 19.9;
@@ -65,7 +66,7 @@ async function sendGoogleAnalyticsEvent({
 }
 
 async function updateProfilePlanFromPayment(event: any) {
-  const url = process.env.VITE_SUPABASE_URL;
+  const url = SUPABASE_PROJECT_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) throw new Error("Supabase service role não configurado.");
 
@@ -155,7 +156,7 @@ async function updateProfilePlanFromPayment(event: any) {
 }
 
 async function runMigrations() {
-  const url = process.env.VITE_SUPABASE_URL;
+  const url = SUPABASE_PROJECT_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
     console.log("[migration] SUPABASE_SERVICE_ROLE_KEY not set — skipping auto-migration.");
@@ -208,7 +209,7 @@ async function startServer() {
   });
 
   app.post("/api/admin/update-user-plan", async (req, res) => {
-    const url = process.env.VITE_SUPABASE_URL;
+    const url = SUPABASE_PROJECT_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !serviceKey) {
       return res.status(500).json({ error: "Configuração administrativa indisponível." });
@@ -256,7 +257,7 @@ async function startServer() {
 
   // Manual migration endpoint — POST /api/run-migration with { serviceRoleKey }
   app.post("/api/run-migration", async (req, res) => {
-    const url = process.env.VITE_SUPABASE_URL;
+    const url = SUPABASE_PROJECT_URL;
     const serviceKey = req.body?.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !serviceKey) {
       return res.status(400).json({ error: "Supabase URL ou SUPABASE_SERVICE_ROLE_KEY não configurados." });

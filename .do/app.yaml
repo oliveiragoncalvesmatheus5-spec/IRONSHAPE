@@ -36,7 +36,7 @@ services:
         value: edb-with-videos-and-images-by-ascendapi.p.rapidapi.com
         scope: RUN_TIME
       - key: VITE_SUPABASE_URL
-        scope: BUILD_TIME
+        scope: RUN_AND_BUILD_TIME
         type: SECRET
       - key: VITE_SUPABASE_ANON_KEY
         scope: BUILD_TIME

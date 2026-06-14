@@ -8520,12 +8520,22 @@ function CommunityView({ profile }: { profile: UserProfile }) {
                 <p className="text-text-secondary text-sm md:text-base leading-relaxed whitespace-pre-wrap">{post.conteudo}</p>
               </div>
               {post.imagem_url && (
-                <img 
-                  src={post.imagem_url} 
-                  alt="Post" 
-                  className="w-full aspect-square sm:aspect-video object-cover"
-                  referrerPolicy="no-referrer"
-                />
+                <div className="relative w-full aspect-[4/5] sm:aspect-[4/3] max-h-[640px] overflow-hidden bg-black">
+                  <img
+                    src={post.imagem_url}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-35"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-black/20" />
+                  <img
+                    src={post.imagem_url}
+                    alt="Imagem da publicação"
+                    className="relative z-10 w-full h-full object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
               )}
               <div className="p-4 flex items-center gap-6 border-t border-white/5">
                 <button 
@@ -8594,15 +8604,22 @@ function CommunityView({ profile }: { profile: UserProfile }) {
                   <label className="text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Mídia</label>
                   {imagePreview ? (
                     <div className="space-y-3">
-                      <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-video">
-                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-[4/5] sm:aspect-[4/3] max-h-[480px] bg-black">
+                        <img
+                          src={imagePreview}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-35"
+                        />
+                        <div className="absolute inset-0 bg-black/20" />
+                        <img src={imagePreview} alt="Prévia da publicação" className="relative z-10 w-full h-full object-contain" />
                         {!isPublishing && (
                           <button 
                             onClick={() => {
                               setNewPostImage(null);
                               setImagePreview(null);
                             }}
-                            className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-xl hover:bg-black/70 transition-colors"
+                            className="absolute z-20 top-2 right-2 p-2 bg-black/50 text-white rounded-xl hover:bg-black/70 transition-colors"
                           >
                             <X size={18} />
                           </button>
@@ -8666,7 +8683,7 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
   const { isAdmin, simulatedPlan, setSimulatedPlan, user, logout, updateProfile } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
   const [adminTestStatus, setAdminTestStatus] = useState('');
-  const [adminTrainingPlace, setAdminTrainingPlace] = useState<'gym' | 'home'>(() => {
+  const [trainingPlace, setTrainingPlace] = useState<'gym' | 'home'>(() => {
     if (!user?.id) return 'gym';
     try {
       const onboarding = JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null');
@@ -8679,7 +8696,8 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
   const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || profile.name || 'Usuário';
   const userEmail = user?.email || profile.email || '';
   const isFreePlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
-  const handleAdminTrainingPlaceChange = (trainingPlace: 'gym' | 'home') => {
+  const planLabel = isFreePlan ? 'Free' : effectivePlan;
+  const handleTrainingPlaceChange = (nextTrainingPlace: 'gym' | 'home') => {
     if (!user?.id) return;
     let onboarding: any = null;
     try {
@@ -8689,12 +8707,12 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
     }
     const nextOnboarding = {
       ...(onboarding || {}),
-      trainingPlace,
+      trainingPlace: nextTrainingPlace,
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem(`training_onboarding_${user.id}`, JSON.stringify(nextOnboarding));
-    setAdminTrainingPlace(trainingPlace);
-    window.dispatchEvent(new CustomEvent('ironshape:training-place-changed', { detail: { trainingPlace } }));
+    setTrainingPlace(nextTrainingPlace);
+    window.dispatchEvent(new CustomEvent('ironshape:training-place-changed', { detail: { trainingPlace: nextTrainingPlace } }));
   };
   const prepareFreePhaseTest = async () => {
     setAdminTestStatus('Preparando teste...');
@@ -8736,6 +8754,49 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
             <div className="flex justify-between items-center">
               <span className="text-text-secondary">Email</span>
               <span className="font-bold">{userEmail}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-surface rounded-3xl border border-white/5 overflow-hidden">
+          <div className="p-5 md:p-6 border-b border-white/5 flex items-center gap-3">
+            <Dumbbell className="text-primary" size={20} />
+            <div>
+              <h3 className="font-bold">Preferências de treino</h3>
+              <p className="text-xs text-text-muted mt-1">Escolha onde você deseja treinar agora.</p>
+            </div>
+          </div>
+          <div className="p-5 md:p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { id: 'gym', label: 'Academia', description: 'Máquinas e cargas' },
+                { id: 'home', label: 'Casa', description: 'Prático e adaptado' },
+              ] as const).map((option) => {
+                const selected = trainingPlace === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => handleTrainingPlaceChange(option.id)}
+                    className={`min-h-[76px] rounded-2xl px-3 py-4 text-left transition-all border active:scale-[0.98] ${
+                      selected
+                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
+                        : 'bg-white/5 border-white/10 text-text-muted hover:border-primary/40 hover:bg-white/10'
+                    }`}
+                  >
+                    <span className="block text-xs font-black uppercase tracking-widest">{option.label}</span>
+                    <span className={`block text-[10px] mt-1 ${selected ? 'text-white/75' : 'text-text-muted'}`}>
+                      {option.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="rounded-2xl bg-primary/5 border border-primary/15 p-4">
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Você continuará no plano <span className="font-black text-text-primary">{planLabel}</span>. Pontos, histórico, favoritos, progresso e treinos da semana não serão apagados.
+              </p>
             </div>
           </div>
         </section>
@@ -8800,31 +8861,6 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
                   Resetar para Plano Real
                 </button>
               )}
-              <div className="mt-6 pt-6 border-t border-primary/10">
-                <p className="text-[10px] text-text-muted uppercase tracking-widest font-black mb-3">Ambiente dos treinos</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {([
-                    { id: 'gym', label: 'Academia' },
-                    { id: 'home', label: 'Casa' },
-                  ] as const).map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => handleAdminTrainingPlaceChange(option.id)}
-                      className={`py-3 rounded-xl text-xs font-black transition-all border ${
-                        adminTrainingPlace === option.id
-                          ? 'bg-primary border-primary text-text-primary shadow-lg shadow-primary/20'
-                          : 'bg-white/5 border-white/10 text-text-muted hover:border-white/20'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-text-muted mt-3 leading-relaxed">
-                  Alterna a área de treinos entre protocolos de academia e exercícios adaptados para casa.
-                </p>
-              </div>
-
               <div className="mt-6 pt-6 border-t border-primary/10">
                 <p className="text-[10px] text-text-muted uppercase tracking-widest font-black mb-3">Teste da fase free</p>
                 <button

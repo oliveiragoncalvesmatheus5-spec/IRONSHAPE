@@ -80,7 +80,8 @@ import {
   Repeat2,
   CalendarPlus,
   SlidersHorizontal,
-  Coffee
+  Coffee,
+  Share2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -8264,6 +8265,160 @@ function MealRow({ time, name, items, onAddItem, onUpdateItem, onRemoveItem, onA
   );
 }
 
+function drawRoundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  const safeRadius = Math.min(radius, width / 2, height / 2);
+  context.beginPath();
+  context.roundRect(x, y, width, height, safeRadius);
+  context.closePath();
+}
+
+function drawStoryText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines: number,
+) {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (context.measureText(candidate).width <= maxWidth) {
+      currentLine = candidate;
+      continue;
+    }
+    if (currentLine) lines.push(currentLine);
+    currentLine = word;
+    if (lines.length === maxLines) break;
+  }
+  if (currentLine && lines.length < maxLines) lines.push(currentLine);
+
+  if (words.length > 0 && lines.length === maxLines) {
+    const renderedWords = lines.join(' ').split(/\s+/).length;
+    if (renderedWords < words.length) {
+      while (lines[maxLines - 1].length > 1 && context.measureText(`${lines[maxLines - 1]}...`).width > maxWidth) {
+        lines[maxLines - 1] = lines[maxLines - 1].slice(0, -1);
+      }
+      lines[maxLines - 1] = `${lines[maxLines - 1].trim()}...`;
+    }
+  }
+
+  lines.forEach((line, index) => context.fillText(line, x, y + (index * lineHeight)));
+}
+
+async function createCommunityStory(post: Post) {
+  if (!post.imagem_url) throw new Error('Esta publicação não possui uma foto para compartilhar.');
+
+  const response = await fetch(post.imagem_url);
+  if (!response.ok) throw new Error('Não foi possível carregar a foto desta publicação.');
+  const sourceBlob = await response.blob();
+  const objectUrl = URL.createObjectURL(sourceBlob);
+  const image = new Image();
+  image.src = objectUrl;
+  await image.decode();
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1920;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Não foi possível preparar a imagem.');
+
+    context.fillStyle = '#080808';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    const glow = context.createRadialGradient(930, 140, 20, 930, 140, 760);
+    glow.addColorStop(0, 'rgba(255, 102, 0, 0.34)');
+    glow.addColorStop(1, 'rgba(255, 102, 0, 0)');
+    context.fillStyle = glow;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.fillStyle = '#ff6600';
+    context.font = '900 34px Arial, sans-serif';
+    context.letterSpacing = '5px';
+    context.fillText('MINHA EVOLUÇÃO', 72, 105);
+    context.letterSpacing = '0px';
+    context.fillStyle = '#ffffff';
+    context.font = '900 78px Arial, sans-serif';
+    context.fillText('IRONSHAPE', 72, 185);
+    context.fillStyle = 'rgba(255,255,255,0.64)';
+    context.font = '500 28px Arial, sans-serif';
+    context.fillText('Disciplina que aparece nos resultados.', 74, 235);
+
+    const frameX = 72;
+    const frameY = 300;
+    const frameWidth = 936;
+    const frameHeight = 1120;
+    context.save();
+    drawRoundedRect(context, frameX, frameY, frameWidth, frameHeight, 48);
+    context.clip();
+    context.fillStyle = '#131313';
+    context.fillRect(frameX, frameY, frameWidth, frameHeight);
+
+    const backgroundScale = Math.max(frameWidth / image.width, frameHeight / image.height);
+    const backgroundWidth = image.width * backgroundScale;
+    const backgroundHeight = image.height * backgroundScale;
+    context.globalAlpha = 0.3;
+    context.filter = 'blur(28px)';
+    context.drawImage(
+      image,
+      frameX + ((frameWidth - backgroundWidth) / 2),
+      frameY + ((frameHeight - backgroundHeight) / 2),
+      backgroundWidth,
+      backgroundHeight,
+    );
+    context.filter = 'none';
+    context.globalAlpha = 1;
+    context.fillStyle = 'rgba(0,0,0,0.24)';
+    context.fillRect(frameX, frameY, frameWidth, frameHeight);
+
+    const imageScale = Math.min(frameWidth / image.width, frameHeight / image.height);
+    const imageWidth = image.width * imageScale;
+    const imageHeight = image.height * imageScale;
+    context.drawImage(
+      image,
+      frameX + ((frameWidth - imageWidth) / 2),
+      frameY + ((frameHeight - imageHeight) / 2),
+      imageWidth,
+      imageHeight,
+    );
+    context.restore();
+
+    context.fillStyle = '#ffffff';
+    context.font = '900 36px Arial, sans-serif';
+    context.fillText(post.user_name || 'Atleta IronShape', 72, 1505);
+    if (post.conteudo?.trim()) {
+      context.fillStyle = 'rgba(255,255,255,0.76)';
+      context.font = '500 30px Arial, sans-serif';
+      drawStoryText(context, post.conteudo, 72, 1560, 936, 42, 3);
+    }
+
+    drawRoundedRect(context, 72, 1750, 936, 96, 32);
+    context.fillStyle = '#ff6600';
+    context.fill();
+    context.fillStyle = '#ffffff';
+    context.font = '900 30px Arial, sans-serif';
+    context.fillText('TREINE COMIGO EM IRONSHAPE.ONLINE', 132, 1811);
+
+    const storyBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Não foi possível gerar a arte.')), 'image/png', 0.94);
+    });
+    return storyBlob;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 function CommunityView({ profile }: { profile: UserProfile }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -8274,6 +8429,8 @@ function CommunityView({ profile }: { profile: UserProfile }) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [postError, setPostError] = useState<string | null>(null);
+  const [sharingPostId, setSharingPostId] = useState<string | null>(null);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -8448,6 +8605,43 @@ function CommunityView({ profile }: { profile: UserProfile }) {
     }
   };
 
+  const handleShareEvolution = async (post: Post) => {
+    setSharingPostId(post.id);
+    setShareFeedback(null);
+    try {
+      const storyBlob = await createCommunityStory(post);
+      const fileName = `ironshape-evolucao-${post.id}.png`;
+      const storyFile = new File([storyBlob], fileName, { type: 'image/png' });
+      const shareData = {
+        files: [storyFile],
+        title: 'Minha evolução no IronShape',
+        text: 'Minha evolução com o IronShape 💪 https://ironshape.online',
+      };
+
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [storyFile] }))) {
+        await navigator.share(shareData);
+        setShareFeedback('Arte pronta! Escolha o Instagram para publicar no Story.');
+      } else {
+        const downloadUrl = URL.createObjectURL(storyBlob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        setShareFeedback('Arte baixada. Abra o Instagram e adicione a imagem ao seu Story.');
+      }
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error('Error sharing community post:', error);
+        setShareFeedback(error?.message || 'Não foi possível preparar o compartilhamento.');
+      }
+    } finally {
+      setSharingPostId(null);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <header className="flex justify-between items-center">
@@ -8462,6 +8656,18 @@ function CommunityView({ profile }: { profile: UserProfile }) {
           <Plus size={24} />
         </button>
       </header>
+
+      {shareFeedback && (
+        <div className="max-w-2xl mx-auto flex items-start justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-text-secondary">
+          <div className="flex items-start gap-3">
+            <Share2 size={18} className="text-primary mt-0.5 shrink-0" />
+            <p className="leading-relaxed">{shareFeedback}</p>
+          </div>
+          <button onClick={() => setShareFeedback(null)} className="p-1 text-text-muted hover:text-text-primary" aria-label="Fechar aviso">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -8549,6 +8755,18 @@ function CommunityView({ profile }: { profile: UserProfile }) {
                   <Users size={20} />
                   <span className="text-sm font-bold">0</span>
                 </button>
+                {post.user_id === profile.id && post.imagem_url && (
+                  <button
+                    onClick={() => handleShareEvolution(post)}
+                    disabled={sharingPostId === post.id}
+                    className="ml-auto flex min-h-[44px] items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 text-primary transition-all hover:bg-primary hover:text-white active:scale-[0.98] disabled:opacity-60"
+                  >
+                    {sharingPostId === post.id ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+                    <span className="hidden sm:inline text-xs font-black uppercase tracking-wider">
+                      {sharingPostId === post.id ? 'Preparando' : 'Compartilhar evolução'}
+                    </span>
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

@@ -40,6 +40,25 @@ export interface UserProfile {
   streak: number;
   lastWorkoutDate?: string;
   nutrition_preferences?: NutritionPreferences;
+  bio?: string;
+  avatar_url?: string;
+  social_private?: boolean;
+}
+
+export interface SocialFollow {
+  follower_id: string;
+  following_id: string;
+  criado_em: string;
+}
+
+export interface SocialProfile {
+  id: string;
+  name: string;
+  plano: Plan;
+  bio?: string;
+  avatar_url?: string;
+  streak?: number;
+  criado_em?: string;
 }
 
 export interface Exercise {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
-import { UserProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
+import { UserProfile, SocialProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
 import { searchExercisesByName } from './services/exerciseMediaApi';
@@ -81,7 +81,10 @@ import {
   CalendarPlus,
   SlidersHorizontal,
   Coffee,
-  Share2
+  Share2,
+  Grid3X3,
+  UserPlus,
+  UserMinus
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -790,14 +793,14 @@ export default function App() {
             : authError}
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button 
+          <button
             onClick={() => initSession()}
             className="bg-primary text-text-primary px-8 py-4 rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 transition-transform flex items-center gap-2 justify-center"
           >
             <RefreshCw size={20} />
             Tentar Novamente
           </button>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="bg-white/5 text-text-primary px-8 py-4 rounded-2xl font-black border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2 justify-center"
           >
@@ -1338,7 +1341,7 @@ function AffiliateView({ profile }: { profile: UserProfile | null }) {
               {window.location.origin}?ref={affiliate.codigo_afiliado}
             </p>
           </div>
-          <button 
+          <button
             onClick={copyLink}
             className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-text-primary"
           >
@@ -1676,7 +1679,7 @@ function AuthCallback() {
         )}
 
         {status === 'error' && (
-          <button 
+          <button
             onClick={() => window.location.href = '/'}
             className="w-full py-4 bg-white/5 text-text-primary rounded-2xl font-black text-xs uppercase tracking-widest border border-white/10 hover:bg-white/10 transition-all"
           >
@@ -2752,7 +2755,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
               <p className="text-sm text-text-secondary">Assine o plano <span className="text-primary font-bold">PRO</span> ou <span className="text-primary font-bold">ELITE</span> e tenha acesso a treinos com IA e dietas personalizadas.</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onUpgrade}
             className="bg-primary text-text-primary px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all active:scale-95 whitespace-nowrap"
           >
@@ -4575,7 +4578,7 @@ function RestTimer({ restTime, onStateChange }: { restTime: string, onStateChang
         </div>
         
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={toggleTimer}
             className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${
               isActive ? 'bg-primary text-text-primary' : 'bg-white/10 text-text-primary hover:bg-white/20'
@@ -4584,7 +4587,7 @@ function RestTimer({ restTime, onStateChange }: { restTime: string, onStateChang
           >
             {isActive ? <Pause size={20} /> : <Play size={20} />}
           </button>
-          <button 
+          <button
             onClick={resetTimer}
             className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 text-text-primary hover:bg-white/20 transition-all"
             title="Resetar"
@@ -4835,7 +4838,7 @@ function ExecutionModal({
             </div>
           )}
           
-          <button 
+          <button
             onClick={onClose}
             className="absolute top-6 right-6 p-3 bg-black/50 backdrop-blur-md rounded-2xl text-text-primary hover:bg-primary transition-all z-10 lg:hidden"
           >
@@ -8420,7 +8423,9 @@ async function createCommunityStory(post: Post) {
 }
 
 function CommunityView({ profile }: { profile: UserProfile }) {
+  const { updateProfile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [postProfiles, setPostProfiles] = useState<Record<string, SocialProfile>>({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
@@ -8431,6 +8436,22 @@ function CommunityView({ profile }: { profile: UserProfile }) {
   const [postError, setPostError] = useState<string | null>(null);
   const [sharingPostId, setSharingPostId] = useState<string | null>(null);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const [activeSocialProfile, setActiveSocialProfile] = useState<SocialProfile | null>(null);
+  const [socialLoading, setSocialLoading] = useState(false);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowingProfile, setIsFollowingProfile] = useState(false);
+  const [followSaving, setFollowSaving] = useState(false);
+  const [showSocialList, setShowSocialList] = useState<'followers' | 'following' | null>(null);
+  const [socialListProfiles, setSocialListProfiles] = useState<SocialProfile[]>([]);
+  const [socialListLoading, setSocialListLoading] = useState(false);
+  const [showEditSocialProfile, setShowEditSocialProfile] = useState(false);
+  const [editSocialName, setEditSocialName] = useState(profile.name || '');
+  const [editSocialBio, setEditSocialBio] = useState(profile.bio || '');
+  const [editSocialAvatar, setEditSocialAvatar] = useState<File | null>(null);
+  const [editSocialAvatarPreview, setEditSocialAvatarPreview] = useState(profile.avatar_url || '');
+  const [savingSocialProfile, setSavingSocialProfile] = useState(false);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -8457,7 +8478,19 @@ function CommunityView({ profile }: { profile: UserProfile }) {
       ) as any;
 
       if (error) throw error;
-      setPosts(data || []);
+      const nextPosts = (data || []) as Post[];
+      setPosts(nextPosts);
+
+      const userIds = Array.from(new Set(nextPosts.map(post => post.user_id).filter(Boolean)));
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('social_profiles')
+          .select('*')
+          .in('id', userIds);
+        if (!profilesError && profilesData) {
+          setPostProfiles(Object.fromEntries((profilesData as SocialProfile[]).map(item => [item.id, item])));
+        }
+      }
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
@@ -8605,6 +8638,176 @@ function CommunityView({ profile }: { profile: UserProfile }) {
     }
   };
 
+  const loadSocialStats = async (targetProfile: SocialProfile) => {
+    setSocialLoading(true);
+    setSocialError(null);
+    try {
+      const [followersResult, followingResult, relationshipResult] = await Promise.all([
+        supabase.from('social_follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', targetProfile.id),
+        supabase.from('social_follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', targetProfile.id),
+        targetProfile.id === profile.id
+          ? Promise.resolve({ data: null, error: null })
+          : supabase.from('social_follows').select('follower_id').eq('follower_id', profile.id).eq('following_id', targetProfile.id).maybeSingle(),
+      ]);
+
+      const firstError = followersResult.error || followingResult.error || relationshipResult.error;
+      if (firstError) throw firstError;
+      setFollowersCount(followersResult.count || 0);
+      setFollowingCount(followingResult.count || 0);
+      setIsFollowingProfile(Boolean(relationshipResult.data));
+    } catch (error: any) {
+      console.error('Error loading social profile stats:', error);
+      setFollowersCount(0);
+      setFollowingCount(0);
+      setIsFollowingProfile(false);
+      setSocialError('A área social precisa ser ativada no banco para liberar seguidores.');
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
+  const openSocialProfile = async (targetUserId: string, fallback?: Partial<SocialProfile>) => {
+    setSocialLoading(true);
+    setSocialError(null);
+    try {
+      const knownProfile: SocialProfile | undefined = targetUserId === profile.id ? profile : postProfiles[targetUserId];
+      let targetProfile = knownProfile;
+      if (!targetProfile) {
+        const { data, error } = await supabase.from('social_profiles').select('*').eq('id', targetUserId).maybeSingle();
+        if (error) throw error;
+        targetProfile = data as SocialProfile | null;
+      }
+      if (!targetProfile) {
+        targetProfile = {
+          id: targetUserId,
+          name: fallback?.name || 'Atleta IronShape',
+          plano: fallback?.plano || 'free',
+          avatar_url: fallback?.avatar_url || '',
+        };
+      }
+      setActiveSocialProfile(targetProfile);
+      await loadSocialStats(targetProfile);
+    } catch (error: any) {
+      console.error('Error opening social profile:', error);
+      setSocialError('Não foi possível abrir este perfil agora.');
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
+  const handleToggleFollow = async () => {
+    if (!activeSocialProfile || activeSocialProfile.id === profile.id || followSaving) return;
+    setFollowSaving(true);
+    setSocialError(null);
+    try {
+      if (isFollowingProfile) {
+        const { error } = await supabase
+          .from('social_follows')
+          .delete()
+          .eq('follower_id', profile.id)
+          .eq('following_id', activeSocialProfile.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('social_follows').insert({
+          follower_id: profile.id,
+          following_id: activeSocialProfile.id,
+        });
+        if (error) throw error;
+      }
+      setIsFollowingProfile(current => !current);
+      setFollowersCount(current => Math.max(0, current + (isFollowingProfile ? -1 : 1)));
+    } catch (error: any) {
+      console.error('Error toggling follow:', error);
+      setSocialError('Não foi possível atualizar este vínculo. Tente novamente.');
+    } finally {
+      setFollowSaving(false);
+    }
+  };
+
+  const openSocialList = async (type: 'followers' | 'following') => {
+    if (!activeSocialProfile) return;
+    setShowSocialList(type);
+    setSocialListLoading(true);
+    setSocialListProfiles([]);
+    try {
+      const column = type === 'followers' ? 'following_id' : 'follower_id';
+      const idColumn = type === 'followers' ? 'follower_id' : 'following_id';
+      const { data, error } = await supabase
+        .from('social_follows')
+        .select(idColumn)
+        .eq(column, activeSocialProfile.id)
+        .order('criado_em', { ascending: false });
+      if (error) throw error;
+      const ids = (data || []).map((item: any) => item[idColumn]).filter(Boolean);
+      if (ids.length === 0) return;
+      const { data: profilesData, error: profilesError } = await supabase.from('social_profiles').select('*').in('id', ids);
+      if (profilesError) throw profilesError;
+      setSocialListProfiles((profilesData || []) as SocialProfile[]);
+    } catch (error: any) {
+      console.error('Error loading social list:', error);
+      setSocialError('Não foi possível carregar esta lista.');
+    } finally {
+      setSocialListLoading(false);
+    }
+  };
+
+  const openSocialProfileEditor = () => {
+    const target = activeSocialProfile || profile;
+    setEditSocialName(target.name || '');
+    setEditSocialBio(target.bio || '');
+    setEditSocialAvatar(null);
+    setEditSocialAvatarPreview(target.avatar_url || '');
+    setShowEditSocialProfile(true);
+  };
+
+  const handleSocialAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setSocialError('A foto de perfil deve ter no máximo 5MB.');
+      return;
+    }
+    setEditSocialAvatar(file);
+    setEditSocialAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const saveSocialProfile = async () => {
+    if (!editSocialName.trim()) return;
+    setSavingSocialProfile(true);
+    setSocialError(null);
+    try {
+      let avatarUrl = activeSocialProfile?.avatar_url || profile.avatar_url || '';
+      if (editSocialAvatar) {
+        const extension = editSocialAvatar.name.split('.').pop() || 'jpg';
+        const filePath = `${profile.id}/profile/avatar-${Date.now()}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from('post-images').upload(filePath, editSocialAvatar, { upsert: true });
+        if (uploadError) throw uploadError;
+        avatarUrl = supabase.storage.from('post-images').getPublicUrl(filePath).data.publicUrl;
+      }
+
+      const updates = {
+        name: editSocialName.trim().slice(0, 60),
+        bio: editSocialBio.trim().slice(0, 160),
+        avatar_url: avatarUrl,
+      };
+      await updateProfile(updates);
+      await supabase.from('posts').update({ user_name: updates.name, user_avatar: avatarUrl || updates.name[0] }).eq('user_id', profile.id);
+
+      const updatedProfile = { ...profile, ...updates };
+      setActiveSocialProfile(updatedProfile);
+      setPostProfiles(current => ({ ...current, [profile.id]: updatedProfile }));
+      setPosts(current => current.map(post => post.user_id === profile.id
+        ? { ...post, user_name: updates.name, user_avatar: avatarUrl || updates.name[0] }
+        : post));
+      setShowEditSocialProfile(false);
+    } catch (error: any) {
+      console.error('Error saving social profile:', error);
+      setSocialError(error?.message || 'Não foi possível salvar o perfil social.');
+    } finally {
+      setSavingSocialProfile(false);
+    }
+  };
+
   const handleShareEvolution = async (post: Post) => {
     setSharingPostId(post.id);
     setShareFeedback(null);
@@ -8642,6 +8845,231 @@ function CommunityView({ profile }: { profile: UserProfile }) {
     }
   };
 
+  if (activeSocialProfile) {
+    const isOwnSocialProfile = activeSocialProfile.id === profile.id;
+    const socialPosts = posts.filter(post => post.user_id === activeSocialProfile.id);
+    const socialAvatar = activeSocialProfile.avatar_url || '';
+    const planName = activeSocialProfile.plano === 'Iniciante' || activeSocialProfile.plano === 'free'
+      ? 'Free'
+      : activeSocialProfile.plano;
+
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <header className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              setActiveSocialProfile(null);
+              setSocialError(null);
+            }}
+            className="w-11 h-11 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center text-text-muted hover:text-white hover:border-primary/40 transition-all"
+            aria-label="Voltar para a comunidade"
+          >
+            <ArrowLeft size={21} />
+          </button>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Perfil social</p>
+            <h1 className="text-xl md:text-2xl font-black tracking-tight">{activeSocialProfile.name}</h1>
+          </div>
+        </header>
+
+        <section className="bg-surface rounded-[28px] md:rounded-[36px] border border-white/5 overflow-hidden">
+          <div className="h-24 md:h-32 bg-gradient-to-r from-primary/25 via-primary/5 to-transparent border-b border-white/5" />
+          <div className="px-5 md:px-8 pb-6 md:pb-8">
+            <div className="-mt-12 md:-mt-14 flex items-end justify-between gap-4">
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-[28px] bg-primary border-4 border-surface overflow-hidden flex items-center justify-center text-3xl font-black text-white shadow-xl">
+                {socialAvatar ? (
+                  <img src={socialAvatar} alt={`Foto de ${activeSocialProfile.name}`} className="w-full h-full object-cover" />
+                ) : (
+                  activeSocialProfile.name?.[0]?.toUpperCase() || 'I'
+                )}
+              </div>
+              {isOwnSocialProfile ? (
+                <button
+                  onClick={openSocialProfileEditor}
+                  className="min-h-[44px] px-4 md:px-5 rounded-2xl border border-white/10 bg-white/5 text-xs font-black uppercase tracking-wider hover:border-primary/40 hover:bg-primary/10 transition-all"
+                >
+                  Editar perfil
+                </button>
+              ) : (
+                <button
+                  onClick={handleToggleFollow}
+                  disabled={followSaving || Boolean(socialError)}
+                  className={`min-h-[44px] px-5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 ${
+                    isFollowingProfile
+                      ? 'border border-white/10 bg-white/5 text-text-secondary'
+                      : 'bg-primary text-white shadow-lg shadow-primary/20'
+                  }`}
+                >
+                  {followSaving ? <Loader2 size={17} className="animate-spin" /> : isFollowingProfile ? <UserMinus size={17} /> : <UserPlus size={17} />}
+                  {isFollowingProfile ? 'Seguindo' : 'Seguir'}
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-black">{activeSocialProfile.name}</h2>
+                <span className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-[9px] font-black uppercase tracking-widest text-primary">
+                  Plano {planName}
+                </span>
+              </div>
+              <p className="text-sm text-text-secondary mt-2 leading-relaxed max-w-xl">
+                {activeSocialProfile.bio?.trim() || (isOwnSocialProfile
+                  ? 'Conte um pouco sobre sua jornada, seus objetivos e o que mantém você em movimento.'
+                  : 'Atleta da comunidade IronShape.')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mt-6">
+              <div className="rounded-2xl bg-white/5 border border-white/5 p-3 text-center">
+                <strong className="block text-lg md:text-xl font-black">{socialPosts.length}</strong>
+                <span className="text-[9px] md:text-[10px] uppercase tracking-widest text-text-muted">Publicações</span>
+              </div>
+              <button onClick={() => openSocialList('followers')} className="rounded-2xl bg-white/5 border border-white/5 p-3 text-center hover:border-primary/30 transition-all">
+                <strong className="block text-lg md:text-xl font-black">{socialLoading ? '...' : followersCount}</strong>
+                <span className="text-[9px] md:text-[10px] uppercase tracking-widest text-text-muted">Seguidores</span>
+              </button>
+              <button onClick={() => openSocialList('following')} className="rounded-2xl bg-white/5 border border-white/5 p-3 text-center hover:border-primary/30 transition-all">
+                <strong className="block text-lg md:text-xl font-black">{socialLoading ? '...' : followingCount}</strong>
+                <span className="text-[9px] md:text-[10px] uppercase tracking-widest text-text-muted">Seguindo</span>
+              </button>
+            </div>
+
+            {socialError && (
+              <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-xs text-text-secondary leading-relaxed">
+                {socialError}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Grid3X3 size={18} className="text-primary" />
+              <h3 className="font-black uppercase tracking-widest text-xs">Publicações</h3>
+            </div>
+            <span className="text-[10px] text-text-muted uppercase tracking-widest">{socialPosts.length} no perfil</span>
+          </div>
+
+          {socialPosts.length === 0 ? (
+            <div className="rounded-[28px] border border-dashed border-white/10 bg-surface p-10 text-center">
+              <ImageIcon size={38} className="mx-auto text-text-muted mb-3" />
+              <h4 className="font-bold">Nenhuma publicação ainda</h4>
+              <p className="text-xs text-text-muted mt-2">As fotos e atualizações aparecerão aqui.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5 md:gap-3">
+              {socialPosts.map(post => (
+                <div key={post.id} className="relative aspect-square rounded-lg md:rounded-2xl overflow-hidden bg-surface border border-white/5 group">
+                  {post.imagem_url ? (
+                    <img src={post.imagem_url} alt="Publicação do perfil" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <div className="w-full h-full p-2 md:p-4 flex items-center justify-center text-center bg-gradient-to-br from-primary/15 to-white/5">
+                      <p className="text-[8px] md:text-xs leading-relaxed text-text-secondary line-clamp-5">{post.conteudo}</p>
+                    </div>
+                  )}
+                  <div className="absolute bottom-1.5 right-1.5 md:bottom-2 md:right-2 px-1.5 py-1 rounded-md bg-black/60 text-[8px] md:text-[9px] font-bold flex items-center gap-1">
+                    <Flame size={10} /> {post.likes || 0}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <AnimatePresence>
+          {showEditSocialProfile && (
+            <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-5">
+              <motion.button
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setShowEditSocialProfile(false)}
+                className="absolute inset-0 bg-background/85 backdrop-blur-sm"
+                aria-label="Fechar edição"
+              />
+              <motion.div
+                initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                className="relative w-full max-w-lg rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-surface p-5 md:p-7 shadow-2xl"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Seu perfil</p>
+                    <h3 className="text-xl font-black">Editar perfil social</h3>
+                  </div>
+                  <button onClick={() => setShowEditSocialProfile(false)} className="p-2 rounded-xl bg-white/5"><X size={20} /></button>
+                </div>
+
+                <div className="space-y-5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-3xl overflow-hidden bg-primary flex items-center justify-center text-2xl font-black text-white shrink-0">
+                      {editSocialAvatarPreview
+                        ? <img src={editSocialAvatarPreview} alt="Prévia do avatar" className="w-full h-full object-cover" />
+                        : editSocialName?.[0]?.toUpperCase() || 'I'}
+                    </div>
+                    <label className="min-h-[44px] px-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider cursor-pointer hover:border-primary/40">
+                      <Camera size={17} /> Trocar foto
+                      <input type="file" accept="image/*" className="hidden" onChange={handleSocialAvatarChange} />
+                    </label>
+                  </div>
+                  <label className="block space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Nome</span>
+                    <input value={editSocialName} onChange={event => setEditSocialName(event.target.value)} maxLength={60} className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-primary" />
+                  </label>
+                  <label className="block space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Bio</span>
+                    <textarea value={editSocialBio} onChange={event => setEditSocialBio(event.target.value)} maxLength={160} rows={4} placeholder="Fale sobre sua jornada e seus objetivos..." className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none resize-none focus:border-primary" />
+                    <span className="block text-right text-[10px] text-text-muted">{editSocialBio.length}/160</span>
+                  </label>
+                  <button onClick={saveSocialProfile} disabled={savingSocialProfile || !editSocialName.trim()} className="w-full min-h-[52px] rounded-2xl bg-primary text-white font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 disabled:opacity-50">
+                    {savingSocialProfile && <Loader2 size={18} className="animate-spin" />}
+                    Salvar perfil
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {showSocialList && (
+            <div className="fixed inset-0 z-[125] flex items-end sm:items-center justify-center p-0 sm:p-5">
+              <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSocialList(null)} className="absolute inset-0 bg-background/85 backdrop-blur-sm" aria-label="Fechar lista" />
+              <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} className="relative w-full max-w-md max-h-[75vh] rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-surface overflow-hidden shadow-2xl">
+                <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                  <h3 className="font-black">{showSocialList === 'followers' ? 'Seguidores' : 'Seguindo'}</h3>
+                  <button onClick={() => setShowSocialList(null)} className="p-2 rounded-xl bg-white/5"><X size={19} /></button>
+                </div>
+                <div className="p-3 overflow-y-auto max-h-[60vh]">
+                  {socialListLoading ? (
+                    <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
+                  ) : socialListProfiles.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-text-muted">Nenhum perfil nesta lista.</p>
+                  ) : socialListProfiles.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setShowSocialList(null);
+                        openSocialProfile(item.id, item);
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 text-left transition-colors"
+                    >
+                      <div className="w-11 h-11 rounded-2xl bg-primary overflow-hidden flex items-center justify-center font-black text-white shrink-0">
+                        {item.avatar_url ? <img src={item.avatar_url} alt="" className="w-full h-full object-cover" /> : item.name?.[0]?.toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold truncate">{item.name}</p>
+                        <p className="text-[10px] text-text-muted uppercase tracking-widest">Plano {item.plano === 'free' || item.plano === 'Iniciante' ? 'Free' : item.plano}</p>
+                      </div>
+                      <ChevronRight size={18} className="ml-auto text-text-muted" />
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <header className="flex justify-between items-center">
@@ -8649,12 +9077,22 @@ function CommunityView({ profile }: { profile: UserProfile }) {
           <h1 className="text-2xl md:text-3xl font-black tracking-tight">Comunidade 🤝</h1>
           <p className="text-text-muted text-sm md:text-base">Compartilhe sua jornada</p>
         </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="bg-primary w-12 h-12 flex items-center justify-center rounded-2xl text-text-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform shrink-0"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => openSocialProfile(profile.id, profile)}
+            className="w-12 h-12 rounded-2xl border border-white/10 bg-surface overflow-hidden flex items-center justify-center font-black text-primary hover:border-primary/40 transition-all shrink-0"
+            aria-label="Abrir meu perfil social"
+          >
+            {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="w-full h-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-primary w-12 h-12 flex items-center justify-center rounded-2xl text-text-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform shrink-0"
+            aria-label="Criar publicação"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </header>
 
       {shareFeedback && (
@@ -8694,7 +9132,7 @@ function CommunityView({ profile }: { profile: UserProfile }) {
             <h3 className="text-xl font-bold">Nenhuma publicação ainda</h3>
             <p className="text-text-muted">Seja o primeiro a compartilhar sua evolução!</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowCreateModal(true)}
             className="bg-primary text-text-primary px-8 py-3 rounded-2xl font-black shadow-lg shadow-primary/20"
           >
@@ -8712,11 +9150,21 @@ function CommunityView({ profile }: { profile: UserProfile }) {
               className="bg-surface rounded-2xl md:rounded-3xl border border-white/5 overflow-hidden"
             >
               <div className="p-4 md:p-6 flex items-center gap-4">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center font-black text-lg md:text-xl text-text-primary shrink-0">
-                  {post.user_avatar || post.user_name[0]}
-                </div>
+                <button
+                  onClick={() => openSocialProfile(post.user_id, { name: post.user_name, avatar_url: post.user_avatar })}
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary overflow-hidden flex items-center justify-center font-black text-lg md:text-xl text-text-primary shrink-0 hover:ring-2 hover:ring-primary/40 transition-all"
+                  aria-label={`Abrir perfil de ${post.user_name}`}
+                >
+                  {postProfiles[post.user_id]?.avatar_url || (post.user_avatar?.startsWith('http') ? post.user_avatar : '') ? (
+                    <img src={postProfiles[post.user_id]?.avatar_url || post.user_avatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    post.user_avatar || post.user_name[0]
+                  )}
+                </button>
                 <div>
-                  <h4 className="font-bold text-sm md:text-base">{post.user_name}</h4>
+                  <button onClick={() => openSocialProfile(post.user_id, { name: post.user_name, avatar_url: post.user_avatar })} className="font-bold text-sm md:text-base hover:text-primary transition-colors text-left">
+                    {postProfiles[post.user_id]?.name || post.user_name}
+                  </button>
                   <span className="text-[10px] md:text-xs text-text-muted">
                     {formatDistanceToNow(new Date(post.criado_em), { addSuffix: true, locale: ptBR })}
                   </span>
@@ -9263,13 +9711,13 @@ function AdminView() {
         </div>
 
         <div className="flex bg-surface p-1 rounded-2xl border border-white/5 self-start">
-          <button 
+          <button
             onClick={() => setAdminTab('general')}
             className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'general' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-primary'}`}
           >
             Geral
           </button>
-          <button 
+          <button
             onClick={() => setAdminTab('affiliates')}
             className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'affiliates' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-primary'}`}
           >
@@ -10273,7 +10721,7 @@ function PricingView({
     <div className="min-h-screen bg-background p-6 md:p-12">
       <div className="max-w-6xl mx-auto space-y-12">
         <header className="text-center space-y-4">
-          <button 
+          <button
             onClick={onBack}
             className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors mx-auto mb-8"
           >

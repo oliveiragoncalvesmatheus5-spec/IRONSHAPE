@@ -86,7 +86,7 @@ import {
   UserPlus,
   UserMinus
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
 
@@ -9363,6 +9363,10 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
   const userEmail = user?.email || profile.email || '';
   const isFreePlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
   const planLabel = isFreePlan ? 'Free' : effectivePlan;
+  const paidAt = profile.subscriptionPaidAt ? new Date(profile.subscriptionPaidAt) : null;
+  const nextBillingDate = paidAt && isValid(paidAt)
+    ? format(addMonths(paidAt, 1), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+    : null;
   const handleTrainingPlaceChange = (nextTrainingPlace: 'gym' | 'home') => {
     if (!user?.id) return;
     let onboarding: any = null;
@@ -9488,7 +9492,9 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
             </div>
             {!isFreePlan && (
               <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm text-text-secondary">
-                Sua próxima cobrança será em 24 de Abril de 2026.
+                {nextBillingDate
+                  ? `Sua próxima cobrança será em ${nextBillingDate}.`
+                  : 'A data da próxima cobrança será exibida após a confirmação do pagamento.'}
               </div>
             )}
           </div>

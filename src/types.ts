@@ -34,6 +34,7 @@ export interface UserProfile {
   role: 'user' | 'admin';
   subscriptionStatus: 'active' | 'inactive' | 'canceled';
   paymentCustomerId?: string;
+  subscriptionPaidAt?: string;
   criado_em: string; // Renamed from createdAt
   updatedAt: string;
   points: number;

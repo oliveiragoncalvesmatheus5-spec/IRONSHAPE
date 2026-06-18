@@ -4,6 +4,7 @@ import {
   buildExternalId,
   extractWebhookMetadata,
   getCheckoutConfig,
+  getPaymentDate,
   isActivationEvent,
   isCancellationEvent,
   isPaidPlan,
@@ -133,4 +134,12 @@ test('classifies webhook events', () => {
   assert.equal(isActivationEvent('subscription.cancelled'), false);
   assert.equal(isCancellationEvent('subscription.cancelled'), true);
   assert.equal(isCancellationEvent('checkout.completed'), false);
+});
+
+test('uses the confirmed payment date from the webhook', () => {
+  assert.equal(getPaymentDate({ data: { payment: { paidAt: '2026-06-18T15:30:00.000Z' } } }), '2026-06-18T15:30:00.000Z');
+  assert.equal(
+    getPaymentDate({ data: {} }, new Date('2026-06-19T10:00:00.000Z')),
+    '2026-06-19T10:00:00.000Z',
+  );
 });

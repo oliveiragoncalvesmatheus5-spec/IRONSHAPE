@@ -10,6 +10,7 @@ import {
   buildExternalId,
   extractWebhookMetadata,
   getCheckoutConfig,
+  getPaymentDate,
   isActivationEvent,
   isCancellationEvent,
   isPaidPlan,
@@ -19,7 +20,10 @@ import {
   type PaidPlan,
 } from "./src/server/payment";
 
-const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
+const MIGRATION_SQL = `
+  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;
+  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS "subscriptionPaidAt" timestamptz DEFAULT NULL;
+`;
 const ADMIN_EMAIL = "carlosalbertojuniorourak@gmail.com";
 const SUPABASE_PROJECT_URL = process.env.VITE_SUPABASE_URL || "https://olelsxjkoktjabyfgtoo.supabase.co";
 const SUPABASE_PUBLIC_KEY = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_Kah8D1eadG41rgfXhnztIQ_s4qc2ax9";
@@ -87,7 +91,12 @@ async function updateProfilePlanFromPayment(event: any) {
 
   const updatePayload = isCancellation
     ? { plano: "free", subscriptionStatus: "canceled", updatedAt: new Date().toISOString() }
-    : { plano: plan as PaidPlan, subscriptionStatus: "active", updatedAt: new Date().toISOString() };
+    : {
+        plano: plan as PaidPlan,
+        subscriptionStatus: "active",
+        subscriptionPaidAt: getPaymentDate(event),
+        updatedAt: new Date().toISOString(),
+      };
 
   let updateQuery = admin.from("profiles").update(updatePayload);
   if (userId) {

@@ -150,6 +150,28 @@ export function extractWebhookMetadata(event: any, env: NodeJS.ProcessEnv = proc
   };
 }
 
+export function getPaymentDate(event: any, now = new Date()) {
+  const data = event?.data || {};
+  const candidates = [
+    data.payment?.paidAt,
+    data.payment?.paid_at,
+    data.payment?.completedAt,
+    data.payment?.completed_at,
+    data.subscription?.paidAt,
+    data.subscription?.paid_at,
+    data.checkout?.paidAt,
+    data.checkout?.paid_at,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string' && typeof candidate !== 'number') continue;
+    const parsed = new Date(candidate);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+
+  return now.toISOString();
+}
+
 export function isActivationEvent(eventName: string) {
   return ['checkout.completed', 'subscription.completed', 'subscription.renewed'].includes(eventName);
 }

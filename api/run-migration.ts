@@ -18,7 +18,10 @@ function readBody(req: IncomingMessage): Promise<any> {
   });
 }
 
-const MIGRATION_SQL = `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;`;
+const MIGRATION_SQL = `
+  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;
+  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS "subscriptionPaidAt" timestamptz DEFAULT NULL;
+`;
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.method === 'OPTIONS') return json(res, 200, {});

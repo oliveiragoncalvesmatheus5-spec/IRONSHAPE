@@ -9879,6 +9879,21 @@ function AdminView() {
   const recentUsers = showAllUsers ? adminData.profiles : adminData.profiles.slice(0, 6);
   const hasMoreUsers = adminData.profiles.length > 6;
   const recentConversions = adminData.conversions.slice(0, 5);
+  const formatUserRegistrationDate = (value?: string) => {
+    if (!value) return 'Data de cadastro indisponível';
+
+    const registrationDate = new Date(value);
+    if (!isValid(registrationDate)) return 'Data de cadastro indisponível';
+
+    return `Cadastrado em ${registrationDate.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })} às ${registrationDate.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+  };
 
   return (
     <div className="space-y-8">
@@ -9966,6 +9981,10 @@ function AdminView() {
                               <div className="min-w-0">
                                 <div className="font-black text-sm truncate">{user.name || 'Usuário sem nome'}</div>
                                 <div className="text-[10px] text-text-muted font-bold truncate">{user.email}</div>
+                                <div className="mt-1 flex items-center gap-1 text-[9px] text-text-muted font-bold">
+                                  <CalendarDays size={11} className="shrink-0 text-primary" />
+                                  <span className="truncate">{formatUserRegistrationDate(user.criado_em)}</span>
+                                </div>
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 md:justify-end">

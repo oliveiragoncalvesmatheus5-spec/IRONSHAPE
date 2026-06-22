@@ -16,6 +16,13 @@ export function DashboardMetricCard({ label, value, subValue, icon, trend, onCli
     <motion.div
       whileHover={onClick ? { y: -5, scale: 1.02 } : {}}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (!onClick || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        onClick();
+      }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       className={`bg-surface p-6 md:p-8 rounded-[32px] border border-white/5 hover:border-primary/30 transition-all duration-500 group relative overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all duration-700">

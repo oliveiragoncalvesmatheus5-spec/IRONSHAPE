@@ -2481,6 +2481,24 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
   );
 }
 
+type WellnessLevel = 'low' | 'medium' | 'high';
+
+type DailyWellnessCheckIn = {
+  date: string;
+  energy: WellnessLevel;
+  sleepHours: number;
+  sleepQuality: WellnessLevel;
+  soreness: WellnessLevel;
+  updatedAt: string;
+};
+
+type WellnessCheckInDraft = {
+  energy: WellnessLevel | '';
+  sleepHours: number;
+  sleepQuality: WellnessLevel | '';
+  soreness: WellnessLevel | '';
+};
+
 function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: {
   profile: UserProfile,
   onUpgrade: () => void,
@@ -2501,9 +2519,87 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
   const storageUserId = user?.id || profile.id || 'guest';
   const weeklyStorageKey = `weekly_workouts_${storageUserId}`;
   const weeklyDoneStorageKey = `weekly_workouts_done_${storageUserId}`;
+  const wellnessStorageKey = `wellness_checkins_${storageUserId}`;
+  const todayCheckInDate = format(new Date(), 'yyyy-MM-dd');
   const [savedWeeklyWorkouts, setSavedWeeklyWorkouts] = useState<WeeklyWorkoutSlot[]>(() => safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
   const [savedWeeklyDoneIds, setSavedWeeklyDoneIds] = useState<string[]>(() => safeParseArray<string>(weeklyDoneStorageKey));
   const [dashboardWorkoutPendingId, setDashboardWorkoutPendingId] = useState<string | null>(null);
+  const [dailyCheckIn, setDailyCheckIn] = useState<DailyWellnessCheckIn | null>(() => {
+    try {
+      const history = JSON.parse(localStorage.getItem(wellnessStorageKey) || '{}') as Record<string, DailyWellnessCheckIn>;
+      return history[todayCheckInDate] || null;
+    } catch {
+      return null;
+    }
+  });
+  const [showWellnessCheckIn, setShowWellnessCheckIn] = useState(false);
+  const [checkInDraft, setCheckInDraft] = useState<WellnessCheckInDraft>({
+    energy: '',
+    sleepHours: 0,
+    sleepQuality: '',
+    soreness: '',
+  });
+
+  const openWellnessCheckIn = () => {
+    setCheckInDraft({
+      energy: dailyCheckIn?.energy || '',
+      sleepHours: dailyCheckIn?.sleepHours || 0,
+      sleepQuality: dailyCheckIn?.sleepQuality || '',
+      soreness: dailyCheckIn?.soreness || '',
+    });
+    setShowWellnessCheckIn(true);
+    trackEvent('wellness_checkin_opened', { has_checkin_today: !!dailyCheckIn });
+  };
+
+  const wellnessLabel = (level?: WellnessLevel | '') => {
+    if (level === 'high') return 'Alta';
+    if (level === 'medium') return 'Média';
+    if (level === 'low') return 'Baixa';
+    return 'Não informado';
+  };
+
+  const saveWellnessCheckIn = () => {
+    if (!checkInDraft.energy || !checkInDraft.sleepQuality || !checkInDraft.soreness || checkInDraft.sleepHours <= 0) return;
+    const nextCheckIn: DailyWellnessCheckIn = {
+      date: todayCheckInDate,
+      energy: checkInDraft.energy,
+      sleepHours: checkInDraft.sleepHours,
+      sleepQuality: checkInDraft.sleepQuality,
+      soreness: checkInDraft.soreness,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      const history = JSON.parse(localStorage.getItem(wellnessStorageKey) || '{}') as Record<string, DailyWellnessCheckIn>;
+      history[todayCheckInDate] = nextCheckIn;
+      const recentHistory = Object.fromEntries(Object.entries(history).sort(([a], [b]) => a.localeCompare(b)).slice(-60));
+      localStorage.setItem(wellnessStorageKey, JSON.stringify(recentHistory));
+    } catch {
+      // O check-in continua disponível na sessão mesmo se o armazenamento local falhar.
+    }
+
+    setDailyCheckIn(nextCheckIn);
+    setShowWellnessCheckIn(false);
+    trackEvent('wellness_checkin_saved', {
+      energy: nextCheckIn.energy,
+      sleep_quality: nextCheckIn.sleepQuality,
+      sleep_hours: nextCheckIn.sleepHours,
+      soreness: nextCheckIn.soreness,
+    });
+  };
+
+  useEffect(() => {
+    if (!showWellnessCheckIn) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowWellnessCheckIn(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [showWellnessCheckIn]);
 
   const resolveWorkoutsByPlan = (plan: string | undefined) => {
     const p = plan || 'Iniciante';
@@ -3046,9 +3142,12 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
         />
         <DashboardMetricCard 
           label="Nível de Energia" 
-          value="Alta" 
-          subValue="Baseado no sono" 
-          icon={<Zap size={20} />} 
+          value={wellnessLabel(dailyCheckIn?.energy)}
+          subValue={dailyCheckIn
+            ? `${dailyCheckIn.sleepHours.toLocaleString('pt-BR')}h de sono • check-in de hoje`
+            : 'Toque para fazer seu check-in'}
+          icon={<Zap size={20} />}
+          onClick={openWellnessCheckIn}
         />
       </div>
 
@@ -3205,6 +3304,173 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
           );
         })()}
       </div>
+
+      <AnimatePresence>
+        {showWellnessCheckIn && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWellnessCheckIn(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="wellness-checkin-title"
+              initial={{ opacity: 0, scale: 0.96, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 20 }}
+              className="relative z-10 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[32px] sm:rounded-[40px] border border-white/10 bg-surface p-5 sm:p-8 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4 mb-7">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                    <Zap size={24} />
+                  </div>
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.22em] text-primary">Check-in diário</div>
+                    <h2 id="wellness-checkin-title" className="text-2xl sm:text-3xl font-black tracking-tight">Como você está hoje?</h2>
+                    <p className="mt-1 text-xs sm:text-sm text-text-muted leading-relaxed">Suas respostas ajudam a interpretar sua disposição antes do treino.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowWellnessCheckIn(false)}
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary flex items-center justify-center shrink-0"
+                  aria-label="Fechar check-in"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <div className="space-y-7">
+                <fieldset className="space-y-3">
+                  <legend className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Seu nível de energia</legend>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {([
+                      { value: 'low', label: 'Baixa', description: 'Pouca disposição' },
+                      { value: 'medium', label: 'Média', description: 'Disposição normal' },
+                      { value: 'high', label: 'Alta', description: 'Muita disposição' },
+                    ] as { value: WellnessLevel; label: string; description: string }[]).map(option => (
+                      <button
+                        type="button"
+                        key={option.value}
+                        aria-pressed={checkInDraft.energy === option.value}
+                        onClick={() => setCheckInDraft(current => ({ ...current, energy: option.value }))}
+                        className={`min-h-[76px] rounded-2xl border p-3 text-left transition-all ${
+                          checkInDraft.energy === option.value
+                            ? 'bg-primary/15 border-primary text-primary shadow-lg shadow-primary/10'
+                            : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/25'
+                        }`}
+                      >
+                        <div className="text-sm font-black">{option.label}</div>
+                        <div className="mt-1 text-[9px] leading-tight opacity-70">{option.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div className="space-y-3">
+                  <label htmlFor="wellness-sleep-hours" className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Quantas horas você dormiu?</label>
+                  <div className="relative">
+                    <input
+                      id="wellness-sleep-hours"
+                      type="number"
+                      min="1"
+                      max="14"
+                      step="0.5"
+                      inputMode="decimal"
+                      placeholder="Ex.: 7.5"
+                      value={checkInDraft.sleepHours || ''}
+                      onChange={(event) => setCheckInDraft(current => ({ ...current, sleepHours: Math.min(14, Math.max(0, Number(event.target.value))) }))}
+                      className="w-full min-h-[56px] rounded-2xl border border-white/10 bg-white/5 px-5 pr-16 text-base font-black outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black text-text-muted">HORAS</span>
+                  </div>
+                </div>
+
+                <fieldset className="space-y-3">
+                  <legend className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Qualidade do sono</legend>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {([
+                      { value: 'low', label: 'Ruim' },
+                      { value: 'medium', label: 'Regular' },
+                      { value: 'high', label: 'Boa' },
+                    ] as { value: WellnessLevel; label: string }[]).map(option => (
+                      <button
+                        type="button"
+                        key={option.value}
+                        aria-pressed={checkInDraft.sleepQuality === option.value}
+                        onClick={() => setCheckInDraft(current => ({ ...current, sleepQuality: option.value }))}
+                        className={`min-h-[48px] rounded-2xl border px-3 text-xs font-black transition-all ${
+                          checkInDraft.sleepQuality === option.value
+                            ? 'bg-primary/15 border-primary text-primary'
+                            : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/25'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="space-y-3">
+                  <legend className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Cansaço muscular</legend>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {([
+                      { value: 'low', label: 'Baixo' },
+                      { value: 'medium', label: 'Moderado' },
+                      { value: 'high', label: 'Alto' },
+                    ] as { value: WellnessLevel; label: string }[]).map(option => (
+                      <button
+                        type="button"
+                        key={option.value}
+                        aria-pressed={checkInDraft.soreness === option.value}
+                        onClick={() => setCheckInDraft(current => ({ ...current, soreness: option.value }))}
+                        className={`min-h-[48px] rounded-2xl border px-3 text-xs font-black transition-all ${
+                          checkInDraft.soreness === option.value
+                            ? 'bg-primary/15 border-primary text-primary'
+                            : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/25'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                {checkInDraft.energy && checkInDraft.sleepQuality && checkInDraft.soreness && checkInDraft.sleepHours > 0 && (
+                  <div className="rounded-2xl border border-primary/20 bg-primary/[0.07] p-4 flex items-start gap-3">
+                    <Info size={18} className="text-primary mt-0.5 shrink-0" />
+                    <p className="text-xs sm:text-sm leading-relaxed text-text-secondary">
+                      {checkInDraft.energy === 'low' || checkInDraft.soreness === 'high'
+                        ? 'Seu relato indica recuperação reduzida. Considere diminuir a carga, alongar mais e respeitar qualquer sinal de dor.'
+                        : checkInDraft.sleepHours < 6 || checkInDraft.sleepQuality === 'low'
+                          ? 'Seu sono pode afetar a performance hoje. Faça um aquecimento gradual e ajuste o ritmo conforme sua disposição.'
+                          : checkInDraft.energy === 'high' && checkInDraft.soreness === 'low'
+                            ? 'Você relata boa disposição e pouco cansaço muscular para o treino de hoje.'
+                            : 'Seu relato indica disposição moderada. Comece pelo aquecimento e ajuste a intensidade conforme se sentir.'}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={saveWellnessCheckIn}
+                  disabled={!checkInDraft.energy || !checkInDraft.sleepQuality || !checkInDraft.soreness || checkInDraft.sleepHours <= 0}
+                  className="w-full min-h-[56px] rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-[0.98] disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <Check size={18} />
+                  {dailyCheckIn ? 'Atualizar check-in' : 'Salvar check-in'}
+                </button>
+                <p className="text-[10px] text-center text-text-muted leading-relaxed">Dados informados por você e salvos neste dispositivo. Este check-in não substitui avaliação profissional.</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

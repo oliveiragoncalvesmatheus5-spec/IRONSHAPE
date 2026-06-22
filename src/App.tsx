@@ -4515,42 +4515,116 @@ function HomeRoutineCard({
   );
 }
 
-function RestTimer({ restTime, onStateChange }: { restTime: string, onStateChange?: (isActive: boolean) => void }) {
+function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, timerId: string, onStateChange?: (isActive: boolean) => void }) {
   const initialSeconds = parseInt(restTime.replace('s', '')) || 60;
-  const [seconds, setSeconds] = useState(initialSeconds);
-  const [isActive, setIsActive] = useState(false);
-  const [isFinished, setIsFinished] = useState(false);
+  const storageKey = `ironshape_rest_timer_${timerId}`;
+  const restoredTimer = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || 'null') as {
+        endAt?: number | null;
+        remainingSeconds?: number;
+        isActive?: boolean;
+        isFinished?: boolean;
+      } | null;
+      if (!saved) return null;
+      if (saved.isActive && saved.endAt) {
+        const remainingSeconds = Math.max(0, Math.ceil((saved.endAt - Date.now()) / 1000));
+        return {
+          endAt: remainingSeconds > 0 ? saved.endAt : null,
+          remainingSeconds,
+          isActive: remainingSeconds > 0,
+          isFinished: remainingSeconds === 0,
+        };
+      }
+      return {
+        endAt: null,
+        remainingSeconds: Math.max(0, saved.remainingSeconds ?? initialSeconds),
+        isActive: false,
+        isFinished: !!saved.isFinished,
+      };
+    } catch {
+      return null;
+    }
+  })();
+  const [seconds, setSeconds] = useState(restoredTimer?.remainingSeconds ?? initialSeconds);
+  const [endAt, setEndAt] = useState<number | null>(restoredTimer?.endAt ?? null);
+  const [isActive, setIsActive] = useState(restoredTimer?.isActive ?? false);
+  const [isFinished, setIsFinished] = useState(restoredTimer?.isFinished ?? false);
 
   useEffect(() => {
-    let interval: any = null;
-    if (isActive && seconds > 0) {
-      interval = setInterval(() => {
-        setSeconds((s) => s - 1);
-      }, 1000);
-    } else if (seconds === 0) {
+    onStateChange?.(isActive);
+  }, [isActive, onStateChange]);
+
+  const saveTimer = (timer: { endAt: number | null; remainingSeconds: number; isActive: boolean; isFinished: boolean }) => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(timer));
+    } catch {
+      // O cronômetro continua funcionando mesmo quando o armazenamento está indisponível.
+    }
+  };
+
+  useEffect(() => {
+    if (!isActive || !endAt) return;
+
+    const syncWithClock = () => {
+      const remainingSeconds = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+      setSeconds(remainingSeconds);
+      if (remainingSeconds > 0) return;
+
       setIsActive(false);
       setIsFinished(true);
-      if (onStateChange) onStateChange(false);
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, seconds, onStateChange]);
+      setEndAt(null);
+      saveTimer({ endAt: null, remainingSeconds: 0, isActive: false, isFinished: true });
+      onStateChange?.(false);
+      if (document.visibilityState === 'visible' && 'vibrate' in navigator) navigator.vibrate([180, 100, 180]);
+    };
+
+    syncWithClock();
+    const interval = window.setInterval(syncWithClock, 500);
+    const syncWhenVisible = () => {
+      if (document.visibilityState === 'visible') syncWithClock();
+    };
+    window.addEventListener('focus', syncWithClock);
+    window.addEventListener('pageshow', syncWithClock);
+    document.addEventListener('visibilitychange', syncWhenVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', syncWithClock);
+      window.removeEventListener('pageshow', syncWithClock);
+      document.removeEventListener('visibilitychange', syncWhenVisible);
+    };
+  }, [isActive, endAt, storageKey, onStateChange]);
 
   const toggleTimer = () => {
-    if (isFinished) {
-      setSeconds(initialSeconds);
-      setIsFinished(false);
+    if (isActive && endAt) {
+      const remainingSeconds = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+      setSeconds(remainingSeconds);
+      setEndAt(null);
+      setIsActive(false);
+      setIsFinished(remainingSeconds === 0);
+      saveTimer({ endAt: null, remainingSeconds, isActive: false, isFinished: remainingSeconds === 0 });
+      onStateChange?.(false);
+      return;
     }
-    const newActive = !isActive;
-    setIsActive(newActive);
-    if (onStateChange) onStateChange(newActive);
+
+    const duration = isFinished || seconds <= 0 ? initialSeconds : seconds;
+    const nextEndAt = Date.now() + duration * 1000;
+    setSeconds(duration);
+    setEndAt(nextEndAt);
+    setIsFinished(false);
+    setIsActive(true);
+    saveTimer({ endAt: nextEndAt, remainingSeconds: duration, isActive: true, isFinished: false });
+    onStateChange?.(true);
   };
 
   const resetTimer = () => {
     setSeconds(initialSeconds);
+    setEndAt(null);
     setIsActive(false);
     setIsFinished(false);
-    if (onStateChange) onStateChange(false);
+    try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+    onStateChange?.(false);
   };
 
   const formatTime = (s: number) => {
@@ -5078,7 +5152,7 @@ function ExerciseCard({
                 />
               </div>
             ) : (
-              <RestTimer restTime={exercise.restTime} onStateChange={setIsResting} />
+              <RestTimer restTime={exercise.restTime} timerId={String(exercise.id)} onStateChange={setIsResting} />
             )}
           </div>
 

@@ -10053,6 +10053,7 @@ function AdminView() {
   const [adminError, setAdminError] = useState('');
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [planUser, setPlanUser] = useState<UserProfile | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [selectedAdminPlan, setSelectedAdminPlan] = useState<'free' | 'Pro' | 'Elite'>('free');
   const [savingUserPlan, setSavingUserPlan] = useState(false);
   const [userPlanError, setUserPlanError] = useState('');
@@ -10142,6 +10143,7 @@ function AdminView() {
         ...current,
         profiles: current.profiles.map(profile => profile.id === planUser.id ? payload.profile as UserProfile : profile),
       }));
+      setSelectedUser(current => current?.id === planUser.id ? payload.profile as UserProfile : current);
       trackEvent('admin_user_plan_updated', {
         previous_plan: normalizeAdminPlan(planUser.plano),
         new_plan: selectedAdminPlan,
@@ -10176,6 +10178,104 @@ function AdminView() {
   const recentUsers = showAllUsers ? adminData.profiles : adminData.profiles.slice(0, 6);
   const hasMoreUsers = adminData.profiles.length > 6;
   const recentConversions = adminData.conversions.slice(0, 5);
+  const getUserWorkouts = (userId: string) => adminData.workouts.filter(workout => workout.userUid === userId);
+  const getUserNutrition = (userId: string) => adminData.nutrition.filter(nutrition => nutrition.user_id === userId);
+  const getUserPosts = (userId: string) => adminData.posts.filter(post => post.user_id === userId);
+  const getUserConversions = (userId: string) => adminData.conversions.filter(conversion => conversion.user_id === userId);
+
+  const getLatestUserActivity = (user: UserProfile) => {
+    const dates = [
+      user.updatedAt,
+      user.lastWorkoutDate,
+      ...getUserWorkouts(user.id).map(workout => workout.completedAt),
+      ...getUserNutrition(user.id).map(nutrition => nutrition.date),
+      ...getUserPosts(user.id).map(post => post.criado_em),
+      ...getUserConversions(user.id).map(conversion => conversion.created_at),
+    ]
+      .filter(Boolean)
+      .map(value => new Date(value as string))
+      .filter(isValid);
+
+    return dates.length ? new Date(Math.max(...dates.map(date => date.getTime()))) : null;
+  };
+
+  const getDaysSince = (date: Date | null) => {
+    if (!date) return null;
+    return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const getAdminUserStatus = (user: UserProfile) => {
+    const onboardingMissing = !user.age || !user.weight || !user.height || !user.goal;
+    const latestActivity = getLatestUserActivity(user);
+    const daysSinceActivity = getDaysSince(latestActivity);
+    const workoutCount = getUserWorkouts(user.id).length;
+    const nutritionCount = getUserNutrition(user.id).length;
+    const conversionCount = getUserConversions(user.id).length;
+    const isFree = normalizeAdminPlan(user.plano) === 'free';
+
+    if (onboardingMissing) {
+      return {
+        label: 'Onboarding',
+        detail: 'Perfil incompleto',
+        tone: 'bg-error/10 border-error/20 text-error',
+        priority: 4,
+      };
+    }
+
+    if (isFree && (workoutCount >= 2 || nutritionCount >= 2 || Number(user.points || 0) >= 500 || conversionCount > 0)) {
+      return {
+        label: 'Oportunidade',
+        detail: 'Free engajado',
+        tone: 'bg-primary/10 border-primary/20 text-primary',
+        priority: 3,
+      };
+    }
+
+    if (daysSinceActivity === 0) {
+      return {
+        label: 'Ativo hoje',
+        detail: 'Usou o app hoje',
+        tone: 'bg-success/10 border-success/20 text-success',
+        priority: 1,
+      };
+    }
+
+    if (daysSinceActivity !== null && daysSinceActivity <= 7) {
+      return {
+        label: 'Engajado',
+        detail: `Ativo há ${daysSinceActivity}d`,
+        tone: 'bg-success/10 border-success/20 text-success',
+        priority: 1,
+      };
+    }
+
+    if (daysSinceActivity !== null && daysSinceActivity <= 14) {
+      return {
+        label: 'Morno',
+        detail: `Ativo há ${daysSinceActivity}d`,
+        tone: 'bg-white/5 border-white/10 text-text-secondary',
+        priority: 2,
+      };
+    }
+
+    return {
+      label: 'Risco',
+      detail: daysSinceActivity === null ? 'Sem atividade' : `Parado há ${daysSinceActivity}d`,
+      tone: 'bg-error/10 border-error/20 text-error',
+      priority: 5,
+    };
+  };
+
+  const usersAtRisk = adminData.profiles
+    .map(user => ({ user, status: getAdminUserStatus(user) }))
+    .filter(item => item.status.label === 'Risco' || item.status.label === 'Onboarding')
+    .sort((a, b) => b.status.priority - a.status.priority)
+    .slice(0, 5);
+  const upgradeOpportunities = adminData.profiles
+    .map(user => ({ user, status: getAdminUserStatus(user), workouts: getUserWorkouts(user.id).length, nutrition: getUserNutrition(user.id).length }))
+    .filter(item => item.status.label === 'Oportunidade')
+    .sort((a, b) => (b.workouts + b.nutrition) - (a.workouts + a.nutrition))
+    .slice(0, 5);
   const formatUserRegistrationDate = (value?: string) => {
     if (!value) return 'Data de cadastro indisponível';
 
@@ -10269,10 +10369,28 @@ function AdminView() {
                   <div className="divide-y divide-white/5">
                     {recentUsers.length > 0 ? (
                       <>
-                        {recentUsers.map(user => (
-                          <div key={user.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
+                        {recentUsers.map(user => {
+                          const status = getAdminUserStatus(user);
+                          const workoutCount = getUserWorkouts(user.id).length;
+                          const nutritionCount = getUserNutrition(user.id).length;
+                          const latestActivity = getLatestUserActivity(user);
+                          return (
+                          <div
+                            key={user.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedUser(user)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                setSelectedUser(user);
+                              }
+                            }}
+                            className="group p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 transition-colors cursor-pointer"
+                            aria-label={`Ver detalhes de ${user.name || user.email || 'usuário'}`}
+                          >
                             <div className="flex items-center gap-4 min-w-0">
-                              <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black shrink-0">
+                              <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black shrink-0 group-hover:scale-105 transition-transform">
                                 {(user.name || user.email || 'U')[0]?.toUpperCase()}
                               </div>
                               <div className="min-w-0">
@@ -10282,9 +10400,23 @@ function AdminView() {
                                   <CalendarDays size={11} className="shrink-0 text-primary" />
                                   <span className="truncate">{formatUserRegistrationDate(user.criado_em)}</span>
                                 </div>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-[9px] font-black uppercase tracking-widest text-text-muted">
+                                  <span>{workoutCount} treinos</span>
+                                  <span>•</span>
+                                  <span>{nutritionCount} dietas</span>
+                                  {latestActivity && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{formatDistanceToNow(latestActivity, { addSuffix: true, locale: ptBR })}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                              <span className={`px-3 py-1 border rounded-xl text-[10px] font-black uppercase tracking-widest ${status.tone}`}>
+                                {status.label}
+                              </span>
                               <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">{normalizeAdminPlan(user.plano)}</span>
                               <span className={`px-3 py-1 border rounded-xl text-[10px] font-black uppercase tracking-widest ${user.subscriptionStatus === 'active' ? 'bg-success/10 border-success/20 text-success' : user.subscriptionStatus === 'canceled' ? 'bg-error/10 border-error/20 text-error' : 'bg-white/5 border-white/10 text-text-muted'}`}>
                                 {user.subscriptionStatus === 'active' ? 'Ativa' : user.subscriptionStatus === 'canceled' ? 'Cancelada' : 'Inativa'}
@@ -10294,15 +10426,21 @@ function AdminView() {
                               )}
                               {user.role !== 'admin' && normalizeAdminPlan(user.plano) !== 'Admin' && (
                                 <button
-                                  onClick={() => openPlanManager(user)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openPlanManager(user);
+                                  }}
                                   className="min-h-[34px] px-3 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all flex items-center gap-1.5"
                                 >
                                   <Edit3 size={12} /> Gerenciar plano
                                 </button>
                               )}
+                              <span className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 text-text-muted group-hover:text-primary group-hover:border-primary/30 flex items-center justify-center transition-all">
+                                <ChevronRight size={15} />
+                              </span>
                             </div>
                           </div>
-                        ))}
+                        )})}
                         {hasMoreUsers && (
                           <div className="p-5 flex justify-center">
                             <button
@@ -10408,6 +10546,60 @@ function AdminView() {
                   </div>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className={usersAtRisk.length ? 'text-error' : 'text-success'} size={22} />
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-tight">Atenção agora</h3>
+                      <p className="text-xs text-text-muted">Usuários em risco ou presos no onboarding.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {usersAtRisk.map(({ user, status }) => (
+                      <button
+                        key={user.id}
+                        onClick={() => setSelectedUser(user)}
+                        className="w-full text-left bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition-all"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-black truncate">{user.name || user.email}</div>
+                          <div className="text-[10px] text-text-muted truncate">{user.email}</div>
+                        </div>
+                        <span className={`shrink-0 px-3 py-1 border rounded-xl text-[9px] font-black uppercase tracking-widest ${status.tone}`}>{status.label}</span>
+                      </button>
+                    ))}
+                    {usersAtRisk.length === 0 && <p className="text-sm text-text-muted">Nenhum risco forte detectado nos dados carregados.</p>}
+                  </div>
+                </div>
+
+                <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="text-primary" size={22} />
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-tight">Chance de upgrade</h3>
+                      <p className="text-xs text-text-muted">Free engajados que podem virar assinatura.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {upgradeOpportunities.map(({ user, workouts, nutrition }) => (
+                      <button
+                        key={user.id}
+                        onClick={() => setSelectedUser(user)}
+                        className="w-full text-left bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition-all"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-black truncate">{user.name || user.email}</div>
+                          <div className="text-[10px] text-text-muted truncate">{workouts} treinos • {nutrition} dietas • {Number(user.points || 0)} pts</div>
+                        </div>
+                        <ChevronRight size={16} className="text-primary shrink-0" />
+                      </button>
+                    ))}
+                    {upgradeOpportunities.length === 0 && <p className="text-sm text-text-muted">Ainda não há free engajado suficiente para destacar.</p>}
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -10416,6 +10608,23 @@ function AdminView() {
       )}
 
       <AnimatePresence>
+        {selectedUser && (
+          <AdminUserDetailsDrawer
+            user={selectedUser}
+            status={getAdminUserStatus(selectedUser)}
+            workouts={getUserWorkouts(selectedUser.id)}
+            nutrition={getUserNutrition(selectedUser.id)}
+            posts={getUserPosts(selectedUser.id)}
+            conversions={getUserConversions(selectedUser.id)}
+            allWorkouts={ALL_WORKOUTS}
+            normalizePlan={normalizeAdminPlan}
+            formatRegistrationDate={formatUserRegistrationDate}
+            latestActivity={getLatestUserActivity(selectedUser)}
+            onClose={() => setSelectedUser(null)}
+            onManagePlan={() => openPlanManager(selectedUser)}
+          />
+        )}
+
         {planUser && (
           <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-6">
             <motion.div
@@ -10503,6 +10712,300 @@ function AdminView() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+type AdminUserStatus = {
+  label: string;
+  detail: string;
+  tone: string;
+  priority: number;
+};
+
+function AdminUserDetailsDrawer({
+  user,
+  status,
+  workouts,
+  nutrition,
+  posts,
+  conversions,
+  allWorkouts,
+  normalizePlan,
+  formatRegistrationDate,
+  latestActivity,
+  onClose,
+  onManagePlan,
+}: {
+  user: UserProfile;
+  status: AdminUserStatus;
+  workouts: WorkoutLog[];
+  nutrition: NutritionLog[];
+  posts: Post[];
+  conversions: AffiliateConversion[];
+  allWorkouts: Workout[];
+  normalizePlan: (plan?: Plan) => 'free' | 'Pro' | 'Elite' | 'Admin';
+  formatRegistrationDate: (value?: string) => string;
+  latestActivity: Date | null;
+  onClose: () => void;
+  onManagePlan: () => void;
+}) {
+  const completedWorkoutIds = new Set(workouts.map(workout => workout.workoutId).filter(Boolean));
+  const workoutTemplates = allWorkouts.filter(workout => completedWorkoutIds.has(workout.id));
+  const completedExercises = workoutTemplates.flatMap(workout =>
+    workout.exercises.map(exercise => ({
+      ...exercise,
+      workoutName: workout.name,
+      workoutId: workout.id,
+    }))
+  );
+  const totalWorkoutMinutes = workouts.reduce((sum, workout) => sum + Number(workout.duration || 0), 0);
+  const latestWorkout = workouts[0];
+  const latestNutrition = nutrition[0];
+  const latestConversion = conversions[0];
+  const hasCompletedOnboarding = Boolean(user.age && user.weight && user.height && user.goal);
+
+  const formatDateTime = (value?: string) => {
+    if (!value) return 'Sem data';
+    const date = new Date(value);
+    if (!isValid(date)) return 'Data inválida';
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' às ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatShortDate = (value?: string) => {
+    if (!value) return 'Sem data';
+    const date = new Date(value);
+    if (!isValid(date)) return 'Data inválida';
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  const timeline = [
+    user.criado_em ? { type: 'Cadastro', label: 'Criou conta', date: user.criado_em, tone: 'text-primary' } : null,
+    latestWorkout ? { type: 'Treino', label: `Concluiu ${latestWorkout.workoutName || 'um treino'}`, date: latestWorkout.completedAt, tone: 'text-success' } : null,
+    latestNutrition ? { type: 'Nutrição', label: `Registrou ${Number(latestNutrition.calories || 0).toLocaleString('pt-BR')} kcal`, date: latestNutrition.date, tone: 'text-primary' } : null,
+    posts[0] ? { type: 'Comunidade', label: 'Publicou na comunidade', date: posts[0].criado_em, tone: 'text-text-secondary' } : null,
+    latestConversion ? { type: 'Conversão', label: `${latestConversion.plano} • ${latestConversion.status_pagamento}`, date: latestConversion.created_at, tone: 'text-success' } : null,
+  ].filter(Boolean)
+    .sort((a, b) => new Date((b as any).date).getTime() - new Date((a as any).date).getTime()) as Array<{ type: string; label: string; date: string; tone: string }>;
+
+  const riskNotes = [
+    !hasCompletedOnboarding ? 'Onboarding incompleto: falta algum dado corporal ou objetivo.' : null,
+    workouts.length === 0 ? 'Ainda não concluiu nenhum treino.' : null,
+    nutrition.length === 0 ? 'Ainda não possui registro de nutrição carregado.' : null,
+    normalizePlan(user.plano) === 'free' && (workouts.length >= 2 || nutrition.length >= 2 || Number(user.points || 0) >= 500) ? 'Free com engajamento: bom candidato para oferta ou abordagem.' : null,
+    latestActivity ? null : 'Sem atividade recente detectada além do cadastro.',
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className="fixed inset-0 z-[115] flex items-end lg:items-stretch justify-center lg:justify-end">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-background/90 backdrop-blur-md"
+      />
+      <motion.aside
+        initial={{ opacity: 0, y: 44, x: 0 }}
+        animate={{ opacity: 1, y: 0, x: 0 }}
+        exit={{ opacity: 0, y: 44, x: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-user-detail-title"
+        className="relative w-full lg:w-[620px] max-h-[92vh] lg:max-h-none overflow-y-auto bg-zinc-950 border border-white/10 border-b-0 lg:border-b lg:border-r-0 rounded-t-[32px] lg:rounded-none lg:rounded-l-[32px] shadow-2xl"
+      >
+        <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-xl border-b border-white/10 p-5 sm:p-6 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <span className="text-[9px] font-black uppercase tracking-[0.22em] text-primary">Ficha do usuário</span>
+            <h3 id="admin-user-detail-title" className="mt-1 text-2xl sm:text-3xl font-black uppercase tracking-tight truncate">{user.name || 'Usuário sem nome'}</h3>
+            <p className="text-xs text-text-muted font-bold truncate">{user.email}</p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Fechar detalhes do usuário"
+            className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary flex items-center justify-center shrink-0 transition-all"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 space-y-6">
+          <div className="grid grid-cols-2 gap-3">
+            <AdminDetailStat label="Plano" value={normalizePlan(user.plano) === 'free' ? 'Free' : normalizePlan(user.plano)} />
+            <AdminDetailStat label="Status" value={status.label} tone={status.tone} />
+            <AdminDetailStat label="Treinos" value={workouts.length.toString()} />
+            <AdminDetailStat label="Nutrição" value={nutrition.length.toString()} />
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/10 rounded-[28px] p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-widest">Resumo comportamental</h4>
+                <p className="text-xs text-text-muted mt-1">{status.detail}</p>
+              </div>
+              {user.role !== 'admin' && normalizePlan(user.plano) !== 'Admin' && (
+                <button
+                  onClick={onManagePlan}
+                  className="min-h-[42px] px-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all flex items-center justify-center gap-2"
+                >
+                  <Edit3 size={14} /> Gerenciar plano
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <AdminDetailLine label="Cadastro" value={formatRegistrationDate(user.criado_em)} />
+              <AdminDetailLine label="Última atividade" value={latestActivity ? formatDistanceToNow(latestActivity, { addSuffix: true, locale: ptBR }) : 'Não detectada'} />
+              <AdminDetailLine label="Objetivo" value={user.goal || 'Não informado'} />
+              <AdminDetailLine label="Corpo" value={hasCompletedOnboarding ? `${user.weight}kg • ${user.height}cm • ${user.age} anos` : 'Dados incompletos'} />
+              <AdminDetailLine label="Pontos / streak" value={`${Number(user.points || 0)} pts • ${Number(user.streak || 0)} dias`} />
+              <AdminDetailLine label="Assinatura" value={user.subscriptionStatus || 'inactive'} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <AdminDetailStat label="Tempo treinando" value={`${totalWorkoutMinutes} min`} />
+            <AdminDetailStat label="Posts" value={posts.length.toString()} />
+            <AdminDetailStat label="Conversões" value={conversions.length.toString()} />
+          </div>
+
+          <section className="bg-white/[0.03] border border-white/10 rounded-[28px] p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className={riskNotes.length ? 'text-primary' : 'text-success'} size={20} />
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-widest">O que monitorar</h4>
+                <p className="text-xs text-text-muted">Sinais práticos para suporte, retenção e upgrade.</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {riskNotes.length > 0 ? riskNotes.map(note => (
+                <div key={note} className="flex items-start gap-2 text-xs text-text-secondary bg-white/5 rounded-2xl px-4 py-3">
+                  <CheckCircle2 size={14} className="text-primary shrink-0 mt-0.5" />
+                  <span>{note}</span>
+                </div>
+              )) : (
+                <p className="text-sm text-text-muted">Usuário sem alerta crítico nos dados carregados.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="bg-white/[0.03] border border-white/10 rounded-[28px] p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <Dumbbell className="text-primary" size={20} />
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-widest">Treinos e exercícios</h4>
+                <p className="text-xs text-text-muted">Conclusões registradas e exercícios dos treinos feitos.</p>
+              </div>
+            </div>
+            {workouts.length > 0 ? (
+              <div className="space-y-3">
+                {workouts.slice(0, 5).map(workout => (
+                  <div key={workout.id} className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-black truncate">{workout.workoutName || 'Treino sem nome'}</div>
+                        <div className="text-[10px] text-text-muted font-bold">{formatDateTime(workout.completedAt)}</div>
+                      </div>
+                      <span className="text-xs font-black text-primary shrink-0">{Number(workout.duration || 0)} min</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex flex-wrap gap-2">
+                  {completedExercises.slice(0, 12).map(exercise => (
+                    <span key={`${exercise.workoutId}-${exercise.id}`} className="px-3 py-2 bg-primary/10 border border-primary/10 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest">
+                      {exercise.name}
+                    </span>
+                  ))}
+                  {completedExercises.length > 12 && (
+                    <span className="px-3 py-2 bg-white/5 border border-white/10 text-text-muted rounded-xl text-[10px] font-black uppercase tracking-widest">
+                      +{completedExercises.length - 12} exercícios
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-text-muted">Nenhum treino concluído encontrado nos registros carregados.</p>
+            )}
+          </section>
+
+          <section className="bg-white/[0.03] border border-white/10 rounded-[28px] p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <Apple className="text-primary" size={20} />
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-widest">Nutrição</h4>
+                <p className="text-xs text-text-muted">Últimos registros nutricionais carregados.</p>
+              </div>
+            </div>
+            {nutrition.length > 0 ? (
+              <div className="space-y-3">
+                {nutrition.slice(0, 4).map(item => (
+                  <div key={item.id} className="grid grid-cols-4 gap-2 bg-white/5 border border-white/5 rounded-2xl p-4 text-center">
+                    <AdminMacro label={formatShortDate(item.date)} value={`${Number(item.calories || 0).toLocaleString('pt-BR')}`} />
+                    <AdminMacro label="Prot." value={`${Number(item.protein || 0)}g`} />
+                    <AdminMacro label="Carb." value={`${Number(item.carbs || 0)}g`} />
+                    <AdminMacro label="Gord." value={`${Number(item.fat || 0)}g`} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-text-muted">Nenhum registro de nutrição encontrado nos dados carregados.</p>
+            )}
+          </section>
+
+          <section className="bg-white/[0.03] border border-white/10 rounded-[28px] p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <Activity className="text-primary" size={20} />
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-widest">Linha do tempo</h4>
+                <p className="text-xs text-text-muted">Principais sinais da jornada desse usuário.</p>
+              </div>
+            </div>
+            {timeline.length > 0 ? (
+              <div className="space-y-3">
+                {timeline.map(item => (
+                  <div key={`${item.type}-${item.date}`} className="flex items-start gap-3">
+                    <div className="mt-1 w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
+                    <div className="min-w-0">
+                      <div className={`text-[10px] font-black uppercase tracking-widest ${item.tone}`}>{item.type}</div>
+                      <div className="text-sm font-bold text-text-secondary">{item.label}</div>
+                      <div className="text-[10px] text-text-muted">{formatDateTime(item.date)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-text-muted">Nenhum evento encontrado para montar a jornada.</p>
+            )}
+          </section>
+        </div>
+      </motion.aside>
+    </div>
+  );
+}
+
+function AdminDetailStat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className={`bg-white/[0.03] border border-white/10 rounded-2xl p-4 min-w-0 ${tone || ''}`}>
+      <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">{label}</div>
+      <div className="mt-2 text-lg font-black truncate">{value}</div>
+    </div>
+  );
+}
+
+function AdminDetailLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white/5 rounded-2xl px-4 py-3 min-w-0">
+      <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">{label}</div>
+      <div className="mt-1 text-xs font-bold text-text-secondary break-words">{value}</div>
+    </div>
+  );
+}
+
+function AdminMacro({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[9px] font-black uppercase tracking-widest text-text-muted truncate">{label}</div>
+      <div className="mt-1 text-sm font-black truncate">{value}</div>
     </div>
   );
 }

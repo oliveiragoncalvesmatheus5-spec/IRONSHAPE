@@ -1067,6 +1067,7 @@ export default function App() {
                   setActiveTab('workouts');
                 }}
                 onViewNutrition={() => setActiveTab('nutrition')}
+                onViewProgress={() => setActiveTab('progress')}
               />
             )}
             {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => openPricing('workouts')} /></ViewErrorBoundary>}
@@ -2499,11 +2500,12 @@ type WellnessCheckInDraft = {
   soreness: WellnessLevel | '';
 };
 
-function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: {
+function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, onViewProgress }: {
   profile: UserProfile,
   onUpgrade: () => void,
   onStartWorkout: (workoutId?: string, mode?: HomeTrainingMode) => void,
-  onViewNutrition: () => void
+  onViewNutrition: () => void,
+  onViewProgress: () => void
 }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
@@ -2539,6 +2541,25 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
     sleepQuality: '',
     soreness: '',
   });
+  const savedBodyMeasurements = (() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(`body_measurements_${storageUserId}`) || '[]') as BodyMeasurement[];
+      return Array.isArray(parsed) ? parsed.filter(item => typeof item.weight === 'number').sort((a, b) => a.date.localeCompare(b.date)) : [];
+    } catch {
+      return [];
+    }
+  })();
+  const latestWeightEntry = savedBodyMeasurements[savedBodyMeasurements.length - 1];
+  const previousWeightEntry = savedBodyMeasurements[savedBodyMeasurements.length - 2];
+  const displayedWeight = latestWeightEntry?.weight ?? profile.weight;
+  const weightDifference = latestWeightEntry?.weight !== undefined && previousWeightEntry?.weight !== undefined
+    ? latestWeightEntry.weight - previousWeightEntry.weight
+    : null;
+  const weightSubValue = weightDifference !== null
+    ? `${weightDifference > 0 ? '+' : ''}${weightDifference.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg desde o registro anterior`
+    : latestWeightEntry
+      ? `Registrado em ${new Date(`${latestWeightEntry.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
+      : 'Registre seu peso e acompanhe a evolução';
 
   const openWellnessCheckIn = () => {
     setCheckInDraft({
@@ -2548,7 +2569,13 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
       soreness: dailyCheckIn?.soreness || '',
     });
     setShowWellnessCheckIn(true);
+    trackEvent('dashboard_metric_card_click', { card: 'energy' });
     trackEvent('wellness_checkin_opened', { has_checkin_today: !!dailyCheckIn });
+  };
+
+  const openDashboardMetric = (card: 'weight' | 'workout' | 'nutrition', action: () => void) => {
+    trackEvent('dashboard_metric_card_click', { card });
+    action();
   };
 
   const wellnessLabel = (level?: WellnessLevel | '') => {
@@ -3119,26 +3146,29 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <DashboardMetricCard 
           label="Peso Atual" 
-          value={`${profile.weight} kg`} 
-          subValue="-1.2kg esta semana" 
-          icon={<TrendingUp size={20} />} 
-          trend="up" 
+          value={`${displayedWeight.toLocaleString('pt-BR')} kg`}
+          subValue={weightSubValue}
+          icon={<TrendingUp size={20} />}
+          onClick={() => openDashboardMetric('weight', onViewProgress)}
+          actionLabel="Atualizar peso"
         />
         <DashboardMetricCard
           label="Próximo Treino"
           value={todayScheduledWorkout?.workout.name || nextWorkout.name}
           subValue={todayScheduledWorkout ? `${todayName} • ${todayScheduledWorkout.workout.muscleGroup}` : nextWorkout.muscleGroup}
           icon={<Calendar size={20} />}
-          onClick={() => todayScheduledWorkout
+          onClick={() => openDashboardMetric('workout', () => todayScheduledWorkout
             ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))
-            : onStartWorkout()}
+            : onStartWorkout())}
+          actionLabel="Abrir treino"
         />
         <DashboardMetricCard 
           label="Calorias Diárias" 
           value={`${calorieGoal.toLocaleString('pt-BR')} kcal`}
           subValue={profile.goal?.toLowerCase().includes('emagrec') ? 'Meta em déficit calórico' : `Meta: ${calorieGoal.toLocaleString('pt-BR')} kcal`}
           icon={<Apple size={20} />} 
-          onClick={onViewNutrition}
+          onClick={() => openDashboardMetric('nutrition', onViewNutrition)}
+          actionLabel="Ver nutrição"
         />
         <DashboardMetricCard 
           label="Nível de Energia" 
@@ -3148,6 +3178,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition }: 
             : 'Toque para fazer seu check-in'}
           icon={<Zap size={20} />}
           onClick={openWellnessCheckIn}
+          actionLabel={dailyCheckIn ? 'Editar check-in' : 'Fazer check-in'}
         />
       </div>
 

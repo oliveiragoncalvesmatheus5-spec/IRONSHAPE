@@ -71,6 +71,7 @@ import {
   Bot,
   Ruler,
   Scale,
+  ChevronLeft,
   ChevronDown,
   MoreHorizontal,
   Star,
@@ -10051,7 +10052,7 @@ function AdminView() {
   const [adminTab, setAdminTab] = useState<'general' | 'affiliates'>('general');
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [adminError, setAdminError] = useState('');
-  const [showAllUsers, setShowAllUsers] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
   const [planUser, setPlanUser] = useState<UserProfile | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [selectedAdminPlan, setSelectedAdminPlan] = useState<'free' | 'Pro' | 'Elite'>('free');
@@ -10109,6 +10110,11 @@ function AdminView() {
   useEffect(() => {
     if (adminTab === 'general') fetchAdminData();
   }, [adminTab]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(adminData.profiles.length / 6));
+    setUsersPage(current => Math.min(Math.max(current, 1), totalPages));
+  }, [adminData.profiles.length]);
 
   const normalizeAdminPlan = (plan?: Plan): 'free' | 'Pro' | 'Elite' | 'Admin' => {
     if (plan === 'Pro' || plan === 'Elite' || plan === 'Admin') return plan;
@@ -10175,8 +10181,23 @@ function AdminView() {
     plan,
     count: adminData.profiles.filter(p => normalizeAdminPlan(p.plano) === plan).length,
   }));
-  const recentUsers = showAllUsers ? adminData.profiles : adminData.profiles.slice(0, 6);
-  const hasMoreUsers = adminData.profiles.length > 6;
+  const usersPerPage = 6;
+  const totalUserPages = Math.max(1, Math.ceil(adminData.profiles.length / usersPerPage));
+  const safeUsersPage = Math.min(Math.max(usersPage, 1), totalUserPages);
+  const firstUserIndex = adminData.profiles.length ? (safeUsersPage - 1) * usersPerPage : 0;
+  const lastUserIndex = Math.min(firstUserIndex + usersPerPage, adminData.profiles.length);
+  const recentUsers = adminData.profiles.slice(firstUserIndex, lastUserIndex);
+  const getVisibleUserPages = () => {
+    const pages = new Set<number>([1, totalUserPages, safeUsersPage]);
+
+    if (safeUsersPage > 1) pages.add(safeUsersPage - 1);
+    if (safeUsersPage < totalUserPages) pages.add(safeUsersPage + 1);
+    if (totalUserPages <= 5) {
+      for (let page = 1; page <= totalUserPages; page += 1) pages.add(page);
+    }
+
+    return Array.from(pages).sort((a, b) => a - b);
+  };
   const recentConversions = adminData.conversions.slice(0, 5);
   const getUserWorkouts = (userId: string) => adminData.workouts.filter(workout => workout.userUid === userId);
   const getUserNutrition = (userId: string) => adminData.nutrition.filter(nutrition => nutrition.user_id === userId);
@@ -10364,7 +10385,9 @@ function AdminView() {
                       <h3 className="text-lg font-black uppercase tracking-tight">Usuários Recentes</h3>
                       <p className="text-xs text-text-muted mt-1">Últimos perfis criados ou retornados pela base.</p>
                     </div>
-                    <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{recentUsers.length} de {adminData.profiles.length} exibidos</span>
+                    <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">
+                      {adminData.profiles.length ? `${firstUserIndex + 1}-${lastUserIndex}` : '0'} de {adminData.profiles.length}
+                    </span>
                   </div>
                   <div className="divide-y divide-white/5">
                     {recentUsers.length > 0 ? (
@@ -10441,15 +10464,48 @@ function AdminView() {
                             </div>
                           </div>
                         )})}
-                        {hasMoreUsers && (
-                          <div className="p-5 flex justify-center">
-                            <button
-                              onClick={() => setShowAllUsers(prev => !prev)}
-                              className="flex items-center justify-center gap-2 px-5 py-3 bg-primary/10 border border-primary/20 rounded-2xl text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
-                            >
-                              <ChevronDown size={16} className={`transition-transform ${showAllUsers ? 'rotate-180' : ''}`} />
-                              {showAllUsers ? 'Ver menos' : 'Ver mais'}
-                            </button>
+                        {totalUserPages > 1 && (
+                          <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted text-center sm:text-left">
+                              Página {safeUsersPage} de {totalUserPages}
+                            </span>
+                            <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                              <button
+                                onClick={() => setUsersPage(page => Math.max(1, page - 1))}
+                                disabled={safeUsersPage === 1}
+                                aria-label="Página anterior de usuários"
+                                className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary hover:border-white/20 disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center shrink-0"
+                              >
+                                <ChevronLeft size={17} />
+                              </button>
+                              {getVisibleUserPages().map((page, index, pages) => (
+                                <div key={page} className="flex items-center gap-2 shrink-0">
+                                  {index > 0 && page - pages[index - 1] > 1 && (
+                                    <span className="px-1 text-text-muted text-xs font-black">...</span>
+                                  )}
+                                  <button
+                                    onClick={() => setUsersPage(page)}
+                                    aria-label={`Ir para página ${page} de usuários`}
+                                    aria-current={safeUsersPage === page ? 'page' : undefined}
+                                    className={`w-11 h-11 rounded-2xl border text-[11px] font-black transition-all ${
+                                      safeUsersPage === page
+                                        ? 'bg-primary border-primary text-text-primary shadow-lg shadow-primary/20'
+                                        : 'bg-white/5 border-white/10 text-text-muted hover:text-text-primary hover:border-white/20'
+                                    }`}
+                                  >
+                                    {page}
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => setUsersPage(page => Math.min(totalUserPages, page + 1))}
+                                disabled={safeUsersPage === totalUserPages}
+                                aria-label="Próxima página de usuários"
+                                className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary hover:border-white/20 disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center shrink-0"
+                              >
+                                <ChevronRight size={17} />
+                              </button>
+                            </div>
                           </div>
                         )}
                       </>

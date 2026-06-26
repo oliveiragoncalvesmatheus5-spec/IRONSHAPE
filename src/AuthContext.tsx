@@ -4,6 +4,37 @@ import { supabase } from './lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 
 const ADMIN_EMAIL = 'carlosalbertojuniorourak@gmail.com';
+const AUTH_URL_KEYS = [
+  'code',
+  'access_token',
+  'refresh_token',
+  'expires_in',
+  'expires_at',
+  'provider_token',
+  'provider_refresh_token',
+  'token_type',
+  'type',
+  'error',
+  'error_code',
+  'error_description',
+];
+
+function hasAuthUrlParams() {
+  if (typeof window === 'undefined') return false;
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return AUTH_URL_KEYS.some(key => search.has(key) || hash.has(key));
+}
+
+function cleanAuthUrl(targetPath = '/') {
+  if (typeof window === 'undefined') return;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (!hasAuthUrlParams() && window.location.pathname !== '/auth/callback') return;
+  const nextPath = targetPath || '/';
+  if (current !== nextPath) {
+    window.history.replaceState({ ironshapeAuthClean: true }, document.title, nextPath);
+  }
+}
 
 interface AuthContextType {
   user: User | null;
@@ -85,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = session?.user ?? null;
 
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (currentUser) cleanAuthUrl('/');
         setUser(currentUser);
         setLoading(false);
         if (currentUser) fetchProfileBackground(currentUser.id, currentUser);
@@ -241,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         redirectTo: window.location.origin,
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent',
+          prompt: 'select_account',
         },
         skipBrowserRedirect: false,
       }

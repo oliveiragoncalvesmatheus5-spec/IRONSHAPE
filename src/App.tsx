@@ -109,6 +109,29 @@ function slugifyText(value: string) {
     .replace(/(^-|-$)/g, '');
 }
 
+const AUTH_NAVIGATION_KEYS = [
+  'code',
+  'access_token',
+  'refresh_token',
+  'expires_in',
+  'expires_at',
+  'provider_token',
+  'provider_refresh_token',
+  'token_type',
+  'type',
+  'error',
+  'error_code',
+  'error_description',
+];
+
+function isAuthNavigationUrl() {
+  if (typeof window === 'undefined') return false;
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return window.location.pathname === '/auth/callback'
+    || AUTH_NAVIGATION_KEYS.some(key => search.has(key) || hash.has(key));
+}
+
 function buildExercise(
   id: string,
   name: string,
@@ -676,6 +699,7 @@ export default function App() {
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
   const [initTimeout, setInitTimeout] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const authHistoryGuardedRef = useRef(false);
 
   useEffect(() => {
     initAnalytics();
@@ -685,6 +709,39 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackEvent('app_screen_view', { screen_name: activeTab });
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!user) {
+      authHistoryGuardedRef.current = false;
+      return;
+    }
+
+    const keepUserInsideApp = () => {
+      setShowPricing(false);
+      setCheckoutPlan(null);
+      setDrawerOpen(false);
+      setActiveTab('dashboard');
+      window.history.replaceState({ ironshapeScreen: 'dashboard' }, document.title, '/');
+    };
+
+    if (isAuthNavigationUrl()) {
+      keepUserInsideApp();
+    }
+
+    if (!authHistoryGuardedRef.current) {
+      window.history.replaceState({ ironshapeScreen: 'dashboard' }, document.title, '/');
+      window.history.pushState({ ironshapeScreen: 'dashboard-safe-back' }, document.title, '/');
+      authHistoryGuardedRef.current = true;
+    }
+
+    const onPopState = () => {
+      keepUserInsideApp();
+      window.history.pushState({ ironshapeScreen: 'dashboard-safe-back' }, document.title, '/');
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [user]);
 
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
@@ -1621,20 +1678,21 @@ function AuthCallback() {
         if (error) throw error;
         if (data.session) {
           setStatus('success');
-          setMessage('Email confirmado com sucesso!');
+          setMessage('Login confirmado com sucesso!');
           setTimeout(() => {
             try { window.close(); } catch (e) {}
-            window.location.href = '/';
+            window.location.replace('/');
           }, 2000);
         } else {
           setStatus('error');
-          setMessage('Não foi possível confirmar seu email.');
-          setTimeout(() => { window.location.href = '/'; }, 3000);
+          setMessage('Não foi possível concluir o login. Tente novamente.');
+          setTimeout(() => { window.location.replace('/'); }, 3000);
         }
       } catch (err: any) {
+        console.warn('Auth callback failed:', err?.message || err);
         setStatus('error');
-        setMessage(err.message || 'Erro ao processar confirmação.');
-        setTimeout(() => { window.location.href = '/'; }, 3000);
+        setMessage('Não foi possível concluir o login. Tente novamente.');
+        setTimeout(() => { window.location.replace('/'); }, 3000);
       }
     };
     handleCallback();
@@ -1682,7 +1740,7 @@ function AuthCallback() {
 
         {status === 'error' && (
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.replace('/')}
             className="w-full py-4 bg-white/5 text-text-primary rounded-2xl font-black text-xs uppercase tracking-widest border border-white/10 hover:bg-white/10 transition-all"
           >
             Voltar para o Início
@@ -1781,8 +1839,8 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      console.error('Google login error:', err);
-      setError(err.message || 'Erro ao entrar com Google.');
+      console.warn('Google login error:', err?.message || err);
+      setError('Não foi possível iniciar o login com Google. Tente novamente.');
     } finally {
       setGoogleLoading(false);
     }

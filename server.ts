@@ -262,40 +262,10 @@ async function startServer() {
     return res.json({ profile: data });
   });
 
-  // Manual migration endpoint — POST /api/run-migration with { serviceRoleKey }
-  app.post("/api/run-migration", async (req, res) => {
-    const url = SUPABASE_PROJECT_URL;
-    const serviceKey = req.body?.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !serviceKey) {
-      return res.status(400).json({ error: "Supabase URL ou SUPABASE_SERVICE_ROLE_KEY não configurados." });
-    }
-    try {
-      // Use Supabase Management API to execute raw SQL
-      const projectRef = url.replace("https://", "").split(".")[0];
-      const mgmtResp = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({ query: MIGRATION_SQL }),
-      });
-
-      if (!mgmtResp.ok) {
-        const errText = await mgmtResp.text();
-        // Try direct RPC as fallback
-        const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-        const { error } = await (admin as any).from("profiles").select("nutrition_preferences").limit(1);
-        if (!error) {
-          return res.json({ success: true, message: "Coluna já existe ou foi adicionada com sucesso." });
-        }
-        return res.status(500).json({ error: `Migration falhou: ${errText}` });
-      }
-
-      res.json({ success: true, message: "Coluna nutrition_preferences adicionada com sucesso!" });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
+  app.post("/api/run-migration", (_req, res) => {
+    res.status(410).json({
+      error: "Migration automática removida por segurança. Execute migrations pelo Supabase Dashboard ou pipeline privado.",
+    });
   });
 
   // AbacatePay subscription checkout

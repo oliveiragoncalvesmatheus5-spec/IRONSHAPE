@@ -8084,32 +8084,6 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
 }
 
 function MigrationBanner({ onDismiss, onSuccess }: { onDismiss: () => void; onSuccess: () => void }) {
-  const [key, setKey] = useState('');
-  const [running, setRunning] = useState(false);
-  const [result, setResult] = useState('');
-  const [showKeyInput, setShowKeyInput] = useState(false);
-
-  const runMigration = async () => {
-    if (!key.trim()) return;
-    setRunning(true);
-    setResult('');
-    try {
-      const res = await fetch('/api/run-migration', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceRoleKey: key.trim() })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao executar migration');
-      setResult('✅ Coluna adicionada com sucesso! As preferências serão sincronizadas automaticamente.');
-      setTimeout(() => onSuccess(), 1500);
-    } catch (e: any) {
-      setResult(`❌ ${e.message}`);
-    } finally {
-      setRunning(false);
-    }
-  };
-
   return (
     <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -8118,7 +8092,7 @@ function MigrationBanner({ onDismiss, onSuccess }: { onDismiss: () => void; onSu
             Coluna ausente no Supabase
           </p>
           <p className="text-yellow-400/70 text-xs leading-relaxed">
-            Preferências salvas localmente. Para sincronizar entre dispositivos, execute a migration abaixo.
+            Preferências salvas localmente. Para sincronizar entre dispositivos, rode a migration abaixo direto no SQL Editor do Supabase.
           </p>
         </div>
         <button onClick={onDismiss} className="text-yellow-400/50 hover:text-yellow-400 transition-colors shrink-0">
@@ -8131,63 +8105,23 @@ function MigrationBanner({ onDismiss, onSuccess }: { onDismiss: () => void; onSu
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={() => setShowKeyInput(v => !v)}
-          className="flex-1 py-2.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-yellow-500/20 transition-all"
-        >
-          {showKeyInput ? 'Fechar' : 'Executar Automaticamente'}
-        </button>
         <a
           href={`https://supabase.com/dashboard/project/${(import.meta as any).env?.VITE_SUPABASE_URL?.replace('https://', '').split('.')[0] ?? '_'}/sql/new`}
           target="_blank"
           rel="noreferrer"
-          className="flex-1 py-2.5 bg-white/5 text-text-muted border border-white/10 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5"
+          className="flex-1 py-2.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-yellow-500/20 transition-all text-center flex items-center justify-center gap-1.5"
         >
           <ExternalLink size={11} />
           Abrir SQL Editor
         </a>
+        <button
+          onClick={onSuccess}
+          className="flex-1 py-2.5 bg-white/5 text-text-muted border border-white/10 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all text-center flex items-center justify-center gap-1.5"
+        >
+          <RefreshCw size={11} />
+          Já executei, tentar sincronizar
+        </button>
       </div>
-
-      {showKeyInput && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-yellow-400/60 uppercase tracking-widest ml-1">
-              Service Role Key (Settings → API no dashboard do Supabase)
-            </label>
-            <input
-              type="password"
-              placeholder="sb_secret_..."
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              className="w-full bg-black/30 border border-yellow-500/20 rounded-xl px-4 py-3 text-sm font-mono text-yellow-300 focus:border-yellow-400 outline-none transition-all placeholder:text-yellow-400/30"
-            />
-          </div>
-          <button
-            onClick={runMigration}
-            disabled={running || !key.trim()}
-            className="w-full py-3 bg-yellow-500 text-black rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-yellow-400 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {running ? (
-              <>
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                  <RefreshCw size={13} />
-                </motion.div>
-                Executando...
-              </>
-            ) : (
-              <>
-                <Zap size={13} />
-                Executar Migration
-              </>
-            )}
-          </button>
-          {result && (
-            <p className="text-xs font-bold leading-relaxed" style={{ color: result.startsWith('✅') ? '#4ade80' : '#f87171' }}>
-              {result}
-            </p>
-          )}
-        </motion.div>
-      )}
     </div>
   );
 }

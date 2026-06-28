@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -20,10 +21,18 @@ import {
   type PaidPlan,
 } from "./src/server/payment";
 
-const MIGRATION_SQL = `
+const BASE_MIGRATION_SQL = `
   ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nutrition_preferences jsonb DEFAULT NULL;
   ALTER TABLE profiles ADD COLUMN IF NOT EXISTS "subscriptionPaidAt" timestamptz DEFAULT NULL;
 `;
+const SECURITY_MIGRATION_SQL = (() => {
+  try {
+    return fs.readFileSync(path.join(process.cwd(), "supabase/migrations/20260628_secure_rls_policies.sql"), "utf8");
+  } catch {
+    return "";
+  }
+})();
+const MIGRATION_SQL = `${BASE_MIGRATION_SQL}\n${SECURITY_MIGRATION_SQL}`;
 const ADMIN_EMAIL = "carlosalbertojuniorourak@gmail.com";
 const SUPABASE_PROJECT_URL = process.env.VITE_SUPABASE_URL || "https://olelsxjkoktjabyfgtoo.supabase.co";
 const SUPABASE_PUBLIC_KEY = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_Kah8D1eadG41rgfXhnztIQ_s4qc2ax9";

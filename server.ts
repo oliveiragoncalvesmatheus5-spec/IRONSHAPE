@@ -272,7 +272,11 @@ async function startServer() {
 
   // API Routes
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", securityMigration: "20260628_secure_rls_policies" });
+    res.json({
+      status: "ok",
+      securityMigration: "20260628_secure_rls_policies",
+      webhookAuth: "signature_only_20260628",
+    });
   });
 
   app.post("/api/admin/update-user-plan", async (req, res) => {
@@ -375,16 +379,8 @@ async function startServer() {
   });
 
   // AbacatePay webhook. Configure it as:
-  // https://ironshape.online/api/payment-webhook?webhookSecret=...
+  // https://ironshape.online/api/payment-webhook
   app.post("/api/payment-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-    const expectedSecret = process.env.ABACATEPAY_WEBHOOK_SECRET;
-    if (!expectedSecret) {
-      return res.status(500).json({ error: "ABACATEPAY_WEBHOOK_SECRET não configurado." });
-    }
-    if (req.query.webhookSecret !== expectedSecret) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
     const rawBody = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : String(req.body || "");
     const signature = req.headers["x-webhook-signature"];
     if (!signature) {

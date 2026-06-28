@@ -50,9 +50,6 @@ services:
       - key: ABACATEPAY_PRODUCT_ELITE_ID
         scope: RUN_TIME
         type: SECRET
-      - key: ABACATEPAY_WEBHOOK_SECRET
-        scope: RUN_TIME
-        type: SECRET
       - key: ABACATEPAY_WEBHOOK_SIGNATURE_KEY
         scope: RUN_TIME
         type: SECRET

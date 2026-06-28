@@ -4,6 +4,12 @@ import { supabase } from './lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 
 const ADMIN_EMAIL = 'carlosalbertojuniorourak@gmail.com';
+const CLIENT_SAFE_PLANS: Plan[] = ['free', 'Iniciante'];
+const PROTECTED_PROFILE_FIELDS = [
+  'role',
+  'paymentCustomerId',
+  'subscriptionPaidAt',
+] as const;
 const AUTH_URL_KEYS = [
   'code',
   'access_token',
@@ -315,6 +321,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const sanitizeClientProfileUpdates = (updates: Partial<UserProfile>) => {
+    const safeUpdates = { ...updates } as Partial<UserProfile>;
+
+    for (const field of PROTECTED_PROFILE_FIELDS) {
+      delete safeUpdates[field];
+    }
+
+    if (safeUpdates.plano && !CLIENT_SAFE_PLANS.includes(safeUpdates.plano)) {
+      delete safeUpdates.plano;
+    }
+
+    if (safeUpdates.subscriptionStatus && safeUpdates.subscriptionStatus !== 'inactive') {
+      delete safeUpdates.subscriptionStatus;
+    }
+
+    return safeUpdates;
+  };
+
   const updateProfile = async (updates: Partial<UserProfile>, retryCount = 0) => {
     if (!user) return;
     try {
@@ -322,9 +346,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
 
+      const safeUpdates = sanitizeClientProfileUpdates(updates);
+
       const { data, error } = await supabase
         .from('profiles')
-        .update({ ...updates, updatedAt: new Date().toISOString() })
+        .update({ ...safeUpdates, updatedAt: new Date().toISOString() })
         .eq('id', user.id)
         .select()
         .single();
@@ -347,9 +373,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updatePlan = async (plano: Plan) => {
     if (!user) return;
+    if (!CLIENT_SAFE_PLANS.includes(plano)) {
+      throw new Error('Planos pagos só podem ser ativados após confirmação do pagamento.');
+    }
     await updateProfile({ 
       plano, 
-      subscriptionStatus: plano === 'free' || plano === 'Iniciante' ? 'inactive' : 'active'
+      subscriptionStatus: 'inactive'
     });
   };
 

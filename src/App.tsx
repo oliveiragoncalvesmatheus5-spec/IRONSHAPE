@@ -132,6 +132,17 @@ function isAuthNavigationUrl() {
     || AUTH_NAVIGATION_KEYS.some(key => search.has(key) || hash.has(key));
 }
 
+async function getAuthenticatedJsonHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Sua sessão expirou. Entre novamente para continuar.');
+  }
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${session.access_token}`,
+  };
+}
+
 function buildExercise(
   id: string,
   name: string,
@@ -6718,9 +6729,10 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
     setGeneratingPlan(true);
     setPlanError('');
     try {
+      const headers = await getAuthenticatedJsonHeaders();
       const res = await fetch('/api/generate-meal-plan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           calories: totalCals,
           protein: p,
@@ -6914,9 +6926,10 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
       : aiFood.trim();
     const quantityLabel = isFreePlan ? selectedAiPortion.label : `${aiQty}g/ml`;
     try {
+      const headers = await getAuthenticatedJsonHeaders();
       const res = await fetch('/api/analyze-food', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           food: foodDescription,
           quantity,
@@ -8504,9 +8517,10 @@ function MealRow({ time, name, items, onAddItem, onUpdateItem, onRemoveItem, onA
     setError('');
     setPreview(null);
     try {
+      const headers = await getAuthenticatedJsonHeaders();
       const res = await fetch('/api/analyze-food', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ food: foodInput.trim(), quantity: parseFloat(qtyInput) })
       });
       const data = await res.json();

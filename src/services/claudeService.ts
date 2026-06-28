@@ -1,4 +1,5 @@
 import { UserProfile, Workout } from '../types';
+import { supabase } from '../lib/supabaseClient';
 
 export interface AIProfile {
   trainingDays: number;
@@ -65,10 +66,17 @@ export async function sendMessage(
     ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     { role: 'user' as const, content: userMessage },
   ];
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Sua sessão expirou. Entre novamente para continuar.');
+  }
 
   const response = await fetch('/api/iron-coach', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
     body: JSON.stringify({
       systemPrompt: buildSystemPrompt(profile, aiProfile, workouts),
       messages,

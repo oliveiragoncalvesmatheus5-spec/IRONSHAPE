@@ -30,6 +30,8 @@ const SUPABASE_PUBLIC_KEY = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishabl
 const EXERCISE_MEDIA_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const EXERCISE_MEDIA_EMPTY_CACHE_TTL = 60 * 60 * 1000;
 const exerciseMediaCache = new Map<string, { expiresAt: number; data: any[] }>();
+const AI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const aiRateLimit = new Map<string, { count: number; resetAt: number }>();
 
 function getPlanValue(plan: string) {
   if (plan === "Pro") return 19.9;
@@ -207,6 +209,49 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
+  const requireAuthenticatedUser = async (req: express.Request, res: express.Response) => {
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      res.status(401).json({ error: "Faça login novamente para continuar." });
+      return null;
+    }
+
+    try {
+      const authClient = createClient(SUPABASE_PROJECT_URL, SUPABASE_PUBLIC_KEY, { auth: { persistSession: false } });
+      const { data, error } = await authClient.auth.getUser(token);
+      if (error || !data.user) {
+        res.status(401).json({ error: "Sessão expirada. Entre novamente para continuar." });
+        return null;
+      }
+      return data.user;
+    } catch {
+      res.status(401).json({ error: "Não foi possível validar sua sessão. Tente novamente." });
+      return null;
+    }
+  };
+
+  const checkAiRateLimit = (key: string, limit: number) => {
+    const now = Date.now();
+    const current = aiRateLimit.get(key);
+    if (!current || current.resetAt <= now) {
+      aiRateLimit.set(key, { count: 1, resetAt: now + AI_RATE_LIMIT_WINDOW_MS });
+      return true;
+    }
+    if (current.count >= limit) return false;
+    current.count += 1;
+    return true;
+  };
+
+  const enforceAiRateLimit = (req: express.Request, res: express.Response, userId: string, action: string, limit: number) => {
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const allowed = checkAiRateLimit(`${action}:${userId}:${ip}`, limit);
+    if (!allowed) {
+      res.status(429).json({ error: "Limite temporário atingido. Tente novamente mais tarde." });
+      return false;
+    }
+    return true;
+  };
+
   // Middleware for JSON bodies
   app.use((req, res, next) => {
     if (req.path === "/api/payment-webhook") {
@@ -357,6 +402,10 @@ async function startServer() {
 
   // AI Meal Plan Generation endpoint
   app.post("/api/generate-meal-plan", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+    if (!enforceAiRateLimit(req, res, authUser.id, "generate-meal-plan", 20)) return;
+
     if (!process.env.ANTHROPIC_API_KEY) {
       return res.status(500).json({ error: "ANTHROPIC_API_KEY não configurada" });
     }
@@ -449,6 +498,10 @@ Retorne SOMENTE o JSON completo sem markdown, sem texto extra, no formato:
 
   // AI Food Analysis endpoint
   app.post("/api/analyze-food", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+    if (!enforceAiRateLimit(req, res, authUser.id, "analyze-food", 60)) return;
+
     const { food, quantity, estimationMode, portionLabel } = req.body;
     if (!food || !quantity) {
       return res.status(400).json({ error: "food e quantity são obrigatórios" });
@@ -749,6 +802,10 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
 
   // Iron Coach chat endpoint
   app.post("/api/iron-coach", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+    if (!enforceAiRateLimit(req, res, authUser.id, "iron-coach", 60)) return;
+
     if (!process.env.ANTHROPIC_API_KEY) {
       return res.status(500).json({ error: "ANTHROPIC_API_KEY não configurada" });
     }

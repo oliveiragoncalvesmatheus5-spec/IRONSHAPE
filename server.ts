@@ -272,7 +272,7 @@ async function startServer() {
 
   // API Routes
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", securityMigration: "20260628_secure_rls_policies" });
   });
 
   app.post("/api/admin/update-user-plan", async (req, res) => {

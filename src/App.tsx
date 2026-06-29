@@ -87,7 +87,8 @@ import {
   UserPlus,
   UserMinus,
   Sun,
-  Moon
+  Moon,
+  Languages
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -127,11 +128,122 @@ const AUTH_NAVIGATION_KEYS = [
 ];
 
 type ThemeMode = 'dark' | 'light';
+type LanguageCode = 'pt-BR' | 'en' | 'es';
+
+const LANGUAGE_OPTIONS: Array<{ code: LanguageCode; short: string; label: string }> = [
+  { code: 'pt-BR', short: 'PT', label: 'Português' },
+  { code: 'en', short: 'EN', label: 'English' },
+  { code: 'es', short: 'ES', label: 'Español' },
+];
+
+const APP_TRANSLATIONS: Record<LanguageCode, {
+  nav: Record<'home' | 'workouts' | 'nutrition' | 'progress' | 'social' | 'affiliates' | 'settings' | 'admin' | 'plans' | 'logout' | 'more' | 'close', string>;
+  drawer: { title: string; subtitle: string; socialDesc: string; affiliatesDesc: string; settingsDesc: string; adminDesc: string };
+  actions: { enableLight: string; enableDark: string; language: string };
+}> = {
+  'pt-BR': {
+    nav: {
+      home: 'Início',
+      workouts: 'Treinos',
+      nutrition: 'Dieta',
+      progress: 'Progresso',
+      social: 'Social',
+      affiliates: 'Afiliados',
+      settings: 'Ajustes',
+      admin: 'Admin',
+      plans: 'Planos',
+      logout: 'Sair',
+      more: 'Mais',
+      close: 'Fechar',
+    },
+    drawer: {
+      title: 'Mais opções',
+      subtitle: 'Acessos secundários e configurações',
+      socialDesc: 'Feed e comunidade',
+      affiliatesDesc: 'Comissões e links',
+      settingsDesc: 'Conta e preferências',
+      adminDesc: 'Painel de administrador',
+    },
+    actions: {
+      enableLight: 'Ativar modo claro',
+      enableDark: 'Ativar modo escuro',
+      language: 'Selecionar idioma',
+    },
+  },
+  en: {
+    nav: {
+      home: 'Home',
+      workouts: 'Workouts',
+      nutrition: 'Nutrition',
+      progress: 'Progress',
+      social: 'Social',
+      affiliates: 'Affiliates',
+      settings: 'Settings',
+      admin: 'Admin',
+      plans: 'Plans',
+      logout: 'Log out',
+      more: 'More',
+      close: 'Close',
+    },
+    drawer: {
+      title: 'More options',
+      subtitle: 'Secondary access and settings',
+      socialDesc: 'Feed and community',
+      affiliatesDesc: 'Commissions and links',
+      settingsDesc: 'Account and preferences',
+      adminDesc: 'Admin dashboard',
+    },
+    actions: {
+      enableLight: 'Turn on light mode',
+      enableDark: 'Turn on dark mode',
+      language: 'Select language',
+    },
+  },
+  es: {
+    nav: {
+      home: 'Inicio',
+      workouts: 'Entrenos',
+      nutrition: 'Dieta',
+      progress: 'Progreso',
+      social: 'Social',
+      affiliates: 'Afiliados',
+      settings: 'Ajustes',
+      admin: 'Admin',
+      plans: 'Planes',
+      logout: 'Salir',
+      more: 'Más',
+      close: 'Cerrar',
+    },
+    drawer: {
+      title: 'Más opciones',
+      subtitle: 'Accesos secundarios y configuración',
+      socialDesc: 'Feed y comunidad',
+      affiliatesDesc: 'Comisiones y enlaces',
+      settingsDesc: 'Cuenta y preferencias',
+      adminDesc: 'Panel de administrador',
+    },
+    actions: {
+      enableLight: 'Activar modo claro',
+      enableDark: 'Activar modo oscuro',
+      language: 'Seleccionar idioma',
+    },
+  },
+};
 
 function getInitialThemeMode(): ThemeMode {
   if (typeof window === 'undefined') return 'dark';
   const saved = localStorage.getItem('ironshape_theme');
   return saved === 'light' || saved === 'dark' ? saved : 'dark';
+}
+
+function getInitialLanguage(): LanguageCode {
+  if (typeof window === 'undefined') return 'pt-BR';
+  const saved = localStorage.getItem('ironshape_language');
+  if (saved === 'pt-BR' || saved === 'en' || saved === 'es') return saved;
+  const browserLanguage = navigator.language.toLowerCase();
+  if (browserLanguage.startsWith('en')) return 'en';
+  if (browserLanguage.startsWith('es')) return 'es';
+  return 'pt-BR';
 }
 
 function isAuthNavigationUrl() {
@@ -721,7 +833,10 @@ export default function App() {
   const [initTimeout, setInitTimeout] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
+  const [language, setLanguage] = useState<LanguageCode>(getInitialLanguage);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const authHistoryGuardedRef = useRef(false);
+  const text = APP_TRANSLATIONS[language];
 
   useEffect(() => {
     initAnalytics();
@@ -732,6 +847,11 @@ export default function App() {
     document.documentElement.style.colorScheme = themeMode;
     localStorage.setItem('ironshape_theme', themeMode);
   }, [themeMode]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    localStorage.setItem('ironshape_language', language);
+  }, [language]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -961,7 +1081,7 @@ export default function App() {
       )}
       <button
         type="button"
-        aria-label={themeMode === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+        aria-label={themeMode === 'dark' ? text.actions.enableLight : text.actions.enableDark}
         aria-pressed={themeMode === 'light'}
         onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
         className="md:hidden fixed right-4 z-[55] w-11 h-11 rounded-2xl border border-white/10 bg-surface/90 text-text-primary shadow-xl shadow-black/10 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-all"
@@ -969,6 +1089,53 @@ export default function App() {
       >
         {themeMode === 'dark' ? <Sun size={20} className="text-primary" /> : <Moon size={20} className="text-primary" />}
       </button>
+      <div
+        className="md:hidden fixed right-[68px] z-[55]"
+        style={{ top: 'calc(12px + env(safe-area-inset-top))' }}
+      >
+        <button
+          type="button"
+          aria-label={text.actions.language}
+          aria-expanded={languageMenuOpen}
+          onClick={() => setLanguageMenuOpen(open => !open)}
+          className="w-11 h-11 rounded-2xl border border-white/10 bg-surface/90 text-text-primary shadow-xl shadow-black/10 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-all"
+        >
+          <span className="relative flex items-center justify-center">
+            <Languages size={20} className="text-primary" />
+            <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 text-[8px] font-black text-primary leading-none">
+              {LANGUAGE_OPTIONS.find(option => option.code === language)?.short}
+            </span>
+          </span>
+        </button>
+        <AnimatePresence>
+          {languageMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.96 }}
+              transition={{ duration: 0.16 }}
+              className="absolute right-0 mt-2 w-40 rounded-2xl border border-white/10 bg-surface/95 shadow-2xl shadow-black/20 backdrop-blur-xl overflow-hidden p-1"
+            >
+              {LANGUAGE_OPTIONS.map(option => (
+                <button
+                  key={option.code}
+                  type="button"
+                  onClick={() => {
+                    setLanguage(option.code);
+                    setLanguageMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
+                    language === option.code ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <span className="text-xs font-black">{option.short}</span>
+                  <span className="text-xs font-bold truncate">{option.label}</span>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Sidebar / Navigation */}
       <nav
@@ -984,28 +1151,28 @@ export default function App() {
 
         {/* ── Desktop Nav Items ── */}
         <div className="hidden md:flex md:flex-col md:gap-8 md:py-4 w-full items-center">
-          <NavItem icon={<TrendingUp size={20} />} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} label="Início" />
-          <NavItem icon={<Dumbbell size={20} />} active={activeTab === 'workouts'} onClick={() => setActiveTab('workouts')} label="Treinos" />
-          <NavItem icon={<Apple size={20} />} active={activeTab === 'nutrition'} onClick={() => setActiveTab('nutrition')} label="Dieta" />
-          <NavItem icon={<BarChart3 size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label="Progresso" />
-          <NavItem icon={<Users size={20} />} active={activeTab === 'community'} onClick={() => setActiveTab('community')} label="Social" />
-          <NavItem icon={<Wallet size={20} />} active={activeTab === 'affiliates'} onClick={() => setActiveTab('affiliates')} label="Afiliados" />
+          <NavItem icon={<TrendingUp size={20} />} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} label={text.nav.home} />
+          <NavItem icon={<Dumbbell size={20} />} active={activeTab === 'workouts'} onClick={() => setActiveTab('workouts')} label={text.nav.workouts} />
+          <NavItem icon={<Apple size={20} />} active={activeTab === 'nutrition'} onClick={() => setActiveTab('nutrition')} label={text.nav.nutrition} />
+          <NavItem icon={<BarChart3 size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label={text.nav.progress} />
+          <NavItem icon={<Users size={20} />} active={activeTab === 'community'} onClick={() => setActiveTab('community')} label={text.nav.social} />
+          <NavItem icon={<Wallet size={20} />} active={activeTab === 'affiliates'} onClick={() => setActiveTab('affiliates')} label={text.nav.affiliates} />
         </div>
 
         <div className="hidden md:flex md:flex-col md:gap-8 md:mt-auto md:mb-12 w-full items-center">
           <button
             onClick={() => openPricing('desktop_sidebar')}
             className={`p-3 rounded-2xl transition-all duration-300 ${effectivePlan === 'free' ? 'text-primary bg-primary/10 animate-pulse' : 'text-text-muted hover:text-primary hover:bg-primary/10'}`}
-            title="Planos"
+            title={text.nav.plans}
           >
             <Zap size={24} />
           </button>
-          <NavItem icon={<Settings size={24} />} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label="Ajustes" />
-          {isAdmin && <NavItem icon={<ShieldCheck size={20} />} active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} label="Admin" />}
+          <NavItem icon={<Settings size={24} />} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label={text.nav.settings} />
+          {isAdmin && <NavItem icon={<ShieldCheck size={20} />} active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} label={text.nav.admin} />}
           <button
             onClick={logout}
             className="p-3 rounded-2xl text-text-muted hover:text-error hover:bg-error/10 transition-all duration-300"
-            title="Sair"
+            title={text.nav.logout}
           >
             <LogOut size={24} />
           </button>
@@ -1023,15 +1190,15 @@ export default function App() {
             borderTop: themeMode === 'light' ? '1px solid rgba(17,24,39,0.1)' : '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          <MobileNavItem icon={<TrendingUp size={23} />} label="Início"    active={activeTab === 'dashboard'}  onClick={() => { setDrawerOpen(false); setActiveTab('dashboard'); }} />
-          <MobileNavItem icon={<Dumbbell size={23} />}   label="Treinos"   active={activeTab === 'workouts'}   onClick={() => { setDrawerOpen(false); setActiveTab('workouts'); }} />
-          <MobileNavItem icon={<Apple size={23} />}      label="Dieta"     active={activeTab === 'nutrition'}  onClick={() => { setDrawerOpen(false); setActiveTab('nutrition'); }} />
-          <MobileNavItem icon={<BarChart3 size={23} />}  label="Progresso" active={activeTab === 'progress'}   onClick={() => { setDrawerOpen(false); setActiveTab('progress'); }} />
+          <MobileNavItem icon={<TrendingUp size={23} />} label={text.nav.home} active={activeTab === 'dashboard'}  onClick={() => { setDrawerOpen(false); setActiveTab('dashboard'); }} />
+          <MobileNavItem icon={<Dumbbell size={23} />}   label={text.nav.workouts} active={activeTab === 'workouts'}   onClick={() => { setDrawerOpen(false); setActiveTab('workouts'); }} />
+          <MobileNavItem icon={<Apple size={23} />}      label={text.nav.nutrition} active={activeTab === 'nutrition'}  onClick={() => { setDrawerOpen(false); setActiveTab('nutrition'); }} />
+          <MobileNavItem icon={<BarChart3 size={23} />}  label={text.nav.progress} active={activeTab === 'progress'}   onClick={() => { setDrawerOpen(false); setActiveTab('progress'); }} />
           {/* "Mais" slot */}
           <button
             onClick={() => setDrawerOpen(v => !v)}
             className="flex-1 flex flex-col items-center justify-center gap-[5px] relative h-full"
-            aria-label={drawerOpen ? 'Fechar menu' : 'Mais opções'}
+            aria-label={drawerOpen ? text.nav.close : text.drawer.title}
           >
             {drawerOpen && (
               <span
@@ -1053,7 +1220,7 @@ export default function App() {
               className="text-[11px] font-bold leading-none"
               style={{ color: drawerOpen ? 'var(--color-primary)' : 'var(--color-text-muted)', fontWeight: drawerOpen ? 700 : 500 }}
             >
-              {drawerOpen ? 'Fechar' : 'Mais'}
+              {drawerOpen ? text.nav.close : text.nav.more}
             </span>
           </button>
         </div>
@@ -1079,7 +1246,7 @@ export default function App() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Mais opções"
+        aria-label={text.drawer.title}
         className="md:hidden fixed left-0 right-0 z-40"
         style={{
           bottom: 'calc(76px + env(safe-area-inset-bottom))',
@@ -1108,17 +1275,17 @@ export default function App() {
         <div className="px-4 sm:px-5 pt-3 pb-6 space-y-5">
           {/* Header */}
           <div>
-            <p className="text-base font-bold text-text-primary">Mais opções</p>
-            <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>Acessos secundários e configurações</p>
+            <p className="text-base font-bold text-text-primary">{text.drawer.title}</p>
+            <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{text.drawer.subtitle}</p>
           </div>
 
           {/* Grid of items */}
           <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
             {[
-              { tab: 'community',  icon: <Users size={20} />,      label: 'Social',    desc: 'Feed e comunidade' },
-              { tab: 'affiliates', icon: <Wallet size={20} />,     label: 'Afiliados', desc: 'Comissões e links' },
-              { tab: 'settings',   icon: <Settings size={20} />,   label: 'Ajustes',   desc: 'Conta e preferências' },
-              ...(isAdmin ? [{ tab: 'admin', icon: <ShieldCheck size={20} />, label: 'Admin', desc: 'Painel de administrador' }] : []),
+              { tab: 'community',  icon: <Users size={20} />,      label: text.nav.social,    desc: text.drawer.socialDesc },
+              { tab: 'affiliates', icon: <Wallet size={20} />,     label: text.nav.affiliates, desc: text.drawer.affiliatesDesc },
+              { tab: 'settings',   icon: <Settings size={20} />,   label: text.nav.settings,   desc: text.drawer.settingsDesc },
+              ...(isAdmin ? [{ tab: 'admin', icon: <ShieldCheck size={20} />, label: text.nav.admin, desc: text.drawer.adminDesc }] : []),
             ].map(item => (
               <button
                 key={item.tab}

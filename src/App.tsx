@@ -140,6 +140,71 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
   nav: Record<'home' | 'workouts' | 'nutrition' | 'progress' | 'social' | 'affiliates' | 'settings' | 'admin' | 'plans' | 'logout' | 'more' | 'close', string>;
   drawer: { title: string; subtitle: string; socialDesc: string; affiliatesDesc: string; settingsDesc: string; adminDesc: string };
   actions: { enableLight: string; enableDark: string; language: string };
+  dashboard: {
+    upgradeTitle: string;
+    upgradeText: string;
+    viewPlans: string;
+    startProtocol: string;
+    day: string;
+    member: string;
+    adminMode: string;
+    greeting: string;
+    weeklyQuote: string;
+    weeklyProgress: (percent: number, count: number, target: number) => string;
+    startTodayWorkout: string;
+    weeklyGoal: string;
+    weeklyWorkoutsTitle: string;
+    weeklyWorkoutsSubtitle: string;
+    organize: string;
+    today: string;
+    exercises: string;
+    openWorkout: string;
+    startNow: string;
+    unmarkDone: string;
+    markDone: string;
+    restDay: string;
+    restDayText: string;
+    rest: string;
+    noWorkout: string;
+    organizeWeek: string;
+    buildWeek: string;
+    buildWeekText: string;
+    chooseWorkouts: string;
+    currentWeight: string;
+    updateWeight: string;
+    nextWorkout: string;
+    dailyCalories: string;
+    calorieDeficitGoal: string;
+    calorieGoal: (goal: string) => string;
+    viewNutrition: string;
+    energyLevel: string;
+    checkInToday: string;
+    checkInPrompt: string;
+    editCheckIn: string;
+    doCheckIn: string;
+    high: string;
+    medium: string;
+    low: string;
+    notProvided: string;
+    weekCalories: string;
+    dailyGoal: (goal: string) => string;
+    logMealsForChart: string;
+    weeklyAverage: string;
+    bestDay: string;
+    nutrition: string;
+    viewAll: string;
+    calories: string;
+    proteinShort: string;
+    carbsShort: string;
+    fatShort: string;
+    nextMeal: string;
+    logMeals: string;
+    nutritionModule: string;
+    previousWeightDelta: (delta: string) => string;
+    weightRegisteredAt: (date: string) => string;
+    weightEmpty: string;
+    sleepCheckIn: (hours: string) => string;
+  };
 }> = {
   'pt-BR': {
     nav: {
@@ -168,6 +233,71 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       enableLight: 'Ativar modo claro',
       enableDark: 'Ativar modo escuro',
       language: 'Selecionar idioma',
+    },
+    dashboard: {
+      upgradeTitle: 'Desbloqueie seu Potencial Máximo',
+      upgradeText: 'Assine o plano PRO ou ELITE e tenha acesso a treinos com IA e dietas personalizadas.',
+      viewPlans: 'Ver Planos',
+      startProtocol: 'Começar Protocolo',
+      day: 'Dia',
+      member: 'MEMBER',
+      adminMode: 'ADMIN MODE',
+      greeting: 'BOM TRABALHO',
+      weeklyQuote: '"A disciplina é a ponte entre metas e realizações."',
+      weeklyProgress: (percent, count, target) => `Você já completou ${percent}% da sua meta semanal (${count}/${target} treinos).`,
+      startTodayWorkout: 'INICIAR TREINO DE HOJE',
+      weeklyGoal: 'Meta Semanal',
+      weeklyWorkoutsTitle: 'Seus treinos da semana',
+      weeklyWorkoutsSubtitle: 'Sua rotina organizada para abrir e começar sem precisar procurar.',
+      organize: 'Organizar',
+      today: 'Hoje',
+      exercises: 'exercícios',
+      openWorkout: 'Abrir treino',
+      startNow: 'Começar agora',
+      unmarkDone: 'Desmarcar treino concluído',
+      markDone: 'Marcar treino como concluído',
+      restDay: 'Dia de descanso',
+      restDayText: 'Recupere o corpo e mantenha sua rotina.',
+      rest: 'Descanso',
+      noWorkout: 'Sem treino',
+      organizeWeek: 'Organizar semana',
+      buildWeek: 'Monte sua semana',
+      buildWeekText: 'Escolha seus treinos uma vez e encontre cada dia pronto aqui na tela inicial.',
+      chooseWorkouts: 'Escolher treinos',
+      currentWeight: 'Peso Atual',
+      updateWeight: 'Atualizar peso',
+      nextWorkout: 'Próximo Treino',
+      dailyCalories: 'Calorias Diárias',
+      calorieDeficitGoal: 'Meta em déficit calórico',
+      calorieGoal: goal => `Meta: ${goal} kcal`,
+      viewNutrition: 'Ver nutrição',
+      energyLevel: 'Nível de Energia',
+      checkInToday: 'check-in de hoje',
+      checkInPrompt: 'Toque para fazer seu check-in',
+      editCheckIn: 'Editar check-in',
+      doCheckIn: 'Fazer check-in',
+      high: 'Alta',
+      medium: 'Média',
+      low: 'Baixa',
+      notProvided: 'Não informado',
+      weekCalories: 'Calorias da semana',
+      dailyGoal: goal => `Meta: ${goal} kcal/dia`,
+      logMealsForChart: 'Registre suas refeições para ver o gráfico',
+      weeklyAverage: 'Média da semana',
+      bestDay: 'Melhor dia',
+      nutrition: 'Nutrição',
+      viewAll: 'Ver Tudo',
+      calories: 'Calorias',
+      proteinShort: 'Prot',
+      carbsShort: 'Carb',
+      fatShort: 'Gord',
+      nextMeal: 'Próxima Refeição',
+      logMeals: 'Registre refeições',
+      nutritionModule: 'no módulo de Nutrição',
+      previousWeightDelta: delta => `${delta} kg desde o registro anterior`,
+      weightRegisteredAt: date => `Registrado em ${date}`,
+      weightEmpty: 'Registre seu peso e acompanhe a evolução',
+      sleepCheckIn: hours => `${hours}h de sono • check-in de hoje`,
     },
   },
   en: {
@@ -198,6 +328,71 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       enableDark: 'Turn on dark mode',
       language: 'Select language',
     },
+    dashboard: {
+      upgradeTitle: 'Unlock Your Maximum Potential',
+      upgradeText: 'Subscribe to PRO or ELITE and get access to AI workouts and personalized diets.',
+      viewPlans: 'View Plans',
+      startProtocol: 'Start Protocol',
+      day: 'Day',
+      member: 'MEMBER',
+      adminMode: 'ADMIN MODE',
+      greeting: 'GREAT WORK',
+      weeklyQuote: '"Discipline is the bridge between goals and results."',
+      weeklyProgress: (percent, count, target) => `You have completed ${percent}% of your weekly goal (${count}/${target} workouts).`,
+      startTodayWorkout: "START TODAY'S WORKOUT",
+      weeklyGoal: 'Weekly Goal',
+      weeklyWorkoutsTitle: 'Your weekly workouts',
+      weeklyWorkoutsSubtitle: 'Your routine is organized so you can open and start without searching.',
+      organize: 'Organize',
+      today: 'Today',
+      exercises: 'exercises',
+      openWorkout: 'Open workout',
+      startNow: 'Start now',
+      unmarkDone: 'Unmark workout as done',
+      markDone: 'Mark workout as done',
+      restDay: 'Rest day',
+      restDayText: 'Recover your body and keep your routine.',
+      rest: 'Rest',
+      noWorkout: 'No workout',
+      organizeWeek: 'Organize week',
+      buildWeek: 'Build your week',
+      buildWeekText: 'Choose your workouts once and find each day ready here on the home screen.',
+      chooseWorkouts: 'Choose workouts',
+      currentWeight: 'Current Weight',
+      updateWeight: 'Update weight',
+      nextWorkout: 'Next Workout',
+      dailyCalories: 'Daily Calories',
+      calorieDeficitGoal: 'Calorie deficit goal',
+      calorieGoal: goal => `Goal: ${goal} kcal`,
+      viewNutrition: 'View nutrition',
+      energyLevel: 'Energy Level',
+      checkInToday: "today's check-in",
+      checkInPrompt: 'Tap to do your check-in',
+      editCheckIn: 'Edit check-in',
+      doCheckIn: 'Do check-in',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      notProvided: 'Not provided',
+      weekCalories: 'Weekly calories',
+      dailyGoal: goal => `Goal: ${goal} kcal/day`,
+      logMealsForChart: 'Log your meals to see the chart',
+      weeklyAverage: 'Weekly average',
+      bestDay: 'Best day',
+      nutrition: 'Nutrition',
+      viewAll: 'View All',
+      calories: 'Calories',
+      proteinShort: 'Prot',
+      carbsShort: 'Carb',
+      fatShort: 'Fat',
+      nextMeal: 'Next Meal',
+      logMeals: 'Log meals',
+      nutritionModule: 'in the Nutrition module',
+      previousWeightDelta: delta => `${delta} kg since the previous log`,
+      weightRegisteredAt: date => `Logged on ${date}`,
+      weightEmpty: 'Log your weight and track progress',
+      sleepCheckIn: hours => `${hours}h of sleep • today's check-in`,
+    },
   },
   es: {
     nav: {
@@ -226,6 +421,71 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       enableLight: 'Activar modo claro',
       enableDark: 'Activar modo oscuro',
       language: 'Seleccionar idioma',
+    },
+    dashboard: {
+      upgradeTitle: 'Desbloquea tu Máximo Potencial',
+      upgradeText: 'Suscríbete al plan PRO o ELITE y accede a entrenos con IA y dietas personalizadas.',
+      viewPlans: 'Ver Planes',
+      startProtocol: 'Comenzar Protocolo',
+      day: 'Día',
+      member: 'MEMBER',
+      adminMode: 'ADMIN MODE',
+      greeting: 'BUEN TRABAJO',
+      weeklyQuote: '"La disciplina es el puente entre metas y resultados."',
+      weeklyProgress: (percent, count, target) => `Ya completaste ${percent}% de tu meta semanal (${count}/${target} entrenos).`,
+      startTodayWorkout: 'INICIAR ENTRENO DE HOY',
+      weeklyGoal: 'Meta Semanal',
+      weeklyWorkoutsTitle: 'Tus entrenos de la semana',
+      weeklyWorkoutsSubtitle: 'Tu rutina organizada para abrir y empezar sin buscar.',
+      organize: 'Organizar',
+      today: 'Hoy',
+      exercises: 'ejercicios',
+      openWorkout: 'Abrir entreno',
+      startNow: 'Comenzar ahora',
+      unmarkDone: 'Desmarcar entreno completado',
+      markDone: 'Marcar entreno como completado',
+      restDay: 'Día de descanso',
+      restDayText: 'Recupera el cuerpo y mantén tu rutina.',
+      rest: 'Descanso',
+      noWorkout: 'Sin entreno',
+      organizeWeek: 'Organizar semana',
+      buildWeek: 'Arma tu semana',
+      buildWeekText: 'Elige tus entrenos una vez y encuentra cada día listo aquí en la pantalla inicial.',
+      chooseWorkouts: 'Elegir entrenos',
+      currentWeight: 'Peso Actual',
+      updateWeight: 'Actualizar peso',
+      nextWorkout: 'Próximo Entreno',
+      dailyCalories: 'Calorías Diarias',
+      calorieDeficitGoal: 'Meta en déficit calórico',
+      calorieGoal: goal => `Meta: ${goal} kcal`,
+      viewNutrition: 'Ver nutrición',
+      energyLevel: 'Nivel de Energía',
+      checkInToday: 'check-in de hoy',
+      checkInPrompt: 'Toca para hacer tu check-in',
+      editCheckIn: 'Editar check-in',
+      doCheckIn: 'Hacer check-in',
+      high: 'Alta',
+      medium: 'Media',
+      low: 'Baja',
+      notProvided: 'No informado',
+      weekCalories: 'Calorías de la semana',
+      dailyGoal: goal => `Meta: ${goal} kcal/día`,
+      logMealsForChart: 'Registra tus comidas para ver el gráfico',
+      weeklyAverage: 'Promedio semanal',
+      bestDay: 'Mejor día',
+      nutrition: 'Nutrición',
+      viewAll: 'Ver Todo',
+      calories: 'Calorías',
+      proteinShort: 'Prot',
+      carbsShort: 'Carb',
+      fatShort: 'Grasa',
+      nextMeal: 'Próxima Comida',
+      logMeals: 'Registra comidas',
+      nutritionModule: 'en el módulo de Nutrición',
+      previousWeightDelta: delta => `${delta} kg desde el registro anterior`,
+      weightRegisteredAt: date => `Registrado el ${date}`,
+      weightEmpty: 'Registra tu peso y sigue tu evolución',
+      sleepCheckIn: hours => `${hours}h de sueño • check-in de hoy`,
     },
   },
 };
@@ -1328,6 +1588,7 @@ export default function App() {
             {activeTab === 'dashboard' && (
               <DashboardView 
                 profile={profile} 
+                language={language}
                 onUpgrade={() => openPricing('dashboard')}
                 onStartWorkout={(workoutId, mode) => {
                   if (workoutId) {
@@ -2770,8 +3031,9 @@ type WellnessCheckInDraft = {
   soreness: WellnessLevel | '';
 };
 
-function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, onViewProgress }: {
+function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNutrition, onViewProgress }: {
   profile: UserProfile,
+  language: LanguageCode,
   onUpgrade: () => void,
   onStartWorkout: (workoutId?: string, mode?: HomeTrainingMode) => void,
   onViewNutrition: () => void,
@@ -2779,6 +3041,8 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
 }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
+  const dashboardText = APP_TRANSLATIONS[language].dashboard;
+  const locale = language === 'pt-BR' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US';
 
   const getFirstName = () => {
     const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || profile.name || 'Usuário';
@@ -2826,10 +3090,10 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
     ? latestWeightEntry.weight - previousWeightEntry.weight
     : null;
   const weightSubValue = weightDifference !== null
-    ? `${weightDifference > 0 ? '+' : ''}${weightDifference.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg desde o registro anterior`
+    ? dashboardText.previousWeightDelta(`${weightDifference > 0 ? '+' : ''}${weightDifference.toLocaleString(locale, { maximumFractionDigits: 1 })}`)
     : latestWeightEntry
-      ? `Registrado em ${new Date(`${latestWeightEntry.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
-      : 'Registre seu peso e acompanhe a evolução';
+      ? dashboardText.weightRegisteredAt(new Date(`${latestWeightEntry.date}T12:00:00`).toLocaleDateString(locale, { day: '2-digit', month: '2-digit' }))
+      : dashboardText.weightEmpty;
 
   const openWellnessCheckIn = () => {
     setCheckInDraft({
@@ -2849,10 +3113,10 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
   };
 
   const wellnessLabel = (level?: WellnessLevel | '') => {
-    if (level === 'high') return 'Alta';
-    if (level === 'medium') return 'Média';
-    if (level === 'low') return 'Baixa';
-    return 'Não informado';
+    if (level === 'high') return dashboardText.high;
+    if (level === 'medium') return dashboardText.medium;
+    if (level === 'low') return dashboardText.low;
+    return dashboardText.notProvided;
   };
 
   const saveWellnessCheckIn = () => {
@@ -3144,15 +3408,15 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
               <Zap className="text-primary" size={24} />
             </div>
             <div>
-              <h4 className="font-black text-lg uppercase tracking-tight">Desbloqueie seu Potencial Máximo</h4>
-              <p className="text-sm text-text-secondary">Assine o plano <span className="text-primary font-bold">PRO</span> ou <span className="text-primary font-bold">ELITE</span> e tenha acesso a treinos com IA e dietas personalizadas.</p>
+              <h4 className="font-black text-lg uppercase tracking-tight">{dashboardText.upgradeTitle}</h4>
+              <p className="text-sm text-text-secondary">{dashboardText.upgradeText}</p>
             </div>
           </div>
           <button
             onClick={onUpgrade}
             className="bg-primary text-text-primary px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all active:scale-95 whitespace-nowrap"
           >
-            Ver Planos
+            {dashboardText.viewPlans}
           </button>
         </motion.div>
       )}
@@ -3175,13 +3439,13 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
               onClick={() => onStartWorkout()}
               className="bg-primary text-text-primary px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all min-h-[48px]"
             >
-              Começar Protocolo
+              {dashboardText.startProtocol}
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {trainingOnboarding.recommendation.weeklySplit?.slice(0, 3).map((day: string, idx: number) => (
               <div key={day} className="bg-white/5 border border-white/5 rounded-2xl p-4">
-                <div className="text-[10px] text-text-muted font-black uppercase tracking-widest">Dia {idx + 1}</div>
+                <div className="text-[10px] text-text-muted font-black uppercase tracking-widest">{dashboardText.day} {idx + 1}</div>
                 <div className="font-black mt-1">{day}</div>
               </div>
             ))}
@@ -3198,20 +3462,20 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-primary/20">
-                {effectivePlan} MEMBER
+                {effectivePlan} {dashboardText.member}
               </span>
               {isAdmin && (
                 <span className="px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
-                  ADMIN MODE
+                  {dashboardText.adminMode}
                 </span>
               )}
             </div>
             <h1 className="text-3xl md:text-6xl font-black tracking-tighter leading-none">
-              BOM TRABALHO, <br />
+              {dashboardText.greeting}, <br />
               <span className="text-primary">{getFirstName()}!</span>
             </h1>
             <p className="text-text-secondary text-base md:text-lg max-w-md leading-relaxed">
-              "A disciplina é a ponte entre metas e realizações." Você já completou <span className="text-text-primary font-bold">{weeklyPercent}%</span> da sua meta semanal ({weeklyCount}/{WEEKLY_TARGET} treinos).
+              {dashboardText.weeklyQuote} <span className="text-text-primary font-bold">{dashboardText.weeklyProgress(weeklyPercent, weeklyCount, WEEKLY_TARGET)}</span>
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -3221,7 +3485,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                   : onStartWorkout()}
                 className="bg-primary text-text-primary px-8 py-4 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto min-h-[56px]"
               >
-                INICIAR TREINO DE HOJE
+                {dashboardText.startTodayWorkout}
                 <ArrowRight size={18} />
               </button>
               <div className="flex items-center justify-center gap-4 px-6 py-4 bg-white/5 rounded-2xl border border-white/10 w-full sm:w-auto">
@@ -3253,7 +3517,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
               </svg>
               <div className="text-center z-10">
                 <div className="text-5xl font-black">{weeklyPercent}%</div>
-                <div className="text-[10px] font-black text-text-muted uppercase tracking-widest">Meta Semanal</div>
+                <div className="text-[10px] font-black text-text-muted uppercase tracking-widest">{dashboardText.weeklyGoal}</div>
               </div>
             </div>
           </div>
@@ -3268,7 +3532,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight">Seus treinos da semana</h2>
+                <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight">{dashboardText.weeklyWorkoutsTitle}</h2>
                 {scheduledWorkoutDetails.length > 0 && (
                   <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-text-muted">
                     {savedWeeklyDoneIds.filter(id => scheduledWorkoutDetails.some(slot => slot.workoutId === id)).length}/{scheduledWorkoutDetails.length}
@@ -3276,7 +3540,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                 )}
               </div>
               <p className="text-xs sm:text-sm text-text-secondary mt-1 leading-relaxed">
-                Sua rotina organizada para abrir e começar sem precisar procurar.
+                {dashboardText.weeklyWorkoutsSubtitle}
               </p>
             </div>
           </div>
@@ -3285,7 +3549,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
             className="hidden sm:flex min-h-[44px] px-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-primary/30 transition-all items-center gap-2 shrink-0"
           >
             <SlidersHorizontal size={15} />
-            Organizar
+            {dashboardText.organize}
           </button>
         </div>
 
@@ -3301,12 +3565,12 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest">Hoje</span>
+                        <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest">{dashboardText.today}</span>
                         <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{todayName}</span>
                       </div>
                       <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">{todayScheduledWorkout.workout.name}</h3>
                       <p className="text-xs sm:text-sm text-text-secondary mt-1">
-                        {todayScheduledWorkout.workout.muscleGroup} • {todayScheduledWorkout.workout.duration} • {todayScheduledWorkout.workout.exercises.length} exercícios
+                        {todayScheduledWorkout.workout.muscleGroup} • {todayScheduledWorkout.workout.duration} • {todayScheduledWorkout.workout.exercises.length} {dashboardText.exercises}
                       </p>
                     </div>
                     {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) && (
@@ -3321,7 +3585,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                       className="min-h-[50px] rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                       <Play size={17} />
-                      {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? 'Abrir treino' : 'Começar agora'}
+                      {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? dashboardText.openWorkout : dashboardText.startNow}
                     </button>
                     <button
                       onClick={() => toggleDashboardWorkoutDone(todayScheduledWorkout.workoutId)}
@@ -3331,7 +3595,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                           ? 'bg-success/15 border-success/30 text-success'
                           : 'bg-white/5 border-white/10 text-text-secondary hover:text-success'
                       }`}
-                      aria-label={savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? 'Desmarcar treino concluído' : 'Marcar treino como concluído'}
+                      aria-label={savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? dashboardText.unmarkDone : dashboardText.markDone}
                     >
                       {dashboardWorkoutPendingId === todayScheduledWorkout.workoutId
                         ? <Loader2 size={20} className="animate-spin" />
@@ -3345,9 +3609,9 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                     <Coffee size={20} />
                   </div>
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-widest text-primary">Hoje</div>
-                    <h3 className="text-lg font-black">Dia de descanso</h3>
-                    <p className="text-xs text-text-muted mt-1">Recupere o corpo e mantenha sua rotina.</p>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-primary">{dashboardText.today}</div>
+                    <h3 className="text-lg font-black">{dashboardText.restDay}</h3>
+                    <p className="text-xs text-text-muted mt-1">{dashboardText.restDayText}</p>
                   </div>
                 </div>
               )}
@@ -3377,8 +3641,8 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                       <span className={`text-[9px] font-black uppercase tracking-widest ${isToday ? 'text-primary' : 'text-text-muted'}`}>{day.slice(0, 3)}</span>
                       {isDone && <CheckCircle2 size={15} className="text-success" />}
                     </div>
-                    <div className="mt-3 text-sm font-black leading-tight line-clamp-2">{slot?.workout.name || 'Descanso'}</div>
-                    <div className="mt-2 text-[9px] font-bold text-text-muted line-clamp-1">{slot ? slot.workout.muscleGroup : 'Sem treino'}</div>
+                    <div className="mt-3 text-sm font-black leading-tight line-clamp-2">{slot?.workout.name || dashboardText.rest}</div>
+                    <div className="mt-2 text-[9px] font-bold text-text-muted line-clamp-1">{slot ? slot.workout.muscleGroup : dashboardText.noWorkout}</div>
                   </button>
                 );
               })}
@@ -3389,7 +3653,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
               className="sm:hidden w-full min-h-[46px] rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary flex items-center justify-center gap-2"
             >
               <SlidersHorizontal size={15} />
-              Organizar semana
+              {dashboardText.organizeWeek}
             </button>
           </>
         ) : (
@@ -3398,15 +3662,15 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
               <CalendarPlus size={25} />
             </div>
             <div>
-              <h3 className="text-lg font-black">Monte sua semana</h3>
-              <p className="text-xs sm:text-sm text-text-muted mt-1 max-w-md mx-auto leading-relaxed">Escolha seus treinos uma vez e encontre cada dia pronto aqui na tela inicial.</p>
+              <h3 className="text-lg font-black">{dashboardText.buildWeek}</h3>
+              <p className="text-xs sm:text-sm text-text-muted mt-1 max-w-md mx-auto leading-relaxed">{dashboardText.buildWeekText}</p>
             </div>
             <button
               onClick={() => onStartWorkout()}
               className="w-full sm:w-auto min-h-[50px] px-6 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all inline-flex items-center justify-center gap-2"
             >
               <PlusCircle size={17} />
-              Escolher treinos
+              {dashboardText.chooseWorkouts}
             </button>
           </div>
         )}
@@ -3415,40 +3679,40 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <DashboardMetricCard 
-          label="Peso Atual" 
-          value={`${displayedWeight.toLocaleString('pt-BR')} kg`}
+          label={dashboardText.currentWeight}
+          value={`${displayedWeight.toLocaleString(locale)} kg`}
           subValue={weightSubValue}
           icon={<TrendingUp size={20} />}
           onClick={() => openDashboardMetric('weight', onViewProgress)}
-          actionLabel="Atualizar peso"
+          actionLabel={dashboardText.updateWeight}
         />
         <DashboardMetricCard
-          label="Próximo Treino"
+          label={dashboardText.nextWorkout}
           value={todayScheduledWorkout?.workout.name || nextWorkout.name}
           subValue={todayScheduledWorkout ? `${todayName} • ${todayScheduledWorkout.workout.muscleGroup}` : nextWorkout.muscleGroup}
           icon={<Calendar size={20} />}
           onClick={() => openDashboardMetric('workout', () => todayScheduledWorkout
             ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))
             : onStartWorkout())}
-          actionLabel="Abrir treino"
+          actionLabel={dashboardText.openWorkout}
         />
         <DashboardMetricCard 
-          label="Calorias Diárias" 
-          value={`${calorieGoal.toLocaleString('pt-BR')} kcal`}
-          subValue={profile.goal?.toLowerCase().includes('emagrec') ? 'Meta em déficit calórico' : `Meta: ${calorieGoal.toLocaleString('pt-BR')} kcal`}
+          label={dashboardText.dailyCalories}
+          value={`${calorieGoal.toLocaleString(locale)} kcal`}
+          subValue={profile.goal?.toLowerCase().includes('emagrec') ? dashboardText.calorieDeficitGoal : dashboardText.calorieGoal(calorieGoal.toLocaleString(locale))}
           icon={<Apple size={20} />} 
           onClick={() => openDashboardMetric('nutrition', onViewNutrition)}
-          actionLabel="Ver nutrição"
+          actionLabel={dashboardText.viewNutrition}
         />
         <DashboardMetricCard 
-          label="Nível de Energia" 
+          label={dashboardText.energyLevel}
           value={wellnessLabel(dailyCheckIn?.energy)}
           subValue={dailyCheckIn
-            ? `${dailyCheckIn.sleepHours.toLocaleString('pt-BR')}h de sono • check-in de hoje`
-            : 'Toque para fazer seu check-in'}
+            ? dashboardText.sleepCheckIn(dailyCheckIn.sleepHours.toLocaleString(locale))
+            : dashboardText.checkInPrompt}
           icon={<Zap size={20} />}
           onClick={openWellnessCheckIn}
-          actionLabel={dailyCheckIn ? 'Editar check-in' : 'Fazer check-in'}
+          actionLabel={dailyCheckIn ? dashboardText.editCheckIn : dashboardText.doCheckIn}
         />
       </div>
 
@@ -3456,14 +3720,14 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
         {/* Calorias da Semana */}
         <div className="lg:col-span-2 bg-surface p-8 rounded-[40px] border border-white/5 space-y-6">
           <div>
-            <h3 className="text-xl font-black tracking-tight uppercase">Calorias da semana</h3>
-            <p className="text-sm text-text-muted">Meta: {calorieGoal.toLocaleString('pt-BR')} kcal/dia</p>
+            <h3 className="text-xl font-black tracking-tight uppercase">{dashboardText.weekCalories}</h3>
+            <p className="text-sm text-text-muted">{dashboardText.dailyGoal(calorieGoal.toLocaleString(locale))}</p>
           </div>
 
           <div className="h-[280px] w-full relative">
             {weeklyCalData.every(d => d.calories === 0) && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <p className="text-sm text-text-muted font-bold text-center px-4">Registre suas refeições para ver o gráfico</p>
+                <p className="text-sm text-text-muted font-bold text-center px-4">{dashboardText.logMealsForChart}</p>
               </div>
             )}
             <ResponsiveContainer width="100%" height="100%">
@@ -3489,8 +3753,8 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                   contentStyle={{ backgroundColor: '#121212', border: '1px solid #ffffff10', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
                   cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                   formatter={(value: number, _: string, props: any) => {
-                    if (props.payload?.isFuture || value === 0) return ['Sem registro', 'Calorias'];
-                    return [`${value.toLocaleString('pt-BR')} kcal`, 'Calorias'];
+                    if (props.payload?.isFuture || value === 0) return ['—', dashboardText.calories];
+                    return [`${value.toLocaleString(locale)} kcal`, dashboardText.calories];
                   }}
                 />
                 <ReferenceLine y={calorieGoal} stroke="#FF6A00" strokeDasharray="5 4" strokeOpacity={0.45} strokeWidth={1.5} />
@@ -3511,7 +3775,7 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                       if (!entry?.isToday || !value) return null;
                       return (
                         <text x={x + width / 2} y={y - 6} textAnchor="middle" fill="#FF6A00" fontSize={11} fontWeight={700}>
-                          {value.toLocaleString('pt-BR')}
+                          {value.toLocaleString(locale)}
                         </text>
                       );
                     }}
@@ -3528,13 +3792,13 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
             return (
               <div className="flex gap-8 pt-4 border-t border-white/5">
                 <div>
-                  <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Média da semana</p>
-                  <p className="text-base font-black mt-0.5">{avg.toLocaleString('pt-BR')} <span className="text-text-muted text-xs font-bold">kcal</span></p>
+                  <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{dashboardText.weeklyAverage}</p>
+                  <p className="text-base font-black mt-0.5">{avg.toLocaleString(locale)} <span className="text-text-muted text-xs font-bold">kcal</span></p>
                 </div>
                 <div className="w-px bg-white/5" />
                 <div>
-                  <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Melhor dia</p>
-                  <p className="text-base font-black mt-0.5">{best.toLocaleString('pt-BR')} <span className="text-text-muted text-xs font-bold">kcal</span></p>
+                  <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{dashboardText.bestDay}</p>
+                  <p className="text-base font-black mt-0.5">{best.toLocaleString(locale)} <span className="text-text-muted text-xs font-bold">kcal</span></p>
                 </div>
               </div>
             );
@@ -3549,21 +3813,21 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
           return (
             <div className="bg-surface p-8 rounded-[40px] border border-white/5 space-y-8">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black tracking-tight uppercase">Nutrição</h3>
+                <h3 className="text-xl font-black tracking-tight uppercase">{dashboardText.nutrition}</h3>
                 <button
                   onClick={onViewNutrition}
                   className="text-primary text-xs font-black uppercase tracking-widest hover:text-primary-hover transition-colors"
                 >
-                  Ver Tudo
+                  {dashboardText.viewAll}
                 </button>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                    <span className="text-text-muted">Calorias</span>
+                    <span className="text-text-muted">{dashboardText.calories}</span>
                     <span className="text-text-primary">
-                      {todayCals > 0 ? todayCals.toLocaleString('pt-BR') : '—'} / {calorieGoal.toLocaleString('pt-BR')} kcal
+                      {todayCals > 0 ? todayCals.toLocaleString(locale) : '—'} / {calorieGoal.toLocaleString(locale)} kcal
                     </span>
                   </div>
                   <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -3577,9 +3841,9 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
 
                 <div className="grid grid-cols-3 gap-4">
                   {[
-                    { label: 'Prot', value: todayLog?.protein ?? 0, unit: 'g' },
-                    { label: 'Carb', value: todayLog?.carbs ?? 0, unit: 'g' },
-                    { label: 'Gord', value: todayLog?.fat ?? 0, unit: 'g' },
+                    { label: dashboardText.proteinShort, value: todayLog?.protein ?? 0, unit: 'g' },
+                    { label: dashboardText.carbsShort, value: todayLog?.carbs ?? 0, unit: 'g' },
+                    { label: dashboardText.fatShort, value: todayLog?.fat ?? 0, unit: 'g' },
                   ].map(({ label, value }) => (
                     <div key={label} className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
                       <div className="text-[10px] text-text-muted font-black uppercase mb-1">{label}</div>
@@ -3589,14 +3853,14 @@ function DashboardView({ profile, onUpgrade, onStartWorkout, onViewNutrition, on
                 </div>
 
                 <div className="pt-4 space-y-4">
-                  <h4 className="text-xs font-black text-text-muted uppercase tracking-widest">Próxima Refeição</h4>
+                  <h4 className="text-xs font-black text-text-muted uppercase tracking-widest">{dashboardText.nextMeal}</h4>
                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                       <Utensils size={24} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-text-muted">Registre refeições</div>
-                      <div className="text-[10px] text-text-muted">no módulo de Nutrição</div>
+                      <div className="text-sm font-bold text-text-muted">{dashboardText.logMeals}</div>
+                      <div className="text-[10px] text-text-muted">{dashboardText.nutritionModule}</div>
                     </div>
                   </div>
                 </div>

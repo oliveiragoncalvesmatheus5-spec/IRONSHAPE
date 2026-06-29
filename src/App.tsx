@@ -959,6 +959,17 @@ export default function App() {
           onPlanChange={setSimulatedPlan}
         />
       )}
+      <button
+        type="button"
+        aria-label={themeMode === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+        aria-pressed={themeMode === 'light'}
+        onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
+        className="md:hidden fixed right-4 z-[55] w-11 h-11 rounded-2xl border border-white/10 bg-surface/90 text-text-primary shadow-xl shadow-black/10 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-all"
+        style={{ top: 'calc(12px + env(safe-area-inset-top))' }}
+      >
+        {themeMode === 'dark' ? <Sun size={20} className="text-primary" /> : <Moon size={20} className="text-primary" />}
+      </button>
+
       {/* Sidebar / Navigation */}
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 md:top-0 md:bottom-0 md:left-0 md:right-auto md:w-24 md:flex md:flex-col md:items-center md:border-r md:border-white/5 md:bg-surface/90 md:backdrop-blur-2xl"
@@ -1100,42 +1111,6 @@ export default function App() {
             <p className="text-base font-bold text-text-primary">Mais opções</p>
             <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>Acessos secundários e configurações</p>
           </div>
-
-          <button
-            type="button"
-            role="switch"
-            aria-checked={themeMode === 'light'}
-            onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
-            className="w-full flex items-center justify-between gap-4 p-3 rounded-2xl text-left transition-all active:scale-95 border border-white/5 bg-white/5 min-h-[64px]"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex-shrink-0 flex items-center justify-center rounded-xl bg-primary/10 text-primary" style={{ width: 40, height: 40 }}>
-                {themeMode === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
-              </div>
-              <div className="min-w-0">
-                <span className="text-[13.5px] font-bold text-text-primary truncate block">Aparência</span>
-                <p className="text-[10.5px] truncate text-text-muted">{themeMode === 'dark' ? 'Modo escuro ativo' : 'Modo claro ativo'}</p>
-              </div>
-            </div>
-            <span
-              className="relative rounded-full shrink-0 transition-colors"
-              style={{
-                width: 48,
-                height: 28,
-                background: themeMode === 'light' ? 'var(--color-primary)' : 'rgba(138,138,146,0.32)',
-              }}
-            >
-              <span
-                className="absolute top-1 rounded-full bg-white shadow-lg transition-transform"
-                style={{
-                  width: 20,
-                  height: 20,
-                  left: 4,
-                  transform: themeMode === 'light' ? 'translateX(20px)' : 'translateX(0)',
-                }}
-              />
-            </span>
-          </button>
 
           {/* Grid of items */}
           <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">

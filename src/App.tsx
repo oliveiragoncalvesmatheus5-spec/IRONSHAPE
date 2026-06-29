@@ -85,7 +85,9 @@ import {
   Share2,
   Grid3X3,
   UserPlus,
-  UserMinus
+  UserMinus,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -123,6 +125,14 @@ const AUTH_NAVIGATION_KEYS = [
   'error_code',
   'error_description',
 ];
+
+type ThemeMode = 'dark' | 'light';
+
+function getInitialThemeMode(): ThemeMode {
+  if (typeof window === 'undefined') return 'dark';
+  const saved = localStorage.getItem('ironshape_theme');
+  return saved === 'light' || saved === 'dark' ? saved : 'dark';
+}
 
 function isAuthNavigationUrl() {
   if (typeof window === 'undefined') return false;
@@ -710,11 +720,18 @@ export default function App() {
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
   const [initTimeout, setInitTimeout] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const authHistoryGuardedRef = useRef(false);
 
   useEffect(() => {
     initAnalytics();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    document.documentElement.style.colorScheme = themeMode;
+    localStorage.setItem('ironshape_theme', themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -989,10 +1006,10 @@ export default function App() {
           style={{
             height: 'calc(76px + env(safe-area-inset-bottom))',
             paddingBottom: 'env(safe-area-inset-bottom)',
-            background: 'rgba(13,13,15,0.96)',
+            background: themeMode === 'light' ? 'rgba(255,255,255,0.94)' : 'rgba(13,13,15,0.96)',
             backdropFilter: 'blur(14px)',
             WebkitBackdropFilter: 'blur(14px)',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderTop: themeMode === 'light' ? '1px solid rgba(17,24,39,0.1)' : '1px solid rgba(255,255,255,0.06)',
           }}
         >
           <MobileNavItem icon={<TrendingUp size={23} />} label="Início"    active={activeTab === 'dashboard'}  onClick={() => { setDrawerOpen(false); setActiveTab('dashboard'); }} />
@@ -1008,14 +1025,14 @@ export default function App() {
             {drawerOpen && (
               <span
                 className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-full"
-                style={{ width: 28, height: 3, background: '#ff6b1a' }}
+                style={{ width: 28, height: 3, background: 'var(--color-primary)' }}
               />
             )}
             <span
               className="transition-transform duration-300"
               style={{
                 display: 'flex',
-                color: drawerOpen ? '#ff6b1a' : '#8a8a92',
+                color: drawerOpen ? 'var(--color-primary)' : 'var(--color-text-muted)',
                 transform: drawerOpen ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             >
@@ -1023,7 +1040,7 @@ export default function App() {
             </span>
             <span
               className="text-[11px] font-bold leading-none"
-              style={{ color: drawerOpen ? '#ff6b1a' : '#8a8a92', fontWeight: drawerOpen ? 700 : 500 }}
+              style={{ color: drawerOpen ? 'var(--color-primary)' : 'var(--color-text-muted)', fontWeight: drawerOpen ? 700 : 500 }}
             >
               {drawerOpen ? 'Fechar' : 'Mais'}
             </span>
@@ -1036,7 +1053,7 @@ export default function App() {
         className="md:hidden fixed inset-0 z-40 pointer-events-none"
         style={{
           bottom: 'calc(76px + env(safe-area-inset-bottom))',
-          background: 'rgba(0,0,0,0.45)',
+          background: themeMode === 'light' ? 'rgba(17,24,39,0.22)' : 'rgba(0,0,0,0.45)',
           backdropFilter: drawerOpen ? 'blur(4px)' : 'none',
           WebkitBackdropFilter: drawerOpen ? 'blur(4px)' : 'none',
           opacity: drawerOpen ? 1 : 0,
@@ -1055,9 +1072,9 @@ export default function App() {
         className="md:hidden fixed left-0 right-0 z-40"
         style={{
           bottom: 'calc(76px + env(safe-area-inset-bottom))',
-          background: '#16161a',
+          background: 'var(--color-surface)',
           borderRadius: '24px 24px 0 0',
-          boxShadow: '0 -20px 40px -10px rgba(0,0,0,0.5)',
+          boxShadow: themeMode === 'light' ? '0 -18px 44px -18px rgba(17,24,39,0.28)' : '0 -20px 40px -10px rgba(0,0,0,0.5)',
           transform: drawerOpen ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform .35s cubic-bezier(.32,.72,.32,1)',
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -1074,15 +1091,51 @@ export default function App() {
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="rounded-full" style={{ width: 44, height: 4, background: 'rgba(255,255,255,0.18)' }} />
+          <div className="rounded-full" style={{ width: 44, height: 4, background: themeMode === 'light' ? 'rgba(17,24,39,0.16)' : 'rgba(255,255,255,0.18)' }} />
         </div>
 
         <div className="px-4 sm:px-5 pt-3 pb-6 space-y-5">
           {/* Header */}
           <div>
             <p className="text-base font-bold text-text-primary">Mais opções</p>
-            <p className="text-[11.5px] mt-0.5" style={{ color: '#8a8a92' }}>Acessos secundários e configurações</p>
+            <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>Acessos secundários e configurações</p>
           </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={themeMode === 'light'}
+            onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
+            className="w-full flex items-center justify-between gap-4 p-3 rounded-2xl text-left transition-all active:scale-95 border border-white/5 bg-white/5 min-h-[64px]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex-shrink-0 flex items-center justify-center rounded-xl bg-primary/10 text-primary" style={{ width: 40, height: 40 }}>
+                {themeMode === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
+              </div>
+              <div className="min-w-0">
+                <span className="text-[13.5px] font-bold text-text-primary truncate block">Aparência</span>
+                <p className="text-[10.5px] truncate text-text-muted">{themeMode === 'dark' ? 'Modo escuro ativo' : 'Modo claro ativo'}</p>
+              </div>
+            </div>
+            <span
+              className="relative rounded-full shrink-0 transition-colors"
+              style={{
+                width: 48,
+                height: 28,
+                background: themeMode === 'light' ? 'var(--color-primary)' : 'rgba(138,138,146,0.32)',
+              }}
+            >
+              <span
+                className="absolute top-1 rounded-full bg-white shadow-lg transition-transform"
+                style={{
+                  width: 20,
+                  height: 20,
+                  left: 4,
+                  transform: themeMode === 'light' ? 'translateX(20px)' : 'translateX(0)',
+                }}
+              />
+            </span>
+          </button>
 
           {/* Grid of items */}
           <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
@@ -1096,17 +1149,22 @@ export default function App() {
                 key={item.tab}
                 onClick={() => { setActiveTab(item.tab); setDrawerOpen(false); }}
                 className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all active:scale-95 min-h-[68px]"
-                style={{ background: 'rgba(255,255,255,0.04)', border: activeTab === item.tab ? '1px solid rgba(255,107,26,0.4)' : '1px solid rgba(255,255,255,0.06)' }}
+                style={{
+                  background: themeMode === 'light' ? 'rgba(17,24,39,0.035)' : 'rgba(255,255,255,0.04)',
+                  border: activeTab === item.tab
+                    ? '1px solid rgba(255,107,26,0.4)'
+                    : themeMode === 'light' ? '1px solid rgba(17,24,39,0.08)' : '1px solid rgba(255,255,255,0.06)',
+                }}
               >
-                <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.05)', color: activeTab === item.tab ? '#ff6b1a' : '#8a8a92' }}>
+                <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 40, height: 40, background: themeMode === 'light' ? 'rgba(17,24,39,0.045)' : 'rgba(255,255,255,0.05)', color: activeTab === item.tab ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
                   {item.icon}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[13.5px] font-bold text-text-primary truncate">{item.label}</span>
-                    {activeTab === item.tab && <span className="flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: '#ff6b1a' }} />}
+                    {activeTab === item.tab && <span className="flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: 'var(--color-primary)' }} />}
                   </div>
-                  <p className="text-[10.5px] truncate" style={{ color: '#8a8a92' }}>{item.desc}</p>
+                  <p className="text-[10.5px] truncate" style={{ color: 'var(--color-text-muted)' }}>{item.desc}</p>
                 </div>
               </button>
             ))}
@@ -5063,7 +5121,7 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
   );
 }
 
-type ExerciseAnimationType = 'dumbbellBenchPress';
+type ExerciseAnimationType = 'press' | 'fly' | 'row' | 'pull' | 'squat' | 'lunge' | 'hinge' | 'bridge' | 'shoulder' | 'curl' | 'triceps' | 'core' | 'mobility' | 'stretch';
 const EXERCISE_MEDIA_PLAYBACK_RATE = 1.75;
 
 function setExerciseVideoSpeed(video: HTMLVideoElement) {
@@ -5082,14 +5140,50 @@ function normalizeExerciseKey(value: string) {
 
 function getExerciseAnimationType(name: string): ExerciseAnimationType | null {
   const key = normalizeExerciseKey(name);
-  if (key.includes('supino reto com halteres') && !navigator.onLine) return 'dumbbellBenchPress';
+  if (/alongamento|postura da crianca|respiracao|relaxamento|posterior|quadriceps|pescoco|peitoral|ombro cruzado|triceps acima/.test(key)) return 'stretch';
+  if (/mobilidade|circulos|deslizamento|retracao|rotacao|wall slide|aquecimento/.test(key)) return 'mobility';
+  if (/prancha|abdominal|russian|bicicleta|dead bug|inseto|calcanhar|joelho|abdomen|core|contracao/.test(key)) return 'core';
+  if (/remada|puxada|pulldown|barra fixa|pull up|superman|pullover|costas|t-bar|pendlay/.test(key)) return key.includes('puxada') || key.includes('pulldown') || key.includes('barra fixa') ? 'pull' : 'row';
+  if (/stiff|terra|good morning|romeno/.test(key)) return 'hinge';
+  if (/elevacao pelvica|hip thrust|bridge|quadril|coice|abducao/.test(key)) return 'bridge';
+  if (/agachamento|leg press|sentar|cadeira extensora|panturrilha|gemeos|passo|avanco|lunge|bulgaro|marcha|perna|joelho/.test(key)) return /passo|avanco|lunge|bulgaro/.test(key) ? 'lunge' : 'squat';
+  if (/desenvolvimento|elevacao lateral|elevacao frontal|face pull|ombro|arnold|militar|posterior|crucifixo inverso|peck deck/.test(key)) return 'shoulder';
+  if (/rosca|biceps|martelo|scott|concentrada|curl/.test(key)) return 'curl';
+  if (/triceps|testa|frances|supino fechado|mergulho|dips|extensao/.test(key)) return 'triceps';
+  if (/crucifixo|fly|abertura|cross over/.test(key)) return 'fly';
+  if (/supino|flexao|pressao|peito|push|bench|chest/.test(key)) return 'press';
   return null;
 }
 
-function DumbbellBenchPressAnimation() {
+function ExerciseAnimation({ type, label }: { type: ExerciseAnimationType, label: string }) {
+  const bodyMotion = type === 'squat' || type === 'lunge'
+    ? 'translate(0 0);translate(0 42);translate(0 0)'
+    : type === 'hinge'
+      ? 'translate(0 -6);translate(28 18);translate(0 -6)'
+      : type === 'bridge'
+        ? 'translate(0 24);translate(0 -8);translate(0 24)'
+        : type === 'core'
+          ? 'translate(-14 0);translate(14 0);translate(-14 0)'
+          : 'translate(0 0);translate(0 -6);translate(0 0)';
+  const armMotion = type === 'press' || type === 'shoulder' || type === 'triceps' || type === 'pull'
+    ? 'translate(0 -34);translate(0 34);translate(0 -34)'
+    : type === 'fly'
+      ? 'translate(-42 0);translate(42 0);translate(-42 0)'
+      : type === 'row' || type === 'curl'
+        ? 'translate(38 0);translate(-24 0);translate(38 0)'
+        : type === 'mobility' || type === 'stretch'
+          ? 'translate(-24 -8);translate(24 8);translate(-24 -8)'
+          : 'translate(0 0);translate(0 -12);translate(0 0)';
+  const legMotion = type === 'lunge'
+    ? 'translate(-26 0);translate(26 0);translate(-26 0)'
+    : type === 'squat' || type === 'bridge'
+      ? 'translate(0 0);translate(0 -18);translate(0 0)'
+      : 'translate(0 0);translate(0 8);translate(0 0)';
+  const showWeights = !['core', 'mobility', 'stretch', 'squat', 'lunge', 'bridge'].includes(type);
+
   return (
-    <div className="relative w-full h-full min-h-[260px] bg-[#f7f7f7] overflow-hidden flex items-center justify-center">
-      <svg viewBox="0 0 640 380" className="w-full h-full" role="img" aria-label="Supino reto com halteres">
+    <div className="relative w-full h-full min-h-[240px] bg-[#f7f7f7] overflow-hidden flex items-center justify-center">
+      <svg viewBox="0 0 640 380" className="w-full h-full" role="img" aria-label={label}>
         <defs>
           <linearGradient id="demoSkin" x1="0" x2="1">
             <stop offset="0%" stopColor="#c9c9c9" />
@@ -5116,52 +5210,47 @@ function DumbbellBenchPressAnimation() {
         </g>
 
         <g filter="url(#demoShadow)">
-          <ellipse cx="320" cy="222" rx="96" ry="42" fill="url(#demoSkin)" />
-          <ellipse cx="320" cy="218" rx="50" ry="27" fill="url(#demoMuscle)" opacity="0.95" />
-          <circle cx="456" cy="218" r="31" fill="url(#demoSkin)" />
-          <path d="M432 218c20-28 53-18 58 6-17-11-36-12-58-6Z" fill="#222" />
-          <rect x="194" y="240" width="96" height="24" rx="12" fill="#222" opacity="0.9" />
+          <g>
+            <animateTransform attributeName="transform" type="translate" values={bodyMotion} dur="1.25s" repeatCount="indefinite" />
+            <ellipse cx="320" cy="222" rx="96" ry="42" fill="url(#demoSkin)" />
+            <ellipse cx="320" cy="218" rx="50" ry="27" fill="url(#demoMuscle)" opacity="0.95" />
+            <circle cx="456" cy="218" r="31" fill="url(#demoSkin)" />
+            <path d="M432 218c20-28 53-18 58 6-17-11-36-12-58-6Z" fill="#222" />
+            <rect x="194" y="240" width="96" height="24" rx="12" fill="#222" opacity="0.9" />
+          </g>
         </g>
 
         <g strokeLinecap="round" strokeLinejoin="round" filter="url(#demoShadow)">
-          <line x1="275" y1="204" x2="242" y2="142" stroke="url(#demoSkin)" strokeWidth="20">
-            <animate attributeName="x2" values="242;252;242" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
-          </line>
-          <line x1="242" y1="142" x2="242" y2="76" stroke="url(#demoSkin)" strokeWidth="18">
-            <animate attributeName="x1" values="242;252;242" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="y1" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="x2" values="242;252;242" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="76;128;76" dur="1.2s" repeatCount="indefinite" />
-          </line>
-          <line x1="365" y1="204" x2="398" y2="142" stroke="url(#demoSkin)" strokeWidth="20">
-            <animate attributeName="x2" values="398;388;398" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
-          </line>
-          <line x1="398" y1="142" x2="398" y2="76" stroke="url(#demoSkin)" strokeWidth="18">
-            <animate attributeName="x1" values="398;388;398" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="y1" values="142;178;142" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="x2" values="398;388;398" dur="1.2s" repeatCount="indefinite" />
-            <animate attributeName="y2" values="76;128;76" dur="1.2s" repeatCount="indefinite" />
-          </line>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values={armMotion} dur="1.15s" repeatCount="indefinite" />
+            <line x1="275" y1="204" x2="242" y2="142" stroke="url(#demoSkin)" strokeWidth="20" />
+            <line x1="242" y1="142" x2="242" y2="76" stroke="url(#demoSkin)" strokeWidth="18" />
+            <line x1="365" y1="204" x2="398" y2="142" stroke="url(#demoSkin)" strokeWidth="20" />
+            <line x1="398" y1="142" x2="398" y2="76" stroke="url(#demoSkin)" strokeWidth="18" />
+          </g>
         </g>
 
         <g filter="url(#demoShadow)">
-          <g>
-            <animateTransform attributeName="transform" type="translate" values="0 0;10 52;0 0" dur="1.2s" repeatCount="indefinite" />
+          <g opacity={showWeights ? 1 : 0}>
+            <animateTransform attributeName="transform" type="translate" values={armMotion} dur="1.15s" repeatCount="indefinite" />
             <rect x="214" y="56" width="56" height="18" rx="9" fill="#191919" />
             <circle cx="214" cy="65" r="22" fill="#111" />
             <circle cx="270" cy="65" r="22" fill="#111" />
             <circle cx="214" cy="65" r="10" fill="#333" />
             <circle cx="270" cy="65" r="10" fill="#333" />
           </g>
-          <g>
-            <animateTransform attributeName="transform" type="translate" values="0 0;-10 52;0 0" dur="1.2s" repeatCount="indefinite" />
+          <g opacity={showWeights ? 1 : 0}>
+            <animateTransform attributeName="transform" type="translate" values={armMotion} dur="1.15s" repeatCount="indefinite" />
             <rect x="370" y="56" width="56" height="18" rx="9" fill="#191919" />
             <circle cx="370" cy="65" r="22" fill="#111" />
             <circle cx="426" cy="65" r="22" fill="#111" />
             <circle cx="370" cy="65" r="10" fill="#333" />
             <circle cx="426" cy="65" r="10" fill="#333" />
+          </g>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values={legMotion} dur="1.25s" repeatCount="indefinite" />
+            <path d="M276 249c-28 20-49 43-64 76" fill="none" stroke="url(#demoSkin)" strokeWidth="24" strokeLinecap="round" />
+            <path d="M364 249c28 20 49 43 64 76" fill="none" stroke="url(#demoSkin)" strokeWidth="24" strokeLinecap="round" />
           </g>
         </g>
 
@@ -5170,11 +5259,6 @@ function DumbbellBenchPressAnimation() {
       </svg>
     </div>
   );
-}
-
-function ExerciseAnimation({ type }: { type: ExerciseAnimationType }) {
-  if (type === 'dumbbellBenchPress') return <DumbbellBenchPressAnimation />;
-  return null;
 }
 
 function ExecutionModal({
@@ -5188,15 +5272,14 @@ function ExecutionModal({
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(true);
   const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
-  const animationType = getExerciseAnimationType(exercise.name);
+  const animationType = getExerciseAnimationType(exercise.name) ?? 'mobility';
 
   useEffect(() => {
     let cancelled = false;
     setGifUrl(null);
     setApiVideoUrl(null);
     setCuratedVideoFailed(false);
-    setGifLoading(!animationType);
-    if (animationType) return () => { cancelled = true; };
+    setGifLoading(true);
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
@@ -5238,8 +5321,6 @@ function ExecutionModal({
             <div className="w-full h-full flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
-          ) : animationType ? (
-            <ExerciseAnimation type={animationType} />
           ) : apiVideoUrl ? (
             <video
               src={apiVideoUrl}
@@ -5249,10 +5330,11 @@ function ExecutionModal({
               playsInline
               controls
               onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
+              onError={() => setApiVideoUrl(null)}
               className="w-full h-full object-contain"
             />
           ) : gifUrl ? (
-            <img src={gifUrl} alt={exercise.name} className="w-full h-full object-contain" />
+            <img src={gifUrl} alt={exercise.name} onError={() => setGifUrl(null)} className="w-full h-full object-contain" />
           ) : exercise.videoUrl && !curatedVideoFailed ? (
             <video
               src={exercise.videoUrl}
@@ -5265,6 +5347,8 @@ function ExecutionModal({
               onError={() => setCuratedVideoFailed(true)}
               className="w-full h-full object-contain"
             />
+          ) : animationType ? (
+            <ExerciseAnimation type={animationType} label={exercise.name} />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-5 p-8 text-center">
               <div className="w-20 h-20 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
@@ -5379,7 +5463,7 @@ function ExerciseCard({
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
   const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
-  const animationType = getExerciseAnimationType(exercise.name);
+  const animationType = getExerciseAnimationType(exercise.name) ?? 'mobility';
 
   const handleToggleDetails = async () => {
     if (showDetails) {
@@ -5388,7 +5472,6 @@ function ExerciseCard({
     }
     setShowDetails(true);
     setCuratedVideoFailed(false);
-    if (animationType) return;
     if (gifUrl || apiVideoUrl) return;
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
@@ -5558,8 +5641,6 @@ function ExerciseCard({
                     <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Carregando...</p>
                   </div>
-                ) : animationType ? (
-                  <ExerciseAnimation type={animationType} />
                 ) : apiVideoUrl ? (
                   <video
                     src={apiVideoUrl}
@@ -5569,12 +5650,14 @@ function ExerciseCard({
                     playsInline
                     controls
                     onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
+                    onError={() => setApiVideoUrl(null)}
                     className="w-full h-full object-contain"
                   />
                 ) : gifUrl ? (
                   <img
                     src={gifUrl}
                     alt={exercise.name}
+                    onError={() => setGifUrl(null)}
                     className="w-full h-full object-contain"
                   />
                 ) : exercise.videoUrl && !curatedVideoFailed ? (
@@ -5589,6 +5672,8 @@ function ExerciseCard({
                     onError={() => setCuratedVideoFailed(true)}
                     className="w-full h-full object-contain"
                   />
+                ) : animationType ? (
+                  <ExerciseAnimation type={animationType} label={exercise.name} />
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-text-muted p-8 text-center">
                     <div className="w-16 h-16 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">

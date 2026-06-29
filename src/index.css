@@ -19,6 +19,18 @@
 }
 
 @layer base {
+  html[data-theme="light"] {
+    --color-background: #F6F7F9;
+    --color-surface: #FFFFFF;
+    --color-surface-hover: #EEF1F5;
+    --color-surface-active: #E3E7EE;
+    --color-primary: #FF6A00;
+    --color-primary-hover: #E85F00;
+    --color-text-primary: #111827;
+    --color-text-secondary: #4B5563;
+    --color-text-muted: #7C8593;
+  }
+
   html,
   body,
   #root {
@@ -35,5 +47,29 @@
   textarea,
   select {
     font: inherit;
+  }
+}
+
+@layer utilities {
+  html[data-theme="light"] .bg-white\/5 {
+    background-color: rgba(17, 24, 39, 0.045);
+  }
+
+  html[data-theme="light"] .bg-white\/10 {
+    background-color: rgba(17, 24, 39, 0.08);
+  }
+
+  html[data-theme="light"] .border-white\/5 {
+    border-color: rgba(17, 24, 39, 0.08);
+  }
+
+  html[data-theme="light"] .border-white\/10 {
+    border-color: rgba(17, 24, 39, 0.12);
+  }
+
+  html[data-theme="light"] .from-text-primary {
+    --tw-gradient-from: var(--color-text-primary) var(--tw-gradient-from-position);
+    --tw-gradient-to: rgba(17, 24, 39, 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
   }
 }

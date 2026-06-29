@@ -46,13 +46,13 @@ export function MobileNavItem({ icon, label, active, onClick }: NavItemProps) {
       {active && (
         <span
           className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-full"
-          style={{ width: 28, height: 3, background: '#ff6b1a' }}
+          style={{ width: 28, height: 3, background: 'var(--color-primary)' }}
         />
       )}
-      <span style={{ color: active ? '#ff6b1a' : '#8a8a92' }}>{icon}</span>
+      <span style={{ color: active ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>{icon}</span>
       <span
         className="text-[11px] leading-none"
-        style={{ color: active ? '#ff6b1a' : '#8a8a92', fontWeight: active ? 700 : 500 }}
+        style={{ color: active ? 'var(--color-primary)' : 'var(--color-text-muted)', fontWeight: active ? 700 : 500 }}
       >
         {label}
       </span>

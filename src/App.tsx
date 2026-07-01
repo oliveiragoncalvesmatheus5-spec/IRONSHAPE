@@ -129,6 +129,7 @@ const AUTH_NAVIGATION_KEYS = [
 
 type ThemeMode = 'dark' | 'light';
 type LanguageCode = 'pt-BR' | 'en' | 'es';
+type NutritionCalcGoal = 'lose' | 'maintain' | 'gain';
 
 const LANGUAGE_OPTIONS: Array<{ code: LanguageCode; short: string; label: string }> = [
   { code: 'pt-BR', short: 'PT', label: 'Português' },
@@ -244,6 +245,42 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
     stretchingRoutines: string;
     emptyTitle: string;
     emptyText: string;
+  };
+  nutrition: {
+    title: string;
+    subtitle: string;
+    editPreferences: string;
+    mealsPerDay: (count: number) => string;
+    metabolicCalculator: string;
+    beginnerModule: string;
+    weight: string;
+    height: string;
+    age: string;
+    gender: string;
+    male: string;
+    female: string;
+    activityLevel: string;
+    activityOptions: Record<'sedentary' | 'light' | 'moderate' | 'very' | 'extra', string>;
+    mainGoal: string;
+    mainGoalHelp: string;
+    lose: string;
+    maintain: string;
+    gain: string;
+    priority: string;
+    priorityHelp: string;
+    localizedFatNote: string;
+    calculateFor: (goal: string, focus: string) => string;
+    choosePriority: string;
+    waitingTitle: string;
+    waitingText: string;
+    estimatedDailyGoal: string;
+    bmr: string;
+    tdee: string;
+    proteins: string;
+    carbs: string;
+    fats: string;
+    protocolAnalysis: string;
+    goalFocusOptions: Record<NutritionCalcGoal, Array<{ value: string; label: string }>>;
   };
 }> = {
   'pt-BR': {
@@ -379,6 +416,70 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       emptyTitle: 'Nenhum treino encontrado',
       emptyText: 'Tente ajustar seus filtros para encontrar outros protocolos.',
     },
+    nutrition: {
+      title: 'Nutrição & Dieta',
+      subtitle: 'Otimize sua performance com protocolos nutricionais baseados em ciência e adaptados ao seu metabolismo.',
+      editPreferences: 'Editar Preferências',
+      mealsPerDay: count => `${count} refeições/dia`,
+      metabolicCalculator: 'Calculadora Metabólica',
+      beginnerModule: 'MÓDULO INICIANTE',
+      weight: 'Peso (kg)',
+      height: 'Altura (cm)',
+      age: 'Idade',
+      gender: 'Sexo',
+      male: 'Masculino',
+      female: 'Feminino',
+      activityLevel: 'Nível de Atividade',
+      activityOptions: {
+        sedentary: 'Sedentário (Pouco ou nenhum exercício)',
+        light: 'Levemente Ativo (1-3 dias/semana)',
+        moderate: 'Moderadamente Ativo (3-5 dias/semana)',
+        very: 'Muito Ativo (6-7 dias/semana)',
+        extra: 'Extra Ativo (Treino pesado 2x/dia)',
+      },
+      mainGoal: 'Objetivo principal',
+      mainGoalHelp: 'Escolha a direção do seu protocolo.',
+      lose: 'PERDER',
+      maintain: 'MANTER',
+      gain: 'GANHAR',
+      priority: 'Sua prioridade',
+      priorityHelp: 'Qual resultado é mais importante para você agora?',
+      localizedFatNote: 'O protocolo favorece a redução de gordura corporal total; não existe perda de gordura localizada.',
+      calculateFor: (goal, focus) => `CALCULAR PARA ${goal} ${focus}`,
+      choosePriority: 'ESCOLHA SUA PRIORIDADE',
+      waitingTitle: 'Aguardando Parâmetros',
+      waitingText: 'Preencha suas informações biométricas para gerar seu protocolo nutricional.',
+      estimatedDailyGoal: 'META DIÁRIA ESTIMADA',
+      bmr: 'TMB',
+      tdee: 'GET',
+      proteins: 'Proteínas',
+      carbs: 'Carboidratos',
+      fats: 'Gorduras',
+      protocolAnalysis: 'Análise do Protocolo',
+      goalFocusOptions: {
+        lose: [
+          { value: 'body_fat', label: 'Gordura corporal' },
+          { value: 'body_weight', label: 'Peso corporal' },
+          { value: 'waist_measurements', label: 'Medidas abdominais' },
+          { value: 'muscle_definition', label: 'Definição muscular' },
+          { value: 'not_sure', label: 'Não tenho certeza' },
+        ],
+        maintain: [
+          { value: 'muscle_mass', label: 'Massa muscular' },
+          { value: 'body_weight', label: 'Peso corporal' },
+          { value: 'body_fat_percentage', label: 'Percentual de gordura' },
+          { value: 'health_wellbeing', label: 'Saúde e bem-estar' },
+          { value: 'not_sure', label: 'Não tenho certeza' },
+        ],
+        gain: [
+          { value: 'muscle_mass', label: 'Massa muscular' },
+          { value: 'body_weight', label: 'Peso corporal' },
+          { value: 'strength_performance', label: 'Força e desempenho' },
+          { value: 'body_composition', label: 'Composição corporal' },
+          { value: 'not_sure', label: 'Não tenho certeza' },
+        ],
+      },
+    },
   },
   en: {
     nav: {
@@ -513,6 +614,70 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       emptyTitle: 'No workout found',
       emptyText: 'Try adjusting your filters to find other protocols.',
     },
+    nutrition: {
+      title: 'Nutrition & Diet',
+      subtitle: 'Optimize your performance with science-based nutrition protocols adapted to your metabolism.',
+      editPreferences: 'Edit Preferences',
+      mealsPerDay: count => `${count} meals/day`,
+      metabolicCalculator: 'Metabolic Calculator',
+      beginnerModule: 'BEGINNER MODULE',
+      weight: 'Weight (kg)',
+      height: 'Height (cm)',
+      age: 'Age',
+      gender: 'Sex',
+      male: 'Male',
+      female: 'Female',
+      activityLevel: 'Activity Level',
+      activityOptions: {
+        sedentary: 'Sedentary (little or no exercise)',
+        light: 'Lightly Active (1-3 days/week)',
+        moderate: 'Moderately Active (3-5 days/week)',
+        very: 'Very Active (6-7 days/week)',
+        extra: 'Extra Active (hard training 2x/day)',
+      },
+      mainGoal: 'Main goal',
+      mainGoalHelp: 'Choose the direction of your protocol.',
+      lose: 'LOSE',
+      maintain: 'MAINTAIN',
+      gain: 'GAIN',
+      priority: 'Your priority',
+      priorityHelp: 'Which result matters most to you right now?',
+      localizedFatNote: 'The protocol supports total body fat reduction; spot fat loss is not possible.',
+      calculateFor: (goal, focus) => `CALCULATE FOR ${goal} ${focus}`,
+      choosePriority: 'CHOOSE YOUR PRIORITY',
+      waitingTitle: 'Waiting for Parameters',
+      waitingText: 'Fill in your biometric information to generate your nutrition protocol.',
+      estimatedDailyGoal: 'ESTIMATED DAILY GOAL',
+      bmr: 'BMR',
+      tdee: 'TDEE',
+      proteins: 'Proteins',
+      carbs: 'Carbohydrates',
+      fats: 'Fats',
+      protocolAnalysis: 'Protocol Analysis',
+      goalFocusOptions: {
+        lose: [
+          { value: 'body_fat', label: 'Body fat' },
+          { value: 'body_weight', label: 'Body weight' },
+          { value: 'waist_measurements', label: 'Waist measurements' },
+          { value: 'muscle_definition', label: 'Muscle definition' },
+          { value: 'not_sure', label: 'Not sure' },
+        ],
+        maintain: [
+          { value: 'muscle_mass', label: 'Muscle mass' },
+          { value: 'body_weight', label: 'Body weight' },
+          { value: 'body_fat_percentage', label: 'Body fat percentage' },
+          { value: 'health_wellbeing', label: 'Health and wellbeing' },
+          { value: 'not_sure', label: 'Not sure' },
+        ],
+        gain: [
+          { value: 'muscle_mass', label: 'Muscle mass' },
+          { value: 'body_weight', label: 'Body weight' },
+          { value: 'strength_performance', label: 'Strength and performance' },
+          { value: 'body_composition', label: 'Body composition' },
+          { value: 'not_sure', label: 'Not sure' },
+        ],
+      },
+    },
   },
   es: {
     nav: {
@@ -646,6 +811,70 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       stretchingRoutines: 'Rutinas de estiramiento',
       emptyTitle: 'No se encontró ningún entreno',
       emptyText: 'Intenta ajustar tus filtros para encontrar otros protocolos.',
+    },
+    nutrition: {
+      title: 'Nutrición & Dieta',
+      subtitle: 'Optimiza tu rendimiento con protocolos nutricionales basados en ciencia y adaptados a tu metabolismo.',
+      editPreferences: 'Editar Preferencias',
+      mealsPerDay: count => `${count} comidas/día`,
+      metabolicCalculator: 'Calculadora Metabólica',
+      beginnerModule: 'MÓDULO INICIANTE',
+      weight: 'Peso (kg)',
+      height: 'Altura (cm)',
+      age: 'Edad',
+      gender: 'Sexo',
+      male: 'Masculino',
+      female: 'Femenino',
+      activityLevel: 'Nivel de Actividad',
+      activityOptions: {
+        sedentary: 'Sedentario (poco o ningún ejercicio)',
+        light: 'Ligeramente Activo (1-3 días/semana)',
+        moderate: 'Moderadamente Activo (3-5 días/semana)',
+        very: 'Muy Activo (6-7 días/semana)',
+        extra: 'Extra Activo (entreno fuerte 2x/día)',
+      },
+      mainGoal: 'Objetivo principal',
+      mainGoalHelp: 'Elige la dirección de tu protocolo.',
+      lose: 'PERDER',
+      maintain: 'MANTENER',
+      gain: 'GANAR',
+      priority: 'Tu prioridad',
+      priorityHelp: '¿Qué resultado es más importante para ti ahora?',
+      localizedFatNote: 'El protocolo favorece la reducción de grasa corporal total; no existe pérdida localizada de grasa.',
+      calculateFor: (goal, focus) => `CALCULAR PARA ${goal} ${focus}`,
+      choosePriority: 'ELIGE TU PRIORIDAD',
+      waitingTitle: 'Esperando Parámetros',
+      waitingText: 'Completa tu información biométrica para generar tu protocolo nutricional.',
+      estimatedDailyGoal: 'META DIARIA ESTIMADA',
+      bmr: 'TMB',
+      tdee: 'GET',
+      proteins: 'Proteínas',
+      carbs: 'Carbohidratos',
+      fats: 'Grasas',
+      protocolAnalysis: 'Análisis del Protocolo',
+      goalFocusOptions: {
+        lose: [
+          { value: 'body_fat', label: 'Grasa corporal' },
+          { value: 'body_weight', label: 'Peso corporal' },
+          { value: 'waist_measurements', label: 'Medidas abdominales' },
+          { value: 'muscle_definition', label: 'Definición muscular' },
+          { value: 'not_sure', label: 'No estoy seguro' },
+        ],
+        maintain: [
+          { value: 'muscle_mass', label: 'Masa muscular' },
+          { value: 'body_weight', label: 'Peso corporal' },
+          { value: 'body_fat_percentage', label: 'Porcentaje de grasa' },
+          { value: 'health_wellbeing', label: 'Salud y bienestar' },
+          { value: 'not_sure', label: 'No estoy seguro' },
+        ],
+        gain: [
+          { value: 'muscle_mass', label: 'Masa muscular' },
+          { value: 'body_weight', label: 'Peso corporal' },
+          { value: 'strength_performance', label: 'Fuerza y rendimiento' },
+          { value: 'body_composition', label: 'Composición corporal' },
+          { value: 'not_sure', label: 'No estoy seguro' },
+        ],
+      },
     },
   },
 };
@@ -1764,6 +1993,7 @@ export default function App() {
             {activeTab === 'nutrition' && (
               <NutritionView
                 profile={profile}
+                language={language}
                 onUpgrade={() => openPricing('nutrition_iron_coach')}
                 updateProfile={updateProfile}
                 onOpenIronCoach={(prompt) => {
@@ -7130,13 +7360,15 @@ function BodyProgressView({ userId }: { userId: string }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
+function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIronCoach }: {
   profile: UserProfile;
+  language: LanguageCode;
   onUpgrade: () => void;
   updateProfile: (u: Partial<UserProfile>) => Promise<void>;
   onOpenIronCoach: (prompt: string) => void;
 }) {
   const { isAdmin, simulatedPlan } = useAuth();
+  const nutritionText = APP_TRANSLATIONS[language].nutrition;
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
   const hasIronCoachAccess = simulatedPlan
     ? simulatedPlan === 'Pro' || simulatedPlan === 'Elite' || simulatedPlan === 'Admin'
@@ -7208,28 +7440,11 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
   const [results, setResults] = useState<MacroResults | null>(savedProtocol?.calcData?.goalFocus ? savedProtocol?.results || null : null);
   const [showCoachUpgradeModal, setShowCoachUpgradeModal] = useState(false);
 
-  const goalFocusOptions: Record<NutritionCalcData['goal'], { value: string; label: string }[]> = {
-    lose: [
-      { value: 'body_fat', label: 'Gordura corporal' },
-      { value: 'body_weight', label: 'Peso corporal' },
-      { value: 'waist_measurements', label: 'Medidas abdominais' },
-      { value: 'muscle_definition', label: 'Definição muscular' },
-      { value: 'not_sure', label: 'Não tenho certeza' },
-    ],
-    maintain: [
-      { value: 'muscle_mass', label: 'Massa muscular' },
-      { value: 'body_weight', label: 'Peso corporal' },
-      { value: 'body_fat_percentage', label: 'Percentual de gordura' },
-      { value: 'health_wellbeing', label: 'Saúde e bem-estar' },
-      { value: 'not_sure', label: 'Não tenho certeza' },
-    ],
-    gain: [
-      { value: 'muscle_mass', label: 'Massa muscular' },
-      { value: 'body_weight', label: 'Peso corporal' },
-      { value: 'strength_performance', label: 'Força e desempenho' },
-      { value: 'body_composition', label: 'Composição corporal' },
-      { value: 'not_sure', label: 'Não tenho certeza' },
-    ],
+  const goalFocusOptions = nutritionText.goalFocusOptions;
+  const goalLabels: Record<NutritionCalcData['goal'], string> = {
+    lose: nutritionText.lose,
+    maintain: nutritionText.maintain,
+    gain: nutritionText.gain,
   };
   const selectedGoalFocusLabel = goalFocusOptions[calcData.goal].find(option => option.value === calcData.goalFocus)?.label || '';
 
@@ -7667,11 +7882,11 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
       <header className="space-y-4 px-2 sm:px-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase">Nutrição & Dieta</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase">{nutritionText.title}</h1>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-text-secondary text-base sm:text-lg max-w-2xl leading-relaxed">
-            Otimize sua performance com protocolos nutricionais baseados em ciência e adaptados ao seu metabolismo.
+            {nutritionText.subtitle}
           </p>
           {localNutritionPrefs && (
             <button
@@ -7679,14 +7894,14 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
               className="shrink-0 flex items-center gap-2 px-4 py-2 bg-white/5 text-text-muted border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-text-primary transition-all"
             >
               <Edit3 size={13} />
-              Editar Preferências
+              {nutritionText.editPreferences}
             </button>
           )}
         </div>
         {localNutritionPrefs && (
           <div className="flex flex-wrap gap-2 mt-2">
             <span className="px-3 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-lg border border-primary/20 uppercase tracking-widest">
-              {localNutritionPrefs.mealsPerDay} refeições/dia
+              {nutritionText.mealsPerDay(localNutritionPrefs.mealsPerDay)}
             </span>
             <span className="px-3 py-1 bg-white/5 text-text-muted text-[9px] font-black rounded-lg border border-white/10 uppercase tracking-widest">
               {localNutritionPrefs.budget}
@@ -7707,10 +7922,10 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
             <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
               <Calculator size={24} />
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Calculadora Metabólica</h2>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionText.metabolicCalculator}</h2>
           </div>
           <span className="self-start sm:self-auto px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
-            MÓDULO INICIANTE
+            {nutritionText.beginnerModule}
           </span>
         </div>
 
@@ -7718,7 +7933,7 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
           <div className="lg:col-span-5 bg-surface p-6 sm:p-10 rounded-[32px] sm:rounded-[48px] border border-white/5 space-y-6 sm:space-y-8 shadow-2xl">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Peso (kg)</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.weight}</label>
                 <input 
                   type="number" 
                   value={calcData.weight}
@@ -7727,7 +7942,7 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                 />
               </div>
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Altura (cm)</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.height}</label>
                 <input 
                   type="number" 
                   value={calcData.height}
@@ -7739,7 +7954,7 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Idade</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.age}</label>
                 <input 
                   type="number" 
                   value={calcData.age}
@@ -7748,37 +7963,37 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                 />
               </div>
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Sexo</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.gender}</label>
                 <CustomSelect 
                   value={calcData.gender}
                   onChange={(val) => setCalcData({...calcData, gender: val as any})}
                   options={[
-                    { value: 'male', label: 'Masculino' },
-                    { value: 'female', label: 'Feminino' }
+                    { value: 'male', label: nutritionText.male },
+                    { value: 'female', label: nutritionText.female }
                   ]}
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Nível de Atividade</label>
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.activityLevel}</label>
               <CustomSelect 
                 value={calcData.activityLevel}
                 onChange={(val) => setCalcData({...calcData, activityLevel: val})}
                 options={[
-                  { value: '1.2', label: 'Sedentário (Pouco ou nenhum exercício)' },
-                  { value: '1.375', label: 'Levemente Ativo (1-3 dias/semana)' },
-                  { value: '1.55', label: 'Moderadamente Ativo (3-5 dias/semana)' },
-                  { value: '1.725', label: 'Muito Ativo (6-7 dias/semana)' },
-                  { value: '1.9', label: 'Extra Ativo (Treino pesado 2x/dia)' }
+                  { value: '1.2', label: nutritionText.activityOptions.sedentary },
+                  { value: '1.375', label: nutritionText.activityOptions.light },
+                  { value: '1.55', label: nutritionText.activityOptions.moderate },
+                  { value: '1.725', label: nutritionText.activityOptions.very },
+                  { value: '1.9', label: nutritionText.activityOptions.extra }
                 ]}
               />
             </div>
 
             <div className="space-y-4">
               <div className="space-y-1 ml-1">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">Objetivo principal</label>
-                <p className="text-xs text-text-muted">Escolha a direção do seu protocolo.</p>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.mainGoal}</label>
+                <p className="text-xs text-text-muted">{nutritionText.mainGoalHelp}</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {(['lose', 'maintain', 'gain'] as const).map((g) => (
@@ -7796,7 +8011,7 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                         : 'bg-white/5 border-white/10 text-text-muted hover:border-white/20'
                     }`}
                   >
-                    {g === 'lose' ? 'PERDER' : g === 'maintain' ? 'MANTER' : 'GANHAR'}
+                    {goalLabels[g]}
                   </button>
                 ))}
               </div>
@@ -7808,8 +8023,8 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                 className="rounded-[24px] border border-white/10 bg-white/[0.025] p-4 sm:p-5 space-y-4"
               >
                 <div className="space-y-1">
-                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">Sua prioridade</div>
-                  <p className="text-xs text-text-secondary">Qual resultado é mais importante para você agora?</p>
+                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.priority}</div>
+                  <p className="text-xs text-text-secondary">{nutritionText.priorityHelp}</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {goalFocusOptions[calcData.goal].map((option, index) => {
@@ -7842,7 +8057,7 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                 </div>
                 {calcData.goal === 'lose' && calcData.goalFocus === 'waist_measurements' && (
                   <p className="text-[10px] leading-relaxed text-text-muted">
-                    O protocolo favorece a redução de gordura corporal total; não existe perda de gordura localizada.
+                    {nutritionText.localizedFatNote}
                   </p>
                 )}
               </motion.div>
@@ -7854,8 +8069,8 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
               className="w-full min-h-[56px] px-4 py-3 bg-primary text-text-primary rounded-[24px] font-black text-sm sm:text-base leading-tight text-center shadow-2xl shadow-primary/30 hover:bg-primary-hover hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
             >
               {calcData.goalFocus
-                ? `CALCULAR PARA ${calcData.goal === 'lose' ? 'PERDER' : calcData.goal === 'gain' ? 'GANHAR' : 'MANTER'} ${selectedGoalFocusLabel.toUpperCase()}`
-                : 'ESCOLHA SUA PRIORIDADE'}
+                ? nutritionText.calculateFor(goalLabels[calcData.goal], selectedGoalFocusLabel.toUpperCase())
+                : nutritionText.choosePriority}
               <ArrowRight size={20} />
             </button>
           </div>
@@ -7871,16 +8086,16 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                   <Info className="w-8 h-8 sm:w-10 sm:h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Aguardando Parâmetros</h3>
+                  <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionText.waitingTitle}</h3>
                   <p className="text-text-secondary max-w-xs mx-auto text-base sm:text-lg leading-relaxed">
-                    Preencha suas informações biométricas para gerar seu protocolo nutricional.
+                    {nutritionText.waitingText}
                   </p>
                 </div>
               </div>
             ) : (
               <div className="relative z-10 space-y-8 sm:space-y-10">
                 <div className="text-center space-y-4">
-                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">META DIÁRIA ESTIMADA</div>
+                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">{nutritionText.estimatedDailyGoal}</div>
                   <div className="text-5xl sm:text-7xl md:text-8xl font-black text-primary tracking-tighter leading-none break-words">
                     {results.calories} 
                     <span className="text-xl sm:text-2xl text-text-muted font-black ml-2 uppercase tracking-widest">kcal</span>
@@ -7888,20 +8103,20 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                   
                   <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto pt-4">
                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">TMB</div>
+                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{nutritionText.bmr}</div>
                       <div className="text-lg font-black text-text-primary">{results.bmr} <span className="text-[10px] opacity-50">kcal</span></div>
                     </div>
                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">TDEE</div>
+                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{nutritionText.tdee}</div>
                       <div className="text-lg font-black text-text-primary">{results.tdee} <span className="text-[10px] opacity-50">kcal</span></div>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-                  <MacroResultCard label="Proteínas" value={results.protein} unit="g" color="bg-primary" icon="🥩" />
-                  <MacroResultCard label="Carboidratos" value={results.carbs} unit="g" color="bg-white/10" icon="🍚" />
-                  <MacroResultCard label="Gorduras" value={results.fat} unit="g" color="bg-white/10" icon="🥑" />
+                  <MacroResultCard label={nutritionText.proteins} value={results.protein} unit="g" color="bg-primary" icon="🥩" />
+                  <MacroResultCard label={nutritionText.carbs} value={results.carbs} unit="g" color="bg-white/10" icon="🍚" />
+                  <MacroResultCard label={nutritionText.fats} value={results.fat} unit="g" color="bg-white/10" icon="🥑" />
                 </div>
 
                 <div className="p-6 sm:p-8 bg-white/5 rounded-[24px] sm:rounded-[32px] border border-white/10 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 backdrop-blur-md">
@@ -7909,7 +8124,7 @@ function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
                     <Zap className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
                   <div className="space-y-2">
-                    <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">Análise do Protocolo</h4>
+                    <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">{nutritionText.protocolAnalysis}</h4>
                     <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
                       Este protocolo foi otimizado para <span className="text-text-primary font-black uppercase">{calcData.goal === 'lose' ? 'Déficit Calórico' : calcData.goal === 'gain' ? 'Superávit Calórico' : 'Manutenção'}</span>, com prioridade em <span className="text-primary font-black">{selectedGoalFocusLabel.toLowerCase()}</span>.
                       Mantenha a consistência por pelo menos 14 dias para observar as primeiras adaptações metabólicas.

@@ -8,6 +8,7 @@ import { dataService } from './services/dataService';
 import { searchExercisesByName } from './services/exerciseMediaApi';
 import { getAnalyticsClientId, initAnalytics, trackEvent, trackPlanEvent } from './services/analytics';
 import { getLocalExerciseMedia, translateExerciseName } from './utils/exerciseTranslations';
+import { getExerciseDisplay, getWorkoutDisplay, translateMuscleGroup, translateWorkoutName } from './utils/workoutDataI18n';
 import AIChat from './AIChat';
 import { DashboardMetricCard } from './components/dashboardCards';
 import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
@@ -3958,7 +3959,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                         <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest">{dashboardText.today}</span>
                         <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{todayName}</span>
                       </div>
-                      <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">{todayScheduledWorkout.workout.name}</h3>
+                      <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">{translateWorkoutName(todayScheduledWorkout.workout.name, language)}</h3>
                       <p className="text-xs sm:text-sm text-text-secondary mt-1">
                         {todayScheduledWorkout.workout.muscleGroup} • {todayScheduledWorkout.workout.duration} • {todayScheduledWorkout.workout.exercises.length} {dashboardText.exercises}
                       </p>
@@ -4031,7 +4032,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                       <span className={`text-[9px] font-black uppercase tracking-widest ${isToday ? 'text-primary' : 'text-text-muted'}`}>{day.slice(0, 3)}</span>
                       {isDone && <CheckCircle2 size={15} className="text-success" />}
                     </div>
-                    <div className="mt-3 text-sm font-black leading-tight line-clamp-2">{slot?.workout.name || dashboardText.rest}</div>
+                    <div className="mt-3 text-sm font-black leading-tight line-clamp-2">{slot?.workout ? translateWorkoutName(slot.workout.name, language) : dashboardText.rest}</div>
                     <div className="mt-2 text-[9px] font-bold text-text-muted line-clamp-1">{slot ? slot.workout.muscleGroup : dashboardText.noWorkout}</div>
                   </button>
                 );
@@ -4078,8 +4079,8 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
         />
         <DashboardMetricCard
           label={dashboardText.nextWorkout}
-          value={todayScheduledWorkout?.workout.name || nextWorkout.name}
-          subValue={todayScheduledWorkout ? `${todayName} • ${todayScheduledWorkout.workout.muscleGroup}` : nextWorkout.muscleGroup}
+          value={todayScheduledWorkout ? translateWorkoutName(todayScheduledWorkout.workout.name, language) : translateWorkoutName(nextWorkout.name, language)}
+          subValue={todayScheduledWorkout ? `${todayName} • ${translateMuscleGroup(todayScheduledWorkout.workout.muscleGroup, language)}` : translateMuscleGroup(nextWorkout.muscleGroup, language)}
           icon={<Calendar size={20} />}
           onClick={() => openDashboardMetric('workout', () => todayScheduledWorkout
             ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))
@@ -4982,6 +4983,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
     return (
       <WorkoutDetailView 
         workout={selectedWorkout} 
+        language={language}
         onBack={() => setSelectedWorkout(null)} 
         isCompleted={completedWorkouts.includes(selectedWorkout.id)}
         hasAwardedPoints={awardedWorkoutPoints.includes(selectedWorkout.id)}
@@ -5166,8 +5168,8 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                       >
                         {WEEK_DAYS.map(item => <option key={item} value={item}>{item}</option>)}
                       </select>
-                      <h3 className="mt-3 text-lg font-black tracking-tight text-text-primary leading-tight">{workout.name}</h3>
-                      <p className="text-xs text-text-muted mt-1">{workout.muscleGroup} • {workout.duration}</p>
+                      <h3 className="mt-3 text-lg font-black tracking-tight text-text-primary leading-tight">{translateWorkoutName(workout.name, language)}</h3>
+                      <p className="text-xs text-text-muted mt-1">{translateMuscleGroup(workout.muscleGroup, language)} • {workout.duration}</p>
                     </div>
                     <button
                       onClick={() => removeWorkoutFromWeek(workoutId)}
@@ -5217,7 +5219,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                   }`}
                 >
                   <Star size={13} className={favoriteWorkoutIds.includes(workout.id) ? 'fill-current' : ''} />
-                  {workout.name}
+                  {translateWorkoutName(workout.name, language)}
                 </button>
               ))}
             </div>
@@ -5365,7 +5367,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                                 : 'text-text-muted hover:text-text-secondary'
                             }`}
                           >
-                            {group}
+                            {translateMuscleGroup(group, language)}
                           </button>
                         ))}
                       </div>
@@ -5403,6 +5405,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                               <HomeRoutineCard
                                 key={workout.id}
                                 workout={workout}
+                                language={language}
                                 mode={activeHomeMode}
                                 isCompleted={completedWorkouts.includes(workout.id)}
                                 isFavorite={favoriteWorkoutIds.includes(workout.id)}
@@ -5416,6 +5419,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                               <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
                                 <WorkoutCard
                                   workout={workout}
+                                  language={language}
                                   isCompleted={completedWorkouts.includes(workout.id)}
                                   isFavorite={favoriteWorkoutIds.includes(workout.id)}
                                   isInWeeklyPlan={weeklyWorkoutIds.includes(workout.id)}
@@ -5522,6 +5526,7 @@ function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgra
 
 function WorkoutCard({
   workout,
+  language,
   isCompleted,
   isFavorite,
   isInWeeklyPlan,
@@ -5531,6 +5536,7 @@ function WorkoutCard({
   onToggleWeekly
 }: {
   workout: Workout,
+  language: LanguageCode,
   isCompleted: boolean,
   isFavorite: boolean,
   isInWeeklyPlan: boolean,
@@ -5539,6 +5545,15 @@ function WorkoutCard({
   onToggleFavorite: () => void,
   onToggleWeekly: () => void
 }) {
+  const workoutDisplay = getWorkoutDisplay(workout, language);
+  const workoutCardLabels = {
+    level: language === 'en' ? 'LEVEL' : language === 'es' ? 'NIVEL' : 'NÍVEL',
+    exercises: language === 'en' ? 'Exercises' : language === 'es' ? 'Ejercicios' : 'Exercícios',
+    duration: language === 'en' ? 'Duration' : language === 'es' ? 'Duración' : 'Duração',
+    inWeek: language === 'en' ? 'In week' : language === 'es' ? 'En la semana' : 'Na semana',
+    add: language === 'en' ? 'Add' : language === 'es' ? 'Agregar' : 'Adicionar',
+  };
+
   return (
     <div
       role="button"
@@ -5579,20 +5594,20 @@ function WorkoutCard({
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${isCompleted ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary'}`}>
-              NÍVEL {(workout.level || '').toUpperCase()}
+              {workoutCardLabels.level} {(workoutDisplay.level || '').toUpperCase()}
             </span>
             {isCompleted && <span className="text-[8px] font-black text-success uppercase tracking-widest">Concluído</span>}
           </div>
-          <h3 className="text-2xl font-black tracking-tight leading-tight text-primary">{workout.name}</h3>
+          <h3 className="text-2xl font-black tracking-tight leading-tight text-primary">{workoutDisplay.name}</h3>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/10 p-4 rounded-2xl border border-white/5">
-            <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">Exercícios</div>
+            <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{workoutCardLabels.exercises}</div>
             <div className="text-lg font-black">{workout.exercises.length}</div>
           </div>
           <div className="bg-white/10 p-4 rounded-2xl border border-white/5">
-            <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">Duração</div>
+            <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{workoutCardLabels.duration}</div>
             <div className="text-lg font-black">{workout.duration}</div>
           </div>
         </div>
@@ -5622,7 +5637,7 @@ function WorkoutCard({
             }`}
           >
             {isInWeeklyPlan ? <CheckCircle2 size={15} /> : <PlusCircle size={15} />}
-            {isInWeeklyPlan ? 'Na semana' : 'Adicionar'}
+            {isInWeeklyPlan ? workoutCardLabels.inWeek : workoutCardLabels.add}
           </button>
         </div>
       </div>
@@ -5632,6 +5647,7 @@ function WorkoutCard({
 
 function HomeRoutineCard({
   workout,
+  language,
   mode,
   isCompleted,
   isFavorite,
@@ -5642,6 +5658,7 @@ function HomeRoutineCard({
   onToggleWeekly,
 }: {
   workout: Workout,
+  language: LanguageCode,
   mode: HomeTrainingMode,
   isCompleted: boolean,
   isFavorite: boolean,
@@ -5651,9 +5668,18 @@ function HomeRoutineCard({
   onToggleFavorite: () => void,
   onToggleWeekly: () => void,
 }) {
+  const workoutDisplay = getWorkoutDisplay(workout, language);
+  const routineLabels = {
+    mobility: language === 'en' ? 'Mobility' : language === 'es' ? 'Movilidad' : 'Mobilidade',
+    stretching: language === 'en' ? 'Stretching' : language === 'es' ? 'Estiramiento' : 'Alongamento',
+    home: language === 'en' ? 'Home workout' : language === 'es' ? 'Entreno en casa' : 'Treino em casa',
+    movements: language === 'en' ? 'movements' : language === 'es' ? 'movimientos' : 'movimentos',
+    inWeek: language === 'en' ? 'In week' : language === 'es' ? 'En la semana' : 'Na semana',
+    add: language === 'en' ? 'Add' : language === 'es' ? 'Agregar' : 'Adicionar',
+  };
   const config = mode === 'mobility'
     ? {
-        label: 'Mobilidade',
+        label: routineLabels.mobility,
         benefit: 'Movimente melhor',
         icon: <Activity size={20} />,
         accent: 'text-success',
@@ -5661,14 +5687,14 @@ function HomeRoutineCard({
       }
     : mode === 'stretching'
     ? {
-        label: 'Alongamento',
+        label: routineLabels.stretching,
         benefit: 'Recupere com calma',
         icon: <RefreshCw size={20} />,
         accent: 'text-[#74b9ff]',
         soft: 'bg-[#74b9ff]/10 border-[#74b9ff]/20',
       }
     : {
-        label: 'Treino em casa',
+        label: routineLabels.home,
         benefit: 'Evolua no seu ritmo',
         icon: <Dumbbell size={20} />,
         accent: 'text-primary',
@@ -5708,13 +5734,13 @@ function HomeRoutineCard({
       </div>
       <div>
         <p className={`text-[9px] font-black uppercase tracking-widest mb-2 ${config.accent}`}>{config.label}</p>
-        <h3 className="text-xl font-black tracking-tight leading-tight text-text-primary">{workout.name}</h3>
-        <p className="text-xs text-text-secondary leading-relaxed mt-2 line-clamp-2">{workout.description}</p>
+        <h3 className="text-xl font-black tracking-tight leading-tight text-text-primary">{workoutDisplay.name}</h3>
+        <p className="text-xs text-text-secondary leading-relaxed mt-2 line-clamp-2">{workoutDisplay.description}</p>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/5">
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold text-text-muted">
           <span className="flex items-center gap-1.5"><Clock size={13} />{workout.duration}</span>
-          <span className="flex items-center gap-1.5"><Activity size={13} />{workout.exercises.length} movimentos</span>
+          <span className="flex items-center gap-1.5"><Activity size={13} />{workout.exercises.length} {routineLabels.movements}</span>
         </div>
         <button
           type="button"
@@ -5730,7 +5756,7 @@ function HomeRoutineCard({
           }`}
         >
           {isInWeeklyPlan ? <CheckCircle2 size={15} /> : <PlusCircle size={15} />}
-          {isInWeeklyPlan ? 'Na semana' : 'Adicionar'}
+          {isInWeeklyPlan ? routineLabels.inWeek : routineLabels.add}
         </button>
       </div>
       <span className="sr-only">{config.benefit}</span>
@@ -6061,9 +6087,11 @@ function ExerciseAnimation({ type, label }: { type: ExerciseAnimationType, label
 
 function ExecutionModal({
   exercise,
+  language,
   onClose
 }: {
   exercise: Exercise,
+  language: LanguageCode,
   onClose: () => void
 }) {
   const [gifUrl, setGifUrl] = useState<string | null>(null);
@@ -6071,6 +6099,7 @@ function ExecutionModal({
   const [gifLoading, setGifLoading] = useState(true);
   const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
   const animationType = getExerciseAnimationType(exercise.name) ?? 'mobility';
+  const exerciseDisplay = getExerciseDisplay(exercise, language);
 
   useEffect(() => {
     let cancelled = false;
@@ -6132,7 +6161,7 @@ function ExecutionModal({
               className="w-full h-full object-contain"
             />
           ) : gifUrl ? (
-            <img src={gifUrl} alt={exercise.name} onError={() => setGifUrl(null)} className="w-full h-full object-contain" />
+            <img src={gifUrl} alt={exerciseDisplay.name} onError={() => setGifUrl(null)} className="w-full h-full object-contain" />
           ) : exercise.videoUrl && !curatedVideoFailed ? (
             <video
               src={exercise.videoUrl}
@@ -6146,7 +6175,7 @@ function ExecutionModal({
               className="w-full h-full object-contain"
             />
           ) : animationType ? (
-            <ExerciseAnimation type={animationType} label={exercise.name} />
+            <ExerciseAnimation type={animationType} label={exerciseDisplay.name} />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-5 p-8 text-center">
               <div className="w-20 h-20 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
@@ -6173,8 +6202,8 @@ function ExecutionModal({
         <div className="lg:w-[400px] p-8 sm:p-12 overflow-y-auto space-y-10 border-l border-white/5">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h3 className="text-3xl font-black tracking-tight uppercase">{exercise.name}</h3>
-              <p className="text-primary font-black text-xs uppercase tracking-[0.2em]">{exercise.muscleGroup}</p>
+              <h3 className="text-3xl font-black tracking-tight uppercase">{exerciseDisplay.name}</h3>
+              <p className="text-primary font-black text-xs uppercase tracking-[0.2em]">{exerciseDisplay.muscleGroup}</p>
             </div>
             <button 
               onClick={onClose}
@@ -6194,7 +6223,7 @@ function ExecutionModal({
                 <h4 className="text-sm font-black uppercase tracking-widest">Instruções</h4>
               </div>
               <ul className="space-y-4">
-                {exercise.instructions.map((step, i) => (
+                {exerciseDisplay.instructions.map((step, i) => (
                   <li key={i} className="flex gap-4 text-text-secondary leading-relaxed">
                     <span className="text-primary font-black">{i + 1}.</span>
                     <span className="text-sm font-medium">{step}</span>
@@ -6213,7 +6242,7 @@ function ExecutionModal({
                   <span className="text-[10px] font-black uppercase tracking-widest">Dica Pro</span>
                 </div>
                 <p className="text-xs text-text-secondary leading-relaxed font-medium italic">
-                  "{exercise.proTips[0]}"
+                  "{exerciseDisplay.proTips[0]}"
                 </p>
               </div>
             )}
@@ -6225,7 +6254,7 @@ function ExecutionModal({
                   <span className="text-[10px] font-black uppercase tracking-widest">Erro Comum</span>
                 </div>
                 <p className="text-xs text-text-secondary leading-relaxed font-medium">
-                  {exercise.commonErrors[0]}
+                  {exerciseDisplay.commonErrors[0]}
                 </p>
               </div>
             )}
@@ -6238,6 +6267,7 @@ function ExecutionModal({
 
 function ExerciseCard({
   exercise,
+  language,
   index,
   isEditing,
   isCompleted,
@@ -6247,6 +6277,7 @@ function ExerciseCard({
   isActionPending = false
 }: {
   exercise: Exercise,
+  language: LanguageCode,
   index: number,
   isEditing: boolean,
   isCompleted: boolean,
@@ -6262,6 +6293,7 @@ function ExerciseCard({
   const [gifLoading, setGifLoading] = useState(false);
   const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
   const animationType = getExerciseAnimationType(exercise.name) ?? 'mobility';
+  const exerciseDisplay = getExerciseDisplay(exercise, language);
 
   const handleToggleDetails = async () => {
     if (showDetails) {
@@ -6319,7 +6351,7 @@ function ExerciseCard({
                   className="bg-transparent border-b border-primary/30 text-xl md:text-2xl font-black tracking-tight focus:outline-none w-full"
                 />
               ) : (
-                <h4 className="text-xl md:text-2xl font-black tracking-tight">{exercise.name}</h4>
+                <h4 className="text-xl md:text-2xl font-black tracking-tight">{exerciseDisplay.name}</h4>
               )}
               {isResting && (
                 <motion.span
@@ -6336,7 +6368,7 @@ function ExerciseCard({
                 </span>
               )}
             </div>
-            <p className="text-text-secondary text-sm md:text-base max-w-md leading-relaxed line-clamp-2">{exercise.description}</p>
+            <p className="text-text-secondary text-sm md:text-base max-w-md leading-relaxed line-clamp-2">{exerciseDisplay.description}</p>
 
             {!isEditing && (
               <button
@@ -6454,7 +6486,7 @@ function ExerciseCard({
                 ) : gifUrl ? (
                   <img
                     src={gifUrl}
-                    alt={exercise.name}
+                    alt={exerciseDisplay.name}
                     onError={() => setGifUrl(null)}
                     className="w-full h-full object-contain"
                   />
@@ -6471,7 +6503,7 @@ function ExerciseCard({
                     className="w-full h-full object-contain"
                   />
                 ) : animationType ? (
-                  <ExerciseAnimation type={animationType} label={exercise.name} />
+                  <ExerciseAnimation type={animationType} label={exerciseDisplay.name} />
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-text-muted p-8 text-center">
                     <div className="w-16 h-16 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
@@ -6490,8 +6522,8 @@ function ExerciseCard({
               {/* Description */}
               <div className="lg:w-1/2 p-8 space-y-8 overflow-y-auto max-h-[400px]">
                 <div className="space-y-1">
-                  <h3 className="text-2xl font-black tracking-tight uppercase">{exercise.name}</h3>
-                  <p className="text-primary font-black text-xs uppercase tracking-[0.2em]">{exercise.muscleGroup}</p>
+                  <h3 className="text-2xl font-black tracking-tight uppercase">{exerciseDisplay.name}</h3>
+                  <p className="text-primary font-black text-xs uppercase tracking-[0.2em]">{exerciseDisplay.muscleGroup}</p>
                 </div>
 
                 {exercise.instructions && (
@@ -6503,7 +6535,7 @@ function ExerciseCard({
                       <h4 className="text-xs font-black uppercase tracking-widest">Instruções</h4>
                     </div>
                     <ul className="space-y-3">
-                      {exercise.instructions.map((step, i) => (
+                      {exerciseDisplay.instructions.map((step, i) => (
                         <li key={i} className="flex gap-4 text-text-secondary leading-relaxed">
                           <span className="text-primary font-black shrink-0">{i + 1}.</span>
                           <span className="text-sm font-medium">{step}</span>
@@ -6519,7 +6551,7 @@ function ExerciseCard({
                       <Zap size={14} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Dica Pro</span>
                     </div>
-                    <p className="text-xs text-text-secondary leading-relaxed font-medium italic">"{exercise.proTips[0]}"</p>
+                    <p className="text-xs text-text-secondary leading-relaxed font-medium italic">"{exerciseDisplay.proTips[0]}"</p>
                   </div>
                 )}
 
@@ -6529,7 +6561,7 @@ function ExerciseCard({
                       <AlertTriangle size={14} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Erro Comum</span>
                     </div>
-                    <p className="text-xs text-text-secondary leading-relaxed font-medium">{exercise.commonErrors[0]}</p>
+                    <p className="text-xs text-text-secondary leading-relaxed font-medium">{exerciseDisplay.commonErrors[0]}</p>
                   </div>
                 )}
               </div>
@@ -6543,6 +6575,7 @@ function ExerciseCard({
 
 function WorkoutDetailView({
   workout,
+  language,
   onBack,
   isCompleted,
   hasAwardedPoints,
@@ -6555,6 +6588,7 @@ function WorkoutDetailView({
   onUpgrade
 }: {
   workout: Workout,
+  language: LanguageCode,
   onBack: () => void,
   isCompleted: boolean,
   hasAwardedPoints: boolean,
@@ -6574,6 +6608,7 @@ function WorkoutDetailView({
   const [pointsNoticeMode, setPointsNoticeMode] = useState<'earned' | 'earnedLimit' | 'limit' | 'complete'>('earned');
   const [displayPoints, setDisplayPoints] = useState(currentPoints);
   const [isAwardingWorkout, setIsAwardingWorkout] = useState(false);
+  const workoutDisplay = getWorkoutDisplay(workout, language);
 
   const POINTS_PER_WORKOUT = 100;
 
@@ -6671,6 +6706,7 @@ function WorkoutDetailView({
         {selectedExerciseForVideo && (
           <ExecutionModal
             exercise={selectedExerciseForVideo}
+            language={language}
             onClose={() => setSelectedExerciseForVideo(null)}
           />
         )}
@@ -6706,10 +6742,10 @@ function WorkoutDetailView({
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20">
-              {workout.muscleGroup}
+              {workoutDisplay.muscleGroup}
             </span>
             <span className="px-3 py-1 rounded-full bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">
-              {workout.level}
+              {workoutDisplay.level}
             </span>
             {isCompleted && (
               <span className="px-3 py-1 rounded-full bg-success/10 text-success text-[10px] font-black uppercase tracking-[0.2em] border border-success/20 flex items-center gap-1">
@@ -6717,7 +6753,7 @@ function WorkoutDetailView({
               </span>
             )}
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">{workout.name}</h1>
+          <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">{workoutDisplay.name}</h1>
         </div>
 
         {/* Métricas inline e compactas */}
@@ -6729,7 +6765,7 @@ function WorkoutDetailView({
           <span className="w-px h-4 bg-white/10" />
           <span className="flex items-center gap-1.5 text-text-muted">
             <Zap size={14} className="text-primary" />
-            <span className="font-bold">{workout.carga}</span>
+            <span className="font-bold">{workoutDisplay.carga}</span>
           </span>
           <span className="w-px h-4 bg-white/10" />
           <span className="flex items-center gap-1.5 text-text-muted">
@@ -6912,10 +6948,11 @@ function WorkoutDetailView({
       {/* Exercícios — direto, sem heading extra */}
       <div className="grid grid-cols-1 gap-4">
         {exercises.map((exercise, index) => (
-          <ExerciseCard
-            key={exercise.id}
-            exercise={exercise}
-            index={index}
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              language={language}
+              index={index}
             isEditing={isEditing}
             isCompleted={completedExercises.includes(exercise.id)}
             onUpdate={(field, value) => updateExercise(index, field, value)}

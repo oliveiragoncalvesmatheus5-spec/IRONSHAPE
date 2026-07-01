@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
-import { UserProfile, SocialProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion, AppNotification } from './types';
+import { UserProfile, SocialProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
 import { searchExercisesByName } from './services/exerciseMediaApi';
@@ -12,7 +12,6 @@ import AIChat from './AIChat';
 import { DashboardMetricCard } from './components/dashboardCards';
 import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
 import { MobileNavItem, NavItem } from './components/navigation';
-import { NotificationsCenter } from './components/NotificationsCenter';
 import { PlanSimulator } from './components/PlanSimulator';
 import { PHYSICAL_LIMITATION_OPTIONS } from './data/physicalLimitations';
 import { motion, AnimatePresence } from 'motion/react';
@@ -94,7 +93,6 @@ import {
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
-import { notificationService } from './services/notificationService';
 
 function getEntitledPlan(profile?: Pick<UserProfile, 'plano' | 'subscriptionStatus'> | null, simulatedPlan?: Plan | null): Plan {
   if (simulatedPlan) return simulatedPlan;
@@ -103,202 +101,6 @@ function getEntitledPlan(profile?: Pick<UserProfile, 'plano' | 'subscriptionStat
     return 'Iniciante';
   }
   return plan;
-}
-
-function getIsoDay(date = new Date()) {
-  return date.toISOString().split('T')[0];
-}
-
-function getDaysBetween(date: Date, now = new Date()) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now);
-  end.setHours(0, 0, 0, 0);
-  return Math.floor((end.getTime() - start.getTime()) / 86400000);
-}
-
-function parseValidDate(value?: string | null) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-async function runNotificationAutomations(profile: UserProfile, effectivePlan: Plan) {
-  const userId = profile.id;
-  const today = getIsoDay();
-
-  const lastSeenKey = `ironshape_last_seen_${userId}`;
-  const lastSeen = parseValidDate(localStorage.getItem(lastSeenKey));
-  if (lastSeen && getDaysBetween(lastSeen) >= 5) {
-    await notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Bom te ver de volta',
-      message: 'Você voltou depois de alguns dias. Recomece com um treino leve hoje.',
-      type: 'return',
-      action: 'workouts',
-      dedupe_key: `return-${today}`,
-    });
-  }
-  localStorage.setItem(lastSeenKey, new Date().toISOString());
-
-  const pendingNoWorkoutKey = `ironshape_session_without_workout_${userId}`;
-  const hadPreviousSessionWithoutWorkout = localStorage.getItem(pendingNoWorkoutKey) === '1';
-  localStorage.removeItem(pendingNoWorkoutKey);
-  const pendingWorkoutKey = `ironshape_pending_started_workout_${userId}`;
-  const pendingStartedWorkout = (() => {
-    try {
-      return JSON.parse(localStorage.getItem(pendingWorkoutKey) || 'null') as { workoutId?: string; workoutName?: string; startedAt?: string } | null;
-    } catch {
-      return null;
-    }
-  })();
-
-  const [workoutsResult, nutritionResult, progressResult] = await Promise.allSettled([
-    withTimeout(() => supabase.from('workout_logs').select('*').eq('userUid', userId).order('completedAt', { ascending: false }).limit(50), 12000, 1) as any,
-    withTimeout(() => supabase.from('nutrition_logs').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(3), 12000, 1) as any,
-    withTimeout(() => supabase.from('progress_logs').select('*').eq('userUid', userId).order('date', { ascending: false }).limit(3), 12000, 1) as any,
-  ]);
-
-  const readRows = <T,>(result: PromiseSettledResult<any>): T[] => {
-    if (result.status === 'rejected' || result.value?.error) return [];
-    return (result.value?.data || []) as T[];
-  };
-
-  const workouts = readRows<WorkoutLog>(workoutsResult);
-  const nutrition = readRows<NutritionLog>(nutritionResult);
-  const progress = readRows<ProgressLog>(progressResult);
-  const latestWorkoutDate = parseValidDate(profile.lastWorkoutDate) || parseValidDate(workouts[0]?.completedAt);
-  const daysSinceWorkout = latestWorkoutDate ? getDaysBetween(latestWorkoutDate) : null;
-  const trainedToday = workouts.some(workout => workout.completedAt?.startsWith(today)) || profile.lastWorkoutDate === today;
-  const createdAt = parseValidDate(profile.criado_em);
-  const accountDays = createdAt ? getDaysBetween(createdAt) : 0;
-  const isFree = effectivePlan === 'free' || effectivePlan === 'Iniciante';
-
-  const pending: Array<ReturnType<typeof notificationService.createNotificationOnce>> = [];
-
-  if (workouts.length === 0 && accountDays >= 0) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Seu primeiro treino está esperando',
-      message: 'Escolha um treino rápido e comece a criar consistência hoje.',
-      type: 'onboarding',
-      action: 'workouts',
-      dedupe_key: 'first-workout-reminder',
-    }));
-  }
-
-  if (hadPreviousSessionWithoutWorkout && !trainedToday) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Você abriu o IronShape e não treinou',
-      message: 'Sem cobrança: volte quando puder e faça pelo menos uma sessão curta.',
-      type: 'workout',
-      action: 'workouts',
-      dedupe_key: `opened-no-workout-${today}`,
-    }));
-  }
-
-  if (pendingStartedWorkout?.workoutId && !workouts.some(workout => workout.workoutId === pendingStartedWorkout.workoutId)) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Você começou um treino e não finalizou',
-      message: `${pendingStartedWorkout.workoutName || 'Seu treino'} ainda pode ser concluído. Volte quando puder e termine a sessão.`,
-      type: 'workout',
-      action: 'workouts',
-      dedupe_key: `unfinished-workout-${pendingStartedWorkout.workoutId}-${today}`,
-    }));
-    localStorage.removeItem(pendingWorkoutKey);
-  }
-
-  for (const day of [2, 3, 7]) {
-    if (daysSinceWorkout !== null && daysSinceWorkout >= day) {
-      pending.push(notificationService.createNotificationOnce({
-        user_id: userId,
-        title: `Seu último treino foi há ${daysSinceWorkout} dias`,
-        message: day >= 7 ? 'Uma sessão leve hoje já recoloca sua rotina nos trilhos.' : 'Que tal manter a sequência com um treino objetivo hoje?',
-        type: 'workout',
-        action: 'workouts',
-        dedupe_key: `inactive-${day}-${today}`,
-      }));
-    }
-  }
-
-  if (nutrition.length === 0 && !localStorage.getItem(`ironshape_nutrition_visited_${userId}`)) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Sua dieta personalizada está pronta para uso',
-      message: 'Percebemos que você ainda não acessou a área de dieta.',
-      type: 'nutrition',
-      action: 'nutrition',
-      dedupe_key: 'never-used-nutrition',
-    }));
-  }
-
-  if (progress.length === 0) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Registre seu ponto de partida',
-      message: 'Peso e medidas ajudam a mostrar sua evolução real ao longo das semanas.',
-      type: 'progress',
-      action: 'progress',
-      dedupe_key: 'never-logged-progress',
-    }));
-  }
-
-  const storedRecord = Number(localStorage.getItem(`ironshape_streak_record_${userId}`) || '0');
-  if (Number(profile.streak || 0) > storedRecord) {
-    localStorage.setItem(`ironshape_streak_record_${userId}`, String(profile.streak || 0));
-    if (storedRecord > 0) {
-      pending.push(notificationService.createNotificationOnce({
-        user_id: userId,
-        title: 'Novo recorde de sequência',
-        message: `Você chegou a ${profile.streak} dias consecutivos. Excelente consistência.`,
-        type: 'streak',
-        action: 'progress',
-        dedupe_key: `streak-record-${profile.streak}`,
-      }));
-    }
-  }
-
-  if (Number(profile.points || 0) >= 2000) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Meta de fase alcançada',
-      message: 'Você bateu uma meta importante. Continue evoluindo com protocolos mais completos.',
-      type: 'achievement',
-      action: 'plans',
-      dedupe_key: 'points-goal-2000',
-    }));
-  }
-
-  if (isFree && (workouts.length >= 2 || Number(profile.points || 0) >= 500)) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Você está usando bem o plano Free',
-      message: 'O Premium libera mais treinos, IA e recursos para acelerar sua evolução.',
-      type: 'premium',
-      action: 'plans',
-      dedupe_key: 'free-active-premium-nudge',
-    }));
-  }
-
-  const weeklyWorkouts = safeParseArray<WeeklyWorkoutSlot>(`weekly_workouts_${userId}`);
-  const weeklyDone = safeParseArray<string>(`weekly_workouts_done_${userId}`);
-  if (weeklyWorkouts.length > 0 && weeklyDone.length >= weeklyWorkouts.length) {
-    pending.push(notificationService.createNotificationOnce({
-      user_id: userId,
-      title: 'Sequência semanal completa',
-      message: 'Você concluiu todos os treinos planejados da semana.',
-      type: 'challenge',
-      action: 'progress',
-      dedupe_key: `weekly-sequence-${today}`,
-    }));
-  }
-
-  const created = await Promise.all(pending);
-  if (created.some(Boolean)) {
-    window.dispatchEvent(new Event('ironshape:notifications-refresh'));
-  }
 }
 
 function slugifyText(value: string) {
@@ -327,7 +129,6 @@ const AUTH_NAVIGATION_KEYS = [
 
 type ThemeMode = 'dark' | 'light';
 type LanguageCode = 'pt-BR' | 'en' | 'es';
-type NutritionCalcGoal = 'lose' | 'maintain' | 'gain';
 
 const LANGUAGE_OPTIONS: Array<{ code: LanguageCode; short: string; label: string }> = [
   { code: 'pt-BR', short: 'PT', label: 'Português' },
@@ -443,42 +244,6 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
     stretchingRoutines: string;
     emptyTitle: string;
     emptyText: string;
-  };
-  nutrition: {
-    title: string;
-    subtitle: string;
-    editPreferences: string;
-    mealsPerDay: (count: number) => string;
-    metabolicCalculator: string;
-    beginnerModule: string;
-    weight: string;
-    height: string;
-    age: string;
-    gender: string;
-    male: string;
-    female: string;
-    activityLevel: string;
-    activityOptions: Record<'sedentary' | 'light' | 'moderate' | 'very' | 'extra', string>;
-    mainGoal: string;
-    mainGoalHelp: string;
-    lose: string;
-    maintain: string;
-    gain: string;
-    priority: string;
-    priorityHelp: string;
-    localizedFatNote: string;
-    calculateFor: (goal: string, focus: string) => string;
-    choosePriority: string;
-    waitingTitle: string;
-    waitingText: string;
-    estimatedDailyGoal: string;
-    bmr: string;
-    tdee: string;
-    proteins: string;
-    carbs: string;
-    fats: string;
-    protocolAnalysis: string;
-    goalFocusOptions: Record<NutritionCalcGoal, Array<{ value: string; label: string }>>;
   };
 }> = {
   'pt-BR': {
@@ -614,70 +379,6 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       emptyTitle: 'Nenhum treino encontrado',
       emptyText: 'Tente ajustar seus filtros para encontrar outros protocolos.',
     },
-    nutrition: {
-      title: 'Nutrição & Dieta',
-      subtitle: 'Otimize sua performance com protocolos nutricionais baseados em ciência e adaptados ao seu metabolismo.',
-      editPreferences: 'Editar Preferências',
-      mealsPerDay: count => `${count} refeições/dia`,
-      metabolicCalculator: 'Calculadora Metabólica',
-      beginnerModule: 'MÓDULO INICIANTE',
-      weight: 'Peso (kg)',
-      height: 'Altura (cm)',
-      age: 'Idade',
-      gender: 'Sexo',
-      male: 'Masculino',
-      female: 'Feminino',
-      activityLevel: 'Nível de Atividade',
-      activityOptions: {
-        sedentary: 'Sedentário (Pouco ou nenhum exercício)',
-        light: 'Levemente Ativo (1-3 dias/semana)',
-        moderate: 'Moderadamente Ativo (3-5 dias/semana)',
-        very: 'Muito Ativo (6-7 dias/semana)',
-        extra: 'Extra Ativo (Treino pesado 2x/dia)',
-      },
-      mainGoal: 'Objetivo principal',
-      mainGoalHelp: 'Escolha a direção do seu protocolo.',
-      lose: 'PERDER',
-      maintain: 'MANTER',
-      gain: 'GANHAR',
-      priority: 'Sua prioridade',
-      priorityHelp: 'Qual resultado é mais importante para você agora?',
-      localizedFatNote: 'O protocolo favorece a redução de gordura corporal total; não existe perda de gordura localizada.',
-      calculateFor: (goal, focus) => `CALCULAR PARA ${goal} ${focus}`,
-      choosePriority: 'ESCOLHA SUA PRIORIDADE',
-      waitingTitle: 'Aguardando Parâmetros',
-      waitingText: 'Preencha suas informações biométricas para gerar seu protocolo nutricional.',
-      estimatedDailyGoal: 'META DIÁRIA ESTIMADA',
-      bmr: 'TMB',
-      tdee: 'GET',
-      proteins: 'Proteínas',
-      carbs: 'Carboidratos',
-      fats: 'Gorduras',
-      protocolAnalysis: 'Análise do Protocolo',
-      goalFocusOptions: {
-        lose: [
-          { value: 'body_fat', label: 'Gordura corporal' },
-          { value: 'body_weight', label: 'Peso corporal' },
-          { value: 'waist_measurements', label: 'Medidas abdominais' },
-          { value: 'muscle_definition', label: 'Definição muscular' },
-          { value: 'not_sure', label: 'Não tenho certeza' },
-        ],
-        maintain: [
-          { value: 'muscle_mass', label: 'Massa muscular' },
-          { value: 'body_weight', label: 'Peso corporal' },
-          { value: 'body_fat_percentage', label: 'Percentual de gordura' },
-          { value: 'health_wellbeing', label: 'Saúde e bem-estar' },
-          { value: 'not_sure', label: 'Não tenho certeza' },
-        ],
-        gain: [
-          { value: 'muscle_mass', label: 'Massa muscular' },
-          { value: 'body_weight', label: 'Peso corporal' },
-          { value: 'strength_performance', label: 'Força e desempenho' },
-          { value: 'body_composition', label: 'Composição corporal' },
-          { value: 'not_sure', label: 'Não tenho certeza' },
-        ],
-      },
-    },
   },
   en: {
     nav: {
@@ -812,70 +513,6 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       emptyTitle: 'No workout found',
       emptyText: 'Try adjusting your filters to find other protocols.',
     },
-    nutrition: {
-      title: 'Nutrition & Diet',
-      subtitle: 'Optimize your performance with science-based nutrition protocols adapted to your metabolism.',
-      editPreferences: 'Edit Preferences',
-      mealsPerDay: count => `${count} meals/day`,
-      metabolicCalculator: 'Metabolic Calculator',
-      beginnerModule: 'BEGINNER MODULE',
-      weight: 'Weight (kg)',
-      height: 'Height (cm)',
-      age: 'Age',
-      gender: 'Sex',
-      male: 'Male',
-      female: 'Female',
-      activityLevel: 'Activity Level',
-      activityOptions: {
-        sedentary: 'Sedentary (little or no exercise)',
-        light: 'Lightly Active (1-3 days/week)',
-        moderate: 'Moderately Active (3-5 days/week)',
-        very: 'Very Active (6-7 days/week)',
-        extra: 'Extra Active (hard training 2x/day)',
-      },
-      mainGoal: 'Main goal',
-      mainGoalHelp: 'Choose the direction of your protocol.',
-      lose: 'LOSE',
-      maintain: 'MAINTAIN',
-      gain: 'GAIN',
-      priority: 'Your priority',
-      priorityHelp: 'Which result matters most to you right now?',
-      localizedFatNote: 'The protocol supports total body fat reduction; spot fat loss is not possible.',
-      calculateFor: (goal, focus) => `CALCULATE FOR ${goal} ${focus}`,
-      choosePriority: 'CHOOSE YOUR PRIORITY',
-      waitingTitle: 'Waiting for Parameters',
-      waitingText: 'Fill in your biometric information to generate your nutrition protocol.',
-      estimatedDailyGoal: 'ESTIMATED DAILY GOAL',
-      bmr: 'BMR',
-      tdee: 'TDEE',
-      proteins: 'Proteins',
-      carbs: 'Carbohydrates',
-      fats: 'Fats',
-      protocolAnalysis: 'Protocol Analysis',
-      goalFocusOptions: {
-        lose: [
-          { value: 'body_fat', label: 'Body fat' },
-          { value: 'body_weight', label: 'Body weight' },
-          { value: 'waist_measurements', label: 'Waist measurements' },
-          { value: 'muscle_definition', label: 'Muscle definition' },
-          { value: 'not_sure', label: 'Not sure' },
-        ],
-        maintain: [
-          { value: 'muscle_mass', label: 'Muscle mass' },
-          { value: 'body_weight', label: 'Body weight' },
-          { value: 'body_fat_percentage', label: 'Body fat percentage' },
-          { value: 'health_wellbeing', label: 'Health and wellbeing' },
-          { value: 'not_sure', label: 'Not sure' },
-        ],
-        gain: [
-          { value: 'muscle_mass', label: 'Muscle mass' },
-          { value: 'body_weight', label: 'Body weight' },
-          { value: 'strength_performance', label: 'Strength and performance' },
-          { value: 'body_composition', label: 'Body composition' },
-          { value: 'not_sure', label: 'Not sure' },
-        ],
-      },
-    },
   },
   es: {
     nav: {
@@ -1009,70 +646,6 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       stretchingRoutines: 'Rutinas de estiramiento',
       emptyTitle: 'No se encontró ningún entreno',
       emptyText: 'Intenta ajustar tus filtros para encontrar otros protocolos.',
-    },
-    nutrition: {
-      title: 'Nutrición & Dieta',
-      subtitle: 'Optimiza tu rendimiento con protocolos nutricionales basados en ciencia y adaptados a tu metabolismo.',
-      editPreferences: 'Editar Preferencias',
-      mealsPerDay: count => `${count} comidas/día`,
-      metabolicCalculator: 'Calculadora Metabólica',
-      beginnerModule: 'MÓDULO INICIANTE',
-      weight: 'Peso (kg)',
-      height: 'Altura (cm)',
-      age: 'Edad',
-      gender: 'Sexo',
-      male: 'Masculino',
-      female: 'Femenino',
-      activityLevel: 'Nivel de Actividad',
-      activityOptions: {
-        sedentary: 'Sedentario (poco o ningún ejercicio)',
-        light: 'Ligeramente Activo (1-3 días/semana)',
-        moderate: 'Moderadamente Activo (3-5 días/semana)',
-        very: 'Muy Activo (6-7 días/semana)',
-        extra: 'Extra Activo (entreno fuerte 2x/día)',
-      },
-      mainGoal: 'Objetivo principal',
-      mainGoalHelp: 'Elige la dirección de tu protocolo.',
-      lose: 'PERDER',
-      maintain: 'MANTENER',
-      gain: 'GANAR',
-      priority: 'Tu prioridad',
-      priorityHelp: '¿Qué resultado es más importante para ti ahora?',
-      localizedFatNote: 'El protocolo favorece la reducción de grasa corporal total; no existe pérdida localizada de grasa.',
-      calculateFor: (goal, focus) => `CALCULAR PARA ${goal} ${focus}`,
-      choosePriority: 'ELIGE TU PRIORIDAD',
-      waitingTitle: 'Esperando Parámetros',
-      waitingText: 'Completa tu información biométrica para generar tu protocolo nutricional.',
-      estimatedDailyGoal: 'META DIARIA ESTIMADA',
-      bmr: 'TMB',
-      tdee: 'GET',
-      proteins: 'Proteínas',
-      carbs: 'Carbohidratos',
-      fats: 'Grasas',
-      protocolAnalysis: 'Análisis del Protocolo',
-      goalFocusOptions: {
-        lose: [
-          { value: 'body_fat', label: 'Grasa corporal' },
-          { value: 'body_weight', label: 'Peso corporal' },
-          { value: 'waist_measurements', label: 'Medidas abdominales' },
-          { value: 'muscle_definition', label: 'Definición muscular' },
-          { value: 'not_sure', label: 'No estoy seguro' },
-        ],
-        maintain: [
-          { value: 'muscle_mass', label: 'Masa muscular' },
-          { value: 'body_weight', label: 'Peso corporal' },
-          { value: 'body_fat_percentage', label: 'Porcentaje de grasa' },
-          { value: 'health_wellbeing', label: 'Salud y bienestar' },
-          { value: 'not_sure', label: 'No estoy seguro' },
-        ],
-        gain: [
-          { value: 'muscle_mass', label: 'Masa muscular' },
-          { value: 'body_weight', label: 'Peso corporal' },
-          { value: 'strength_performance', label: 'Fuerza y rendimiento' },
-          { value: 'body_composition', label: 'Composición corporal' },
-          { value: 'not_sure', label: 'No estoy seguro' },
-        ],
-      },
     },
   },
 };
@@ -1683,10 +1256,7 @@ export default function App() {
   const [language, setLanguage] = useState<LanguageCode>(getInitialLanguage);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const authHistoryGuardedRef = useRef(false);
-  const workoutCompletedThisSessionRef = useRef(false);
-  const notificationAutomationKeyRef = useRef('');
   const text = APP_TRANSLATIONS[language];
-  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
   useEffect(() => {
     initAnalytics();
@@ -1707,39 +1277,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackEvent('app_screen_view', { screen_name: activeTab });
   }, [activeTab]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    if (activeTab === 'nutrition') localStorage.setItem(`ironshape_nutrition_visited_${profile.id}`, '1');
-    if (activeTab === 'progress') localStorage.setItem(`ironshape_progress_visited_${profile.id}`, '1');
-  }, [activeTab, profile?.id]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    if (profile.lastWorkoutDate === getIsoDay()) {
-      workoutCompletedThisSessionRef.current = true;
-    }
-  }, [profile?.id, profile?.lastWorkoutDate]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    const key = `${profile.id}-${getIsoDay()}-${profile.points || 0}-${profile.streak || 0}-${profile.lastWorkoutDate || ''}`;
-    if (notificationAutomationKeyRef.current === key) return;
-    notificationAutomationKeyRef.current = key;
-    runNotificationAutomations(profile, effectivePlan).catch(error => {
-      console.warn('Notification automations skipped:', error);
-    });
-  }, [profile?.id, profile?.points, profile?.streak, profile?.lastWorkoutDate, effectivePlan]);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    const onBeforeUnload = () => {
-      if (workoutCompletedThisSessionRef.current || profile.lastWorkoutDate === getIsoDay()) return;
-      localStorage.setItem(`ironshape_session_without_workout_${profile.id}`, '1');
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [profile?.id, profile?.lastWorkoutDate]);
 
   useEffect(() => {
     if (!user) {
@@ -1774,6 +1311,8 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, [user]);
 
+  const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
+
   const openPricing = (source: string, plan?: Plan | null) => {
     if (plan) setCheckoutPlan(plan);
     else setCheckoutPlan(null);
@@ -1783,19 +1322,6 @@ export default function App() {
       current_plan: effectivePlan,
     });
     setShowPricing(true);
-  };
-
-  const openNotificationAction = (action: string | null) => {
-    if (!action) return;
-    if (action === 'plans') {
-      openPricing('notification');
-      return;
-    }
-    const allowedTabs = ['dashboard', 'workouts', 'nutrition', 'progress', 'community', 'affiliates', 'settings', 'admin'];
-    if (allowedTabs.includes(action)) {
-      setDrawerOpen(false);
-      setActiveTab(action);
-    }
   };
 
   useEffect(() => {
@@ -2030,7 +1556,6 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
-      <NotificationsCenter userId={profile.id} onOpenAction={openNotificationAction} />
 
       {/* Sidebar / Navigation */}
       <nav
@@ -2239,7 +1764,6 @@ export default function App() {
             {activeTab === 'nutrition' && (
               <NutritionView
                 profile={profile}
-                language={language}
                 onUpgrade={() => openPricing('nutrition_iron_coach')}
                 updateProfile={updateProfile}
                 onOpenIronCoach={(prompt) => {
@@ -5059,15 +4583,6 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
     }
   }, [selectedMuscleGroup, visibleMuscleGroups]);
 
-  useEffect(() => {
-    if (!user?.id || !selectedWorkout || completedWorkouts.includes(selectedWorkout.id)) return;
-    localStorage.setItem(`ironshape_pending_started_workout_${user.id}`, JSON.stringify({
-      workoutId: selectedWorkout.id,
-      workoutName: selectedWorkout.name,
-      startedAt: new Date().toISOString(),
-    }));
-  }, [user?.id, selectedWorkout?.id, selectedWorkout?.name, completedWorkouts]);
-
   const hasAccess = (planId: Plan) => {
     const weights = { 'free': 0, 'Iniciante': 1, 'Pro': 2, 'Elite': 3, 'Admin': 4 };
     return weights[effectivePlan] >= weights[planId];
@@ -5203,7 +4718,6 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
           streak: newStreak,
           lastWorkoutDate: today,
         });
-        localStorage.removeItem(`ironshape_pending_started_workout_${user.id}`);
         return nextPoints;
       } catch (e) {
         console.error('Erro ao salvar treino:', e);
@@ -7616,15 +7130,13 @@ function BodyProgressView({ userId }: { userId: string }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIronCoach }: {
+function NutritionView({ profile, onUpgrade, updateProfile, onOpenIronCoach }: {
   profile: UserProfile;
-  language: LanguageCode;
   onUpgrade: () => void;
   updateProfile: (u: Partial<UserProfile>) => Promise<void>;
   onOpenIronCoach: (prompt: string) => void;
 }) {
   const { isAdmin, simulatedPlan } = useAuth();
-  const nutritionText = APP_TRANSLATIONS[language].nutrition;
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
   const hasIronCoachAccess = simulatedPlan
     ? simulatedPlan === 'Pro' || simulatedPlan === 'Elite' || simulatedPlan === 'Admin'
@@ -7696,11 +7208,28 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
   const [results, setResults] = useState<MacroResults | null>(savedProtocol?.calcData?.goalFocus ? savedProtocol?.results || null : null);
   const [showCoachUpgradeModal, setShowCoachUpgradeModal] = useState(false);
 
-  const goalFocusOptions = nutritionText.goalFocusOptions;
-  const goalLabels: Record<NutritionCalcData['goal'], string> = {
-    lose: nutritionText.lose,
-    maintain: nutritionText.maintain,
-    gain: nutritionText.gain,
+  const goalFocusOptions: Record<NutritionCalcData['goal'], { value: string; label: string }[]> = {
+    lose: [
+      { value: 'body_fat', label: 'Gordura corporal' },
+      { value: 'body_weight', label: 'Peso corporal' },
+      { value: 'waist_measurements', label: 'Medidas abdominais' },
+      { value: 'muscle_definition', label: 'Definição muscular' },
+      { value: 'not_sure', label: 'Não tenho certeza' },
+    ],
+    maintain: [
+      { value: 'muscle_mass', label: 'Massa muscular' },
+      { value: 'body_weight', label: 'Peso corporal' },
+      { value: 'body_fat_percentage', label: 'Percentual de gordura' },
+      { value: 'health_wellbeing', label: 'Saúde e bem-estar' },
+      { value: 'not_sure', label: 'Não tenho certeza' },
+    ],
+    gain: [
+      { value: 'muscle_mass', label: 'Massa muscular' },
+      { value: 'body_weight', label: 'Peso corporal' },
+      { value: 'strength_performance', label: 'Força e desempenho' },
+      { value: 'body_composition', label: 'Composição corporal' },
+      { value: 'not_sure', label: 'Não tenho certeza' },
+    ],
   };
   const selectedGoalFocusLabel = goalFocusOptions[calcData.goal].find(option => option.value === calcData.goalFocus)?.label || '';
 
@@ -8138,11 +7667,11 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
       <header className="space-y-4 px-2 sm:px-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase">{nutritionText.title}</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase">Nutrição & Dieta</h1>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-text-secondary text-base sm:text-lg max-w-2xl leading-relaxed">
-            {nutritionText.subtitle}
+            Otimize sua performance com protocolos nutricionais baseados em ciência e adaptados ao seu metabolismo.
           </p>
           {localNutritionPrefs && (
             <button
@@ -8150,14 +7679,14 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               className="shrink-0 flex items-center gap-2 px-4 py-2 bg-white/5 text-text-muted border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-text-primary transition-all"
             >
               <Edit3 size={13} />
-              {nutritionText.editPreferences}
+              Editar Preferências
             </button>
           )}
         </div>
         {localNutritionPrefs && (
           <div className="flex flex-wrap gap-2 mt-2">
             <span className="px-3 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-lg border border-primary/20 uppercase tracking-widest">
-              {nutritionText.mealsPerDay(localNutritionPrefs.mealsPerDay)}
+              {localNutritionPrefs.mealsPerDay} refeições/dia
             </span>
             <span className="px-3 py-1 bg-white/5 text-text-muted text-[9px] font-black rounded-lg border border-white/10 uppercase tracking-widest">
               {localNutritionPrefs.budget}
@@ -8178,10 +7707,10 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
             <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
               <Calculator size={24} />
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionText.metabolicCalculator}</h2>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Calculadora Metabólica</h2>
           </div>
           <span className="self-start sm:self-auto px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
-            {nutritionText.beginnerModule}
+            MÓDULO INICIANTE
           </span>
         </div>
 
@@ -8189,7 +7718,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
           <div className="lg:col-span-5 bg-surface p-6 sm:p-10 rounded-[32px] sm:rounded-[48px] border border-white/5 space-y-6 sm:space-y-8 shadow-2xl">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.weight}</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Peso (kg)</label>
                 <input 
                   type="number" 
                   value={calcData.weight}
@@ -8198,7 +7727,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 />
               </div>
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.height}</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Altura (cm)</label>
                 <input 
                   type="number" 
                   value={calcData.height}
@@ -8210,7 +7739,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.age}</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Idade</label>
                 <input 
                   type="number" 
                   value={calcData.age}
@@ -8219,37 +7748,37 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 />
               </div>
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.gender}</label>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Sexo</label>
                 <CustomSelect 
                   value={calcData.gender}
                   onChange={(val) => setCalcData({...calcData, gender: val as any})}
                   options={[
-                    { value: 'male', label: nutritionText.male },
-                    { value: 'female', label: nutritionText.female }
+                    { value: 'male', label: 'Masculino' },
+                    { value: 'female', label: 'Feminino' }
                   ]}
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.activityLevel}</label>
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">Nível de Atividade</label>
               <CustomSelect 
                 value={calcData.activityLevel}
                 onChange={(val) => setCalcData({...calcData, activityLevel: val})}
                 options={[
-                  { value: '1.2', label: nutritionText.activityOptions.sedentary },
-                  { value: '1.375', label: nutritionText.activityOptions.light },
-                  { value: '1.55', label: nutritionText.activityOptions.moderate },
-                  { value: '1.725', label: nutritionText.activityOptions.very },
-                  { value: '1.9', label: nutritionText.activityOptions.extra }
+                  { value: '1.2', label: 'Sedentário (Pouco ou nenhum exercício)' },
+                  { value: '1.375', label: 'Levemente Ativo (1-3 dias/semana)' },
+                  { value: '1.55', label: 'Moderadamente Ativo (3-5 dias/semana)' },
+                  { value: '1.725', label: 'Muito Ativo (6-7 dias/semana)' },
+                  { value: '1.9', label: 'Extra Ativo (Treino pesado 2x/dia)' }
                 ]}
               />
             </div>
 
             <div className="space-y-4">
               <div className="space-y-1 ml-1">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.mainGoal}</label>
-                <p className="text-xs text-text-muted">{nutritionText.mainGoalHelp}</p>
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">Objetivo principal</label>
+                <p className="text-xs text-text-muted">Escolha a direção do seu protocolo.</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {(['lose', 'maintain', 'gain'] as const).map((g) => (
@@ -8267,7 +7796,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                         : 'bg-white/5 border-white/10 text-text-muted hover:border-white/20'
                     }`}
                   >
-                    {goalLabels[g]}
+                    {g === 'lose' ? 'PERDER' : g === 'maintain' ? 'MANTER' : 'GANHAR'}
                   </button>
                 ))}
               </div>
@@ -8279,8 +7808,8 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 className="rounded-[24px] border border-white/10 bg-white/[0.025] p-4 sm:p-5 space-y-4"
               >
                 <div className="space-y-1">
-                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.priority}</div>
-                  <p className="text-xs text-text-secondary">{nutritionText.priorityHelp}</p>
+                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">Sua prioridade</div>
+                  <p className="text-xs text-text-secondary">Qual resultado é mais importante para você agora?</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {goalFocusOptions[calcData.goal].map((option, index) => {
@@ -8313,7 +7842,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 </div>
                 {calcData.goal === 'lose' && calcData.goalFocus === 'waist_measurements' && (
                   <p className="text-[10px] leading-relaxed text-text-muted">
-                    {nutritionText.localizedFatNote}
+                    O protocolo favorece a redução de gordura corporal total; não existe perda de gordura localizada.
                   </p>
                 )}
               </motion.div>
@@ -8325,8 +7854,8 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               className="w-full min-h-[56px] px-4 py-3 bg-primary text-text-primary rounded-[24px] font-black text-sm sm:text-base leading-tight text-center shadow-2xl shadow-primary/30 hover:bg-primary-hover hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
             >
               {calcData.goalFocus
-                ? nutritionText.calculateFor(goalLabels[calcData.goal], selectedGoalFocusLabel.toUpperCase())
-                : nutritionText.choosePriority}
+                ? `CALCULAR PARA ${calcData.goal === 'lose' ? 'PERDER' : calcData.goal === 'gain' ? 'GANHAR' : 'MANTER'} ${selectedGoalFocusLabel.toUpperCase()}`
+                : 'ESCOLHA SUA PRIORIDADE'}
               <ArrowRight size={20} />
             </button>
           </div>
@@ -8342,16 +7871,16 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                   <Info className="w-8 h-8 sm:w-10 sm:h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionText.waitingTitle}</h3>
+                  <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Aguardando Parâmetros</h3>
                   <p className="text-text-secondary max-w-xs mx-auto text-base sm:text-lg leading-relaxed">
-                    {nutritionText.waitingText}
+                    Preencha suas informações biométricas para gerar seu protocolo nutricional.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="relative z-10 space-y-8 sm:space-y-10">
                 <div className="text-center space-y-4">
-                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">{nutritionText.estimatedDailyGoal}</div>
+                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">META DIÁRIA ESTIMADA</div>
                   <div className="text-5xl sm:text-7xl md:text-8xl font-black text-primary tracking-tighter leading-none break-words">
                     {results.calories} 
                     <span className="text-xl sm:text-2xl text-text-muted font-black ml-2 uppercase tracking-widest">kcal</span>
@@ -8359,20 +7888,20 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                   
                   <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto pt-4">
                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{nutritionText.bmr}</div>
+                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">TMB</div>
                       <div className="text-lg font-black text-text-primary">{results.bmr} <span className="text-[10px] opacity-50">kcal</span></div>
                     </div>
                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{nutritionText.tdee}</div>
+                      <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">TDEE</div>
                       <div className="text-lg font-black text-text-primary">{results.tdee} <span className="text-[10px] opacity-50">kcal</span></div>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-                  <MacroResultCard label={nutritionText.proteins} value={results.protein} unit="g" color="bg-primary" icon="🥩" />
-                  <MacroResultCard label={nutritionText.carbs} value={results.carbs} unit="g" color="bg-white/10" icon="🍚" />
-                  <MacroResultCard label={nutritionText.fats} value={results.fat} unit="g" color="bg-white/10" icon="🥑" />
+                  <MacroResultCard label="Proteínas" value={results.protein} unit="g" color="bg-primary" icon="🥩" />
+                  <MacroResultCard label="Carboidratos" value={results.carbs} unit="g" color="bg-white/10" icon="🍚" />
+                  <MacroResultCard label="Gorduras" value={results.fat} unit="g" color="bg-white/10" icon="🥑" />
                 </div>
 
                 <div className="p-6 sm:p-8 bg-white/5 rounded-[24px] sm:rounded-[32px] border border-white/10 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 backdrop-blur-md">
@@ -8380,7 +7909,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                     <Zap className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
                   <div className="space-y-2">
-                    <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">{nutritionText.protocolAnalysis}</h4>
+                    <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">Análise do Protocolo</h4>
                     <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
                       Este protocolo foi otimizado para <span className="text-text-primary font-black uppercase">{calcData.goal === 'lose' ? 'Déficit Calórico' : calcData.goal === 'gain' ? 'Superávit Calórico' : 'Manutenção'}</span>, com prioridade em <span className="text-primary font-black">{selectedGoalFocusLabel.toLowerCase()}</span>.
                       Mantenha a consistência por pelo menos 14 dias para observar as primeiras adaptações metabólicas.
@@ -11179,8 +10708,7 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
 }
 
 function AdminView() {
-  const { user: adminUser } = useAuth();
-  const [adminTab, setAdminTab] = useState<'general' | 'affiliates' | 'notifications'>('general');
+  const [adminTab, setAdminTab] = useState<'general' | 'affiliates'>('general');
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [adminError, setAdminError] = useState('');
   const [usersPage, setUsersPage] = useState(1);
@@ -11196,21 +10724,19 @@ function AdminView() {
     posts: Post[];
     affiliates: Affiliate[];
     conversions: AffiliateConversion[];
-    notifications: AppNotification[];
-  }>({ profiles: [], workouts: [], nutrition: [], posts: [], affiliates: [], conversions: [], notifications: [] });
+  }>({ profiles: [], workouts: [], nutrition: [], posts: [], affiliates: [], conversions: [] });
 
   const fetchAdminData = async () => {
     setLoadingAdmin(true);
     setAdminError('');
     try {
-      const [profilesRes, workoutsRes, nutritionRes, postsRes, affiliatesRes, conversionsRes, notificationsRes] = await Promise.allSettled([
+      const [profilesRes, workoutsRes, nutritionRes, postsRes, affiliatesRes, conversionsRes] = await Promise.allSettled([
         withTimeout(() => supabase.from('profiles').select('*').order('criado_em', { ascending: false }).limit(1000), 15000, 1) as any,
         withTimeout(() => supabase.from('workout_logs').select('*').order('completedAt', { ascending: false }).limit(300), 15000, 1) as any,
         withTimeout(() => supabase.from('nutrition_logs').select('*').order('date', { ascending: false }).limit(300), 15000, 1) as any,
         withTimeout(() => supabase.from('posts').select('*').order('criado_em', { ascending: false }).limit(100), 15000, 1) as any,
         withTimeout(() => supabase.from('affiliates').select('*').order('criado_em', { ascending: false }).limit(200), 15000, 1) as any,
         withTimeout(() => supabase.from('affiliate_conversions').select('*').order('created_at', { ascending: false }).limit(300), 15000, 1) as any,
-        withTimeout(() => supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(500), 15000, 1) as any,
       ]);
 
       const read = <T,>(result: PromiseSettledResult<any>, label: string): T[] => {
@@ -11232,7 +10758,6 @@ function AdminView() {
         posts: read<Post>(postsRes, 'posts'),
         affiliates: read<Affiliate>(affiliatesRes, 'affiliates'),
         conversions: read<AffiliateConversion>(conversionsRes, 'conversions'),
-        notifications: read<AppNotification>(notificationsRes, 'notifications'),
       });
     } catch (e: any) {
       setAdminError(e.message || 'Erro ao carregar painel administrativo.');
@@ -11242,7 +10767,7 @@ function AdminView() {
   };
 
   useEffect(() => {
-    if (adminTab === 'general' || adminTab === 'notifications') fetchAdminData();
+    if (adminTab === 'general') fetchAdminData();
   }, [adminTab]);
 
   useEffect(() => {
@@ -11470,12 +10995,6 @@ function AdminView() {
             className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'affiliates' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-primary'}`}
           >
             Afiliados
-          </button>
-          <button
-            onClick={() => setAdminTab('notifications')}
-            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'notifications' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-primary'}`}
-          >
-            Notificações
           </button>
         </div>
       </header>
@@ -11799,16 +11318,8 @@ function AdminView() {
             </>
           )}
         </div>
-      ) : adminTab === 'affiliates' ? (
-        <AdminAffiliatesView />
       ) : (
-        <AdminNotificationsPanel
-          profiles={adminData.profiles}
-          notifications={adminData.notifications}
-          loading={loadingAdmin}
-          adminUserId={adminUser?.id || null}
-          onRefresh={fetchAdminData}
-        />
+        <AdminAffiliatesView />
       )}
 
       <AnimatePresence>
@@ -11916,201 +11427,6 @@ function AdminView() {
           </div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function AdminNotificationsPanel({
-  profiles,
-  notifications,
-  loading,
-  adminUserId,
-  onRefresh,
-}: {
-  profiles: UserProfile[];
-  notifications: AppNotification[];
-  loading: boolean;
-  adminUserId: string | null;
-  onRefresh: () => void;
-}) {
-  const [target, setTarget] = useState('all');
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [action, setAction] = useState('dashboard');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState('');
-  const [sendSuccess, setSendSuccess] = useState('');
-
-  const readCount = notifications.filter(item => item.status === 'read').length;
-  const unreadCount = notifications.filter(item => item.status === 'unread').length;
-  const ignoredCount = unreadCount;
-  const readRate = notifications.length ? Math.round((readCount / notifications.length) * 100) : 0;
-
-  const formatDateTime = (value?: string) => {
-    if (!value) return 'Sem data';
-    const date = new Date(value);
-    if (!isValid(date)) return 'Data inválida';
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' às ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const getUserLabel = (userId: string) => {
-    const profile = profiles.find(item => item.id === userId);
-    return profile?.name || profile?.email || userId.slice(0, 8);
-  };
-
-  const sendManualNotification = async () => {
-    const cleanTitle = title.trim();
-    const cleanMessage = message.trim();
-    if (!cleanTitle || !cleanMessage) {
-      setSendError('Informe título e mensagem.');
-      return;
-    }
-
-    const users = target === 'all'
-      ? profiles.filter(profile => profile.role !== 'admin')
-      : profiles.filter(profile => profile.id === target);
-
-    if (users.length === 0) {
-      setSendError('Nenhum usuário encontrado para envio.');
-      return;
-    }
-
-    setSending(true);
-    setSendError('');
-    setSendSuccess('');
-    try {
-      await notificationService.sendManual({
-        users,
-        title: cleanTitle,
-        message: cleanMessage,
-        action,
-        sentBy: adminUserId,
-      });
-      setTitle('');
-      setMessage('');
-      setSendSuccess(`Notificação enviada para ${users.length} usuário${users.length > 1 ? 's' : ''}.`);
-      onRefresh();
-      window.dispatchEvent(new Event('ironshape:notifications-refresh'));
-    } catch (error: any) {
-      setSendError(error?.message || 'Não foi possível enviar a notificação.');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <AdminMetricCard icon={<BellRing size={22} />} label="Enviadas" value={notifications.length.toString()} detail="histórico carregado" tone="text-primary" />
-        <AdminMetricCard icon={<CheckCircle2 size={22} />} label="Lidas" value={readCount.toString()} detail={`${readRate}% de leitura`} tone="text-success" />
-        <AdminMetricCard icon={<EyeOff size={22} />} label="Ignoradas" value={ignoredCount.toString()} detail="ainda não lidas" tone={ignoredCount ? 'text-error' : 'text-success'} />
-        <AdminMetricCard icon={<Users size={22} />} label="Alcance" value={new Set(notifications.map(item => item.user_id)).size.toString()} detail="usuários impactados" tone="text-primary" />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-1 bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
-          <div className="flex items-center gap-3">
-            <Send className="text-primary" size={22} />
-            <div>
-              <h3 className="text-lg font-black uppercase tracking-tight">Envio manual</h3>
-              <p className="text-xs text-text-muted">Para um usuário específico ou toda a base.</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <select
-              value={target}
-              onChange={event => setTarget(event.target.value)}
-              className="w-full bg-background border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-primary"
-            >
-              <option value="all">Todos os usuários</option>
-              {profiles.map(profile => (
-                <option key={profile.id} value={profile.id}>{profile.name || profile.email}</option>
-              ))}
-            </select>
-            <input
-              value={title}
-              onChange={event => setTitle(event.target.value)}
-              placeholder="Título"
-              className="w-full bg-background border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-primary"
-            />
-            <textarea
-              value={message}
-              onChange={event => setMessage(event.target.value)}
-              placeholder="Mensagem"
-              rows={4}
-              className="w-full bg-background border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-primary resize-none"
-            />
-            <select
-              value={action}
-              onChange={event => setAction(event.target.value)}
-              className="w-full bg-background border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-primary"
-            >
-              <option value="dashboard">Dashboard</option>
-              <option value="workouts">Treinos</option>
-              <option value="nutrition">Dieta</option>
-              <option value="progress">Progresso</option>
-              <option value="plans">Planos</option>
-            </select>
-          </div>
-
-          {sendError && <p className="text-xs font-bold text-error bg-error/10 border border-error/20 rounded-2xl p-3">{sendError}</p>}
-          {sendSuccess && <p className="text-xs font-bold text-success bg-success/10 border border-success/20 rounded-2xl p-3">{sendSuccess}</p>}
-
-          <button
-            onClick={sendManualNotification}
-            disabled={sending}
-            className="w-full min-h-[52px] rounded-2xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-          >
-            {sending ? <><Loader2 size={15} className="animate-spin" /> Enviando...</> : <><Send size={15} /> Enviar notificação</>}
-          </button>
-        </div>
-
-        <div className="xl:col-span-2 bg-surface rounded-[32px] border border-white/5 overflow-hidden">
-          <div className="p-6 border-b border-white/5 flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-black uppercase tracking-tight">Histórico de notificações</h3>
-              <p className="text-xs text-text-muted mt-1">Data, usuário, tipo, leitura e ação interna.</p>
-            </div>
-            <button
-              onClick={onRefresh}
-              disabled={loading}
-              className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary flex items-center justify-center disabled:opacity-50"
-              aria-label="Atualizar notificações"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
-
-          <div className="divide-y divide-white/5 max-h-[620px] overflow-y-auto">
-            {loading ? (
-              <div className="py-16 flex flex-col items-center gap-3 text-text-muted">
-                <Loader2 className="animate-spin text-primary" size={30} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Carregando notificações...</span>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-8 text-sm text-text-muted">Nenhuma notificação enviada ainda.</div>
-            ) : notifications.map(notification => (
-              <div key={notification.id} className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-black truncate">{notification.title}</span>
-                    <span className={`px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${notification.status === 'read' ? 'bg-success/10 border-success/20 text-success' : 'bg-white/5 border-white/10 text-text-muted'}`}>
-                      {notification.status === 'read' ? 'Lida' : 'Não lida'}
-                    </span>
-                    <span className="px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-widest">{notification.type}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-text-secondary line-clamp-2">{notification.message}</p>
-                  <p className="mt-2 text-[10px] text-text-muted font-bold">{getUserLabel(notification.user_id)} • {formatDateTime(notification.created_at)}</p>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted shrink-0">
-                  {notification.action || 'sem ação'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

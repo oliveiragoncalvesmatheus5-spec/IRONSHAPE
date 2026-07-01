@@ -13,34 +13,6 @@ export interface NutritionLog {
   meals: any[];
 }
 
-export type NotificationType =
-  | 'onboarding'
-  | 'workout'
-  | 'nutrition'
-  | 'progress'
-  | 'streak'
-  | 'achievement'
-  | 'premium'
-  | 'challenge'
-  | 'return'
-  | 'manual';
-
-export type NotificationStatus = 'unread' | 'read';
-
-export interface AppNotification {
-  id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  action: string | null;
-  status: NotificationStatus;
-  created_at: string;
-  read_at?: string | null;
-  dedupe_key?: string | null;
-  sent_by?: string | null;
-}
-
 export interface NutritionPreferences {
   likedFoods: string;
   dislikedFoods: string;

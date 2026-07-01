@@ -205,6 +205,46 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
     weightEmpty: string;
     sleepCheckIn: (hours: string) => string;
   };
+  workouts: {
+    title: string;
+    subtitle: (place: string, goal: string) => string;
+    fallbackGoal: string;
+    points: string;
+    phaseGoal: (limit: string) => string;
+    pointsGoal: (limit: string) => string;
+    continueEvolution: string;
+    homeActive: string;
+    homeActiveText: (goal: string) => string;
+    train: string;
+    mobility: string;
+    stretch: string;
+    weeklyTitle: string;
+    weeklySimpleText: string;
+    weeklyAdvancedText: string;
+    repeat: string;
+    clear: string;
+    open: string;
+    done: string;
+    markDone: string;
+    removeWeekly: string;
+    emptyWeekly: string;
+    favorites: string;
+    freeWeeklyLimit: (limit: number) => string;
+    upgrade: string;
+    protocol: string;
+    workouts: string;
+    loadLog: string;
+    history: string;
+    ranking: string;
+    athleteSheet: string;
+    earlyAccess: string;
+    muscleGroup: string;
+    all: string;
+    mobilityRoutines: string;
+    stretchingRoutines: string;
+    emptyTitle: string;
+    emptyText: string;
+  };
 }> = {
   'pt-BR': {
     nav: {
@@ -298,6 +338,46 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       weightRegisteredAt: date => `Registrado em ${date}`,
       weightEmpty: 'Registre seu peso e acompanhe a evolução',
       sleepCheckIn: hours => `${hours}h de sono • check-in de hoje`,
+    },
+    workouts: {
+      title: 'Meus Treinos',
+      subtitle: (place, goal) => `Protocolos de treinamento personalizados para ${place.toLowerCase()} e objetivo: ${goal}.`,
+      fallbackGoal: 'evolução',
+      points: 'Pontos',
+      phaseGoal: limit => `Fase 1: ${limit} pts`,
+      pointsGoal: limit => `Meta ${limit} pts`,
+      continueEvolution: 'Continuar evolução',
+      homeActive: 'Treino em casa ativado',
+      homeActiveText: goal => `Sessões práticas para o objetivo ${goal}, com progressão segura e rotina adaptada ao seu espaço.`,
+      train: 'Treinar',
+      mobility: 'Mobilidade',
+      stretch: 'Alongar',
+      weeklyTitle: 'Treinos da Semana',
+      weeklySimpleText: 'Monte uma rotina simples com seus treinos favoritos.',
+      weeklyAdvancedText: 'Organize sua semana sem perder o acesso aos protocolos avançados.',
+      repeat: 'Repetir',
+      clear: 'Limpar',
+      open: 'Abrir',
+      done: 'Feito',
+      markDone: 'Marcar feito',
+      removeWeekly: 'Remover treino da semana',
+      emptyWeekly: 'Adicione treinos pelos cards abaixo para montar sua semana.',
+      favorites: 'Favoritos',
+      freeWeeklyLimit: limit => `Free libera ${limit} treinos por semana. Pro libera 5 e Elite libera a rotina completa.`,
+      upgrade: 'Fazer upgrade',
+      protocol: 'Protocolo',
+      workouts: 'Treinos',
+      loadLog: 'Registro',
+      history: 'Histórico',
+      ranking: 'Ranking',
+      athleteSheet: 'Planilha Atleta',
+      earlyAccess: 'Acesso Antecipado',
+      muscleGroup: 'Grupo Muscular',
+      all: 'Todos',
+      mobilityRoutines: 'Rotinas de mobilidade',
+      stretchingRoutines: 'Rotinas de alongamento',
+      emptyTitle: 'Nenhum treino encontrado',
+      emptyText: 'Tente ajustar seus filtros para encontrar outros protocolos.',
     },
   },
   en: {
@@ -393,6 +473,46 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       weightEmpty: 'Log your weight and track progress',
       sleepCheckIn: hours => `${hours}h of sleep • today's check-in`,
     },
+    workouts: {
+      title: 'My Workouts',
+      subtitle: (place, goal) => `Personalized training protocols for ${place.toLowerCase()} and goal: ${goal}.`,
+      fallbackGoal: 'progress',
+      points: 'Points',
+      phaseGoal: limit => `Phase 1: ${limit} pts`,
+      pointsGoal: limit => `Goal ${limit} pts`,
+      continueEvolution: 'Continue progress',
+      homeActive: 'Home training enabled',
+      homeActiveText: goal => `Practical sessions for the goal ${goal}, with safe progression and a routine adapted to your space.`,
+      train: 'Train',
+      mobility: 'Mobility',
+      stretch: 'Stretch',
+      weeklyTitle: 'Weekly Workouts',
+      weeklySimpleText: 'Build a simple routine with your favorite workouts.',
+      weeklyAdvancedText: 'Organize your week while keeping access to advanced protocols.',
+      repeat: 'Repeat',
+      clear: 'Clear',
+      open: 'Open',
+      done: 'Done',
+      markDone: 'Mark done',
+      removeWeekly: 'Remove workout from week',
+      emptyWeekly: 'Add workouts from the cards below to build your week.',
+      favorites: 'Favorites',
+      freeWeeklyLimit: limit => `Free unlocks ${limit} workouts per week. Pro unlocks 5 and Elite unlocks the full routine.`,
+      upgrade: 'Upgrade',
+      protocol: 'Protocol',
+      workouts: 'Workouts',
+      loadLog: 'Load Log',
+      history: 'History',
+      ranking: 'Ranking',
+      athleteSheet: 'Athlete Sheet',
+      earlyAccess: 'Early Access',
+      muscleGroup: 'Muscle Group',
+      all: 'All',
+      mobilityRoutines: 'Mobility routines',
+      stretchingRoutines: 'Stretching routines',
+      emptyTitle: 'No workout found',
+      emptyText: 'Try adjusting your filters to find other protocols.',
+    },
   },
   es: {
     nav: {
@@ -486,6 +606,46 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       weightRegisteredAt: date => `Registrado el ${date}`,
       weightEmpty: 'Registra tu peso y sigue tu evolución',
       sleepCheckIn: hours => `${hours}h de sueño • check-in de hoy`,
+    },
+    workouts: {
+      title: 'Mis Entrenos',
+      subtitle: (place, goal) => `Protocolos de entrenamiento personalizados para ${place.toLowerCase()} y objetivo: ${goal}.`,
+      fallbackGoal: 'evolución',
+      points: 'Puntos',
+      phaseGoal: limit => `Fase 1: ${limit} pts`,
+      pointsGoal: limit => `Meta ${limit} pts`,
+      continueEvolution: 'Continuar evolución',
+      homeActive: 'Entreno en casa activado',
+      homeActiveText: goal => `Sesiones prácticas para el objetivo ${goal}, con progresión segura y rutina adaptada a tu espacio.`,
+      train: 'Entrenar',
+      mobility: 'Movilidad',
+      stretch: 'Estirar',
+      weeklyTitle: 'Entrenos de la Semana',
+      weeklySimpleText: 'Arma una rutina simple con tus entrenos favoritos.',
+      weeklyAdvancedText: 'Organiza tu semana sin perder acceso a los protocolos avanzados.',
+      repeat: 'Repetir',
+      clear: 'Limpiar',
+      open: 'Abrir',
+      done: 'Hecho',
+      markDone: 'Marcar hecho',
+      removeWeekly: 'Eliminar entreno de la semana',
+      emptyWeekly: 'Agrega entrenos desde las tarjetas de abajo para armar tu semana.',
+      favorites: 'Favoritos',
+      freeWeeklyLimit: limit => `Free libera ${limit} entrenos por semana. Pro libera 5 y Elite libera la rutina completa.`,
+      upgrade: 'Mejorar plan',
+      protocol: 'Protocolo',
+      workouts: 'Entrenos',
+      loadLog: 'Registro',
+      history: 'Historial',
+      ranking: 'Ranking',
+      athleteSheet: 'Planilla Atleta',
+      earlyAccess: 'Acceso Anticipado',
+      muscleGroup: 'Grupo Muscular',
+      all: 'Todos',
+      mobilityRoutines: 'Rutinas de movilidad',
+      stretchingRoutines: 'Rutinas de estiramiento',
+      emptyTitle: 'No se encontró ningún entreno',
+      emptyText: 'Intenta ajustar tus filtros para encontrar otros protocolos.',
     },
   },
 };
@@ -1600,7 +1760,7 @@ export default function App() {
                 onViewProgress={() => setActiveTab('progress')}
               />
             )}
-            {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} onUpgrade={() => openPricing('workouts')} /></ViewErrorBoundary>}
+            {activeTab === 'workouts' && <ViewErrorBoundary><WorkoutsView profile={profile} language={language} onUpgrade={() => openPricing('workouts')} /></ViewErrorBoundary>}
             {activeTab === 'nutrition' && (
               <NutritionView
                 profile={profile}
@@ -4221,9 +4381,11 @@ function CelebrationFireworks() {
   );
 }
 
-function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade: () => void }) {
+function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, language: LanguageCode, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, user, updateProfile } = useAuth();
   const effectivePlan: Plan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null) || 'Iniciante';
+  const workoutsText = APP_TRANSLATIONS[language].workouts;
+  const locale = language === 'pt-BR' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US';
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || isAdmin;
   const isFreePointsPlan = effectivePlan === 'free' || effectivePlan === 'Iniciante';
   const FREE_POINTS_LIMIT = 2000;
@@ -4610,10 +4772,10 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
-            <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase">Meus Treinos</h1>
+            <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase">{workoutsText.title}</h1>
           </div>
           <p className="text-text-secondary text-base md:text-lg">
-            Protocolos de treinamento personalizados para {placeLabel.toLowerCase()} e objetivo: <span className="text-text-primary font-bold">{profile.goal || 'evolução'}</span>.
+            {workoutsText.subtitle(placeLabel, profile.goal || workoutsText.fallbackGoal)}
           </p>
         </div>
         
@@ -4624,8 +4786,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                 <Trophy size={18} />
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Pontos</div>
-                <div className="text-lg font-black leading-tight">{points.toLocaleString('pt-BR')} pts</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">{workoutsText.points}</div>
+                <div className="text-lg font-black leading-tight">{points.toLocaleString(locale)} pts</div>
               </div>
             </div>
             <span className="text-[10px] font-black text-primary uppercase tracking-widest shrink-0">
@@ -4641,14 +4803,14 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
           <div className="flex items-center justify-between mt-2 text-[9px] font-black uppercase tracking-widest text-text-muted">
             <span>0</span>
-            <span>{isFreePointsPlan ? `Fase 1: ${FREE_POINTS_LIMIT.toLocaleString('pt-BR')} pts` : `Meta ${planPointsLimit.toLocaleString('pt-BR')} pts`}</span>
+            <span>{isFreePointsPlan ? workoutsText.phaseGoal(FREE_POINTS_LIMIT.toLocaleString(locale)) : workoutsText.pointsGoal(planPointsLimit.toLocaleString(locale))}</span>
           </div>
           {freeTrainingPhaseComplete && (
             <button
               onClick={onUpgrade}
               className="w-full mt-3 min-h-[42px] bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all"
             >
-              Continuar evolução
+              {workoutsText.continueEvolution}
             </button>
           )}
         </div>
@@ -4671,9 +4833,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         <section className="space-y-4">
           <div className="bg-primary/10 border border-primary/20 rounded-[24px] p-5 flex flex-col gap-4">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Treino em casa ativado</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">{workoutsText.homeActive}</div>
               <p className="text-sm text-text-secondary leading-relaxed">
-                Sessões práticas para o objetivo <span className="text-text-primary font-bold">{profile.goal}</span>, com progressão segura e rotina adaptada ao seu espaço.
+                {workoutsText.homeActiveText(profile.goal || workoutsText.fallbackGoal)}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -4684,9 +4846,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
           <div className="grid grid-cols-3 gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5">
             {([
-              { id: 'training', label: 'Treinar', icon: <Dumbbell size={16} /> },
-              { id: 'mobility', label: 'Mobilidade', icon: <Activity size={16} /> },
-              { id: 'stretching', label: 'Alongar', icon: <RefreshCw size={16} /> },
+              { id: 'training', label: workoutsText.train, icon: <Dumbbell size={16} /> },
+              { id: 'mobility', label: workoutsText.mobility, icon: <Activity size={16} /> },
+              { id: 'stretching', label: workoutsText.stretch, icon: <RefreshCw size={16} /> },
             ] as const).map((item) => (
               <button
                 key={item.id}
@@ -4718,15 +4880,15 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight">Treinos da Semana</h2>
+                <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight">{workoutsText.weeklyTitle}</h2>
                 <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-text-muted">
                   {weeklyWorkouts.length}/{weeklyWorkoutLimit}
                 </span>
               </div>
               <p className="text-sm text-text-secondary leading-relaxed">
                 {isFreePointsPlan
-                  ? 'Monte uma rotina simples com seus treinos favoritos.'
-                  : 'Organize sua semana sem perder o acesso aos protocolos avançados.'}
+                  ? workoutsText.weeklySimpleText
+                  : workoutsText.weeklyAdvancedText}
               </p>
             </div>
           </div>
@@ -4738,7 +4900,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               className="min-h-[40px] px-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
             >
               <Repeat2 size={14} />
-              Repetir
+              {workoutsText.repeat}
             </button>
             <button
               onClick={clearWeeklyWorkouts}
@@ -4746,7 +4908,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               className="min-h-[40px] px-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
             >
               <Trash2 size={14} />
-              Limpar
+              {workoutsText.clear}
             </button>
           </div>
         </div>
@@ -4780,7 +4942,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                     <button
                       onClick={() => removeWorkoutFromWeek(workoutId)}
                       className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-text-muted hover:text-text-primary hover:border-white/20 transition-all flex items-center justify-center shrink-0"
-                      aria-label="Remover treino da semana"
+                      aria-label={workoutsText.removeWeekly}
                     >
                       <X size={16} />
                     </button>
@@ -4790,13 +4952,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                       onClick={() => setSelectedWorkout(workout)}
                       className="min-h-[38px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary transition-all"
                     >
-                      Abrir
+                      {workoutsText.open}
                     </button>
                     <button
                       onClick={() => markWeeklyWorkoutDone(workoutId)}
                       className={`min-h-[38px] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isWeeklyDone ? 'bg-success text-text-primary' : 'bg-primary text-text-primary hover:bg-primary-hover'}`}
                     >
-                      {isWeeklyDone ? 'Feito' : 'Marcar feito'}
+                      {isWeeklyDone ? workoutsText.done : workoutsText.markDone}
                     </button>
                   </div>
                 </div>
@@ -4805,13 +4967,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center">
-            <p className="text-sm font-bold text-text-secondary">Adicione treinos pelos cards abaixo para montar sua semana.</p>
+            <p className="text-sm font-bold text-text-secondary">{workoutsText.emptyWeekly}</p>
           </div>
         )}
 
         {favoriteWorkouts.length > 0 && (
           <div className="space-y-3 pt-1">
-            <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">Favoritos</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">{workoutsText.favorites}</div>
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
               {favoriteWorkouts.slice(0, 10).map(workout => (
                 <button
@@ -4835,13 +4997,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
         {weeklyWorkouts.length >= weeklyWorkoutLimit && isFreePointsPlan && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-primary/10 border border-primary/20 p-4">
             <p className="text-xs text-text-secondary leading-relaxed">
-              Free libera {weeklyWorkoutLimit} treinos por semana. Pro libera 5 e Elite libera a rotina completa.
+              {workoutsText.freeWeeklyLimit(weeklyWorkoutLimit)}
             </p>
             <button
               onClick={onUpgrade}
               className="min-h-[40px] px-4 rounded-xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
             >
-              Fazer upgrade
+              {workoutsText.upgrade}
             </button>
           </div>
         )}
@@ -4849,7 +5011,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
 
       {/* Main Plan Tabs */}
       {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="flex flex-col gap-3">
-        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Protocolo</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">{workoutsText.protocol}</span>
         <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
           {(['Iniciante', 'Pro', 'Elite'] as Plan[]).map((p) => (
             <button
@@ -4877,7 +5039,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
           <SubTabButton 
             active={activeSubTab === 'workouts'} 
             onClick={() => setActiveSubTab('workouts')} 
-            label="Treinos" 
+            label={workoutsText.workouts}
             icon={<Dumbbell size={14} />} 
           />
           {selectedPlanTab === 'Pro' && (
@@ -4885,7 +5047,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               <SubTabButton
                 active={activeSubTab === 'registro'}
                 onClick={() => setActiveSubTab('registro')}
-                label="Registro"
+                label={workoutsText.loadLog}
                 icon={<BarChart3 size={14} />}
               />
               <SubTabButton
@@ -4897,13 +5059,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               <SubTabButton
                 active={activeSubTab === 'history'}
                 onClick={() => setActiveSubTab('history')}
-                label="Histórico"
+                label={workoutsText.history}
                 icon={<Calendar size={14} />}
               />
               <SubTabButton
                 active={activeSubTab === 'ranking'}
                 onClick={() => setActiveSubTab('ranking')}
-                label="Ranking"
+                label={workoutsText.ranking}
                 icon={<Trophy size={14} />}
               />
             </>
@@ -4913,7 +5075,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               <SubTabButton
                 active={activeSubTab === 'registro'}
                 onClick={() => setActiveSubTab('registro')}
-                label="Registro"
+                label={workoutsText.loadLog}
                 icon={<BarChart3 size={14} />}
               />
               <SubTabButton
@@ -4925,13 +5087,13 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
               <SubTabButton
                 active={activeSubTab === 'spreadsheet'}
                 onClick={() => setActiveSubTab('spreadsheet')}
-                label="Planilha Atleta"
+                label={workoutsText.athleteSheet}
                 icon={<Calculator size={14} />}
               />
               <SubTabButton
                 active={activeSubTab === 'early'}
                 onClick={() => setActiveSubTab('early')}
-                label="Acesso Antecipado"
+                label={workoutsText.earlyAccess}
                 icon={<Flame size={14} />}
               />
             </>
@@ -4951,7 +5113,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                 {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="space-y-8">
                   <div>
                     <div className="flex flex-col gap-3 max-w-4xl">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">Grupo Muscular</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">{workoutsText.muscleGroup}</span>
                       <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
                         <button
                           onClick={() => setSelectedMuscleGroup('Todos')}
@@ -4961,7 +5123,7 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                               : 'text-text-muted hover:text-text-secondary'
                           }`}
                         >
-                          Todos
+                          {workoutsText.all}
                         </button>
                         {visibleMuscleGroups.map((group) => (
                           <button
@@ -4996,9 +5158,9 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                         <div className="flex items-center gap-6">
                           <h2 className="text-xl md:text-2xl font-black tracking-tight uppercase">
                             {usesHomeProtocol && activeHomeMode === 'mobility'
-                              ? 'Rotinas de mobilidade'
+                              ? workoutsText.mobilityRoutines
                               : usesHomeProtocol && activeHomeMode === 'stretching'
-                              ? 'Rotinas de alongamento'
+                              ? workoutsText.stretchingRoutines
                               : group}
                           </h2>
                           <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
@@ -5048,8 +5210,8 @@ function WorkoutsView({ profile, onUpgrade }: { profile: UserProfile, onUpgrade:
                         <Dumbbell size={32} />
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xl font-bold">Nenhum treino encontrado</p>
-                        <p className="text-text-muted">Tente ajustar seus filtros para encontrar outros protocolos.</p>
+                        <p className="text-xl font-bold">{workoutsText.emptyTitle}</p>
+                        <p className="text-text-muted">{workoutsText.emptyText}</p>
                       </div>
                     </div>
                   )}

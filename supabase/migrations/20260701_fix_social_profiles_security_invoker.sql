@@ -11,7 +11,6 @@ select
   criado_em
 from public.profiles
 where coalesce(social_private, false) = false
-   or id = auth.uid()
-   or public.is_admin();
+   or id = auth.uid();
 
 grant select on public.social_profiles to authenticated;

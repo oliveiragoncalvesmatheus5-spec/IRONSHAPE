@@ -363,6 +363,16 @@ function isInGradualRollout(userId: string, percentage: number) {
 async function resolveIronShopAccess(authUser: { id: string; email?: string | null }) {
   const settings = await readIronShopSettings();
   const isAdmin = authUser.email === ADMIN_EMAIL;
+  if (isAdmin) {
+    return {
+      enabled: settings.ironshop_enabled || settings.availability_mode === "all",
+      mode: settings.availability_mode,
+      hasAccess: true,
+      reason: "admin" as const,
+      message: undefined,
+    };
+  }
+
   const earlyAccess = await hasIronShopEarlyAccess(authUser.id, authUser.email);
   const enabled = settings.ironshop_enabled || settings.availability_mode === "all";
   let hasAccess = false;

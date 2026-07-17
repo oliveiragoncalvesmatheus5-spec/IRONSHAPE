@@ -6300,6 +6300,11 @@ function ExecutionModal({
     if (localMedia) {
       setGifUrl(localMedia);
       setGifLoading(false);
+      return () => { cancelled = true; };
+    }
+    if (exercise.videoUrl && !curatedVideoFailed) {
+      setGifLoading(false);
+      return () => { cancelled = true; };
     }
     const searchName = translateExerciseName(exercise.name);
     searchExercisesByName(exercise.name)
@@ -6308,7 +6313,7 @@ function ExecutionModal({
         const list = Array.isArray(results) ? results : results?.data;
         if (Array.isArray(list) && list.length > 0) {
           setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);
-          setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
+          setGifUrl(list[0].gifUrl ?? list[0].gif_url ?? null);
         } else {
           console.warn('[ExerciseModal] No GIF found for:', exercise.name, 'query:', searchName, results);
         }
@@ -6316,7 +6321,7 @@ function ExecutionModal({
       .catch((err: any) => { console.error('[ExerciseModal] GIF fetch error:', err?.message); })
       .finally(() => { if (!cancelled) setGifLoading(false); });
     return () => { cancelled = true; };
-  }, [exercise.name, exercise.videoUrl, animationType]);
+  }, [exercise.name, exercise.videoUrl, animationType, curatedVideoFailed]);
 
   return (
     <motion.div
@@ -6484,6 +6489,31 @@ function ExerciseCard({
   const animationType = getExerciseAnimationType(exercise.name) ?? 'mobility';
   const exerciseDisplay = getExerciseDisplay(exercise, language);
 
+  const fetchApiExerciseMedia = async () => {
+    if (gifUrl || apiVideoUrl) return;
+    const localMedia = getLocalExerciseMedia(exercise.name);
+    if (localMedia) {
+      setGifUrl(localMedia);
+      return;
+    }
+    const searchName = translateExerciseName(exercise.name);
+    setGifLoading(true);
+    try {
+      const results = await searchExercisesByName(exercise.name);
+      const list = Array.isArray(results) ? results : results?.data;
+      if (Array.isArray(list) && list.length > 0) {
+        setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);
+        setGifUrl(list[0].gifUrl ?? list[0].gif_url ?? null);
+      } else {
+        console.warn('[ActiveExercise] No GIF found for:', exercise.name, 'query:', searchName, results);
+      }
+    } catch (err: any) {
+      console.error('[ActiveExercise] GIF fetch error:', err?.message);
+    } finally {
+      setGifLoading(false);
+    }
+  };
+
   const handleToggleDetails = async () => {
     if (showDetails) {
       setShowDetails(false);
@@ -6495,24 +6525,19 @@ function ExerciseCard({
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
+      return;
     }
-    const searchName = translateExerciseName(exercise.name);
-    setGifLoading(true);
-    try {
-      const results = await searchExercisesByName(exercise.name);
-      const list = Array.isArray(results) ? results : results?.data;
-      if (Array.isArray(list) && list.length > 0) {
-        setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);
-        setGifUrl(list[0].gifUrl ?? list[0].imageUrl ?? null);
-      } else {
-        console.warn('[ActiveExercise] No GIF found for:', exercise.name, 'query:', searchName, results);
-      }
-    } catch (err: any) {
-      console.error('[ActiveExercise] GIF fetch error:', err?.message);
-    } finally {
-      setGifLoading(false);
+    if (exercise.videoUrl) {
+      return;
     }
+    await fetchApiExerciseMedia();
   };
+
+  useEffect(() => {
+    if (showDetails && curatedVideoFailed) {
+      fetchApiExerciseMedia();
+    }
+  }, [showDetails, curatedVideoFailed]);
 
   return (
     <div className={`bg-surface rounded-[32px] md:rounded-[40px] border transition-all duration-500 overflow-hidden group ${
@@ -11986,6 +12011,8 @@ function AdminIronShopSettings({
   onRefresh: () => void;
   onSave: (updates: Partial<IronShopSettings>) => Promise<void>;
 }) {
+  const locale = getLocaleCode(language);
+
   const formatAuditState = (state?: IronShopSettings) => {
     if (!state) return 'indisponível';
     if (state.ironshop_enabled || state.availability_mode === 'all') return 'Liberada para todos';

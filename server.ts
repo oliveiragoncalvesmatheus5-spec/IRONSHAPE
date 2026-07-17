@@ -1016,9 +1016,40 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       return [];
     };
 
+    const isPlayableMediaUrl = (value: any) =>
+      typeof value === "string" && /\.(gif|mp4|webm)(\?|$)/i.test(value);
+    const isGifMediaUrl = (value: any) =>
+      typeof value === "string" && /\.gif(\?|$)/i.test(value);
+    const isVideoMediaUrl = (value: any) =>
+      typeof value === "string" && /\.(mp4|webm)(\?|$)/i.test(value);
+
+    const hasPlayableMedia = (item: any) => {
+      const media = item?.media || item?.assets || {};
+      const direct = [
+        item?.gifUrl,
+        item?.gif_url,
+        item?.gif,
+        item?.videoUrl,
+        item?.video_url,
+        item?.video,
+        media?.gifUrl,
+        media?.gif,
+        media?.videoUrl,
+        media?.video,
+      ];
+      if (direct.some(isPlayableMediaUrl)) return true;
+      const videos = item?.videos || media?.videos;
+      if (Array.isArray(videos)) {
+        return videos.some((vid: any) => isPlayableMediaUrl(typeof vid === "string" ? vid : vid?.url || vid?.src));
+      }
+      return false;
+    };
+
     const normalizeMediaResult = (item: any) => {
       const id = item?.id || item?.exerciseId;
-      const mediaUrl = item?.gifUrl || pickMedia(item);
+      const pickedMedia = pickMedia(item);
+      const directGif = [item?.gifUrl, item?.gif_url, item?.gif, pickedMedia].find(isGifMediaUrl) || null;
+      const directVideo = [item?.videoUrl, item?.video_url, item?.video, pickedMedia].find(isVideoMediaUrl) || null;
       return {
         ...item,
         id,
@@ -1027,14 +1058,14 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
         bodyParts: toArray(item?.bodyParts || item?.bodyPart),
         targetMuscles: toArray(item?.targetMuscles || item?.target),
         equipments: toArray(item?.equipments || item?.equipment),
-        gifUrl: mediaUrl,
-        imageUrl: item?.imageUrl || item?.image_url || item?.image || mediaUrl,
-        videoUrl: item?.videoUrl || item?.video_url || item?.video,
+        gifUrl: directGif,
+        imageUrl: item?.imageUrl || item?.image_url || item?.image || pickedMedia,
+        videoUrl: directVideo,
       };
     };
 
     const fetchExerciseDetail = async (item: any) => {
-      if (!rapidHost.includes("ascendapi") || !item?.exerciseId || hasMotionMedia(item)) return item;
+      if (!rapidHost.includes("ascendapi") || !item?.exerciseId || hasPlayableMedia(item)) return item;
       try {
         const url = `https://${rapidHost}/api/v1/exercises/${encodeURIComponent(item.exerciseId)}`;
         const response = await fetch(url, { headers: rapidHeaders });
@@ -1195,6 +1226,14 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       return res.status(result?.status || 200).json(data);
     } catch (error: any) {
       console.error(`[workout-gif] Error for "${name}":`, error.message);
+      if (error?.status === 429) {
+        exerciseMediaCache.set(cacheKey, {
+          data: [],
+          expiresAt: Date.now() + EXERCISE_MEDIA_EMPTY_CACHE_TTL,
+        });
+        res.setHeader("X-Exercise-Media-Provider", "quota-exceeded");
+        return res.status(200).json([]);
+      }
       return res.status(error?.status || 500).json({ error: error.message });
     }
   });

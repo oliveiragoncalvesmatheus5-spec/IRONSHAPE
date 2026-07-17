@@ -1,7 +1,7 @@
 create table if not exists public.ironshop_settings (
   id text primary key default 'global',
   ironshop_enabled boolean not null default false,
-  availability_mode text not null default 'blocked'
+  availability_mode text not null default 'admins'
     check (availability_mode in ('blocked', 'admins', 'testers', 'group', 'gradual', 'all')),
   gradual_percentage integer not null default 0 check (gradual_percentage >= 0 and gradual_percentage <= 100),
   allowed_group text,
@@ -10,7 +10,7 @@ create table if not exists public.ironshop_settings (
 );
 
 insert into public.ironshop_settings (id, ironshop_enabled, availability_mode, gradual_percentage)
-values ('global', false, 'blocked', 0)
+values ('global', false, 'admins', 0)
 on conflict (id) do nothing;
 
 create table if not exists public.ironshop_early_access (

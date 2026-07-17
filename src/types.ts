@@ -195,3 +195,48 @@ export interface AffiliateConversion {
   created_at: string;
   paid_at?: string;
 }
+
+export type IronShopAvailabilityMode =
+  | 'blocked'
+  | 'admins'
+  | 'testers'
+  | 'group'
+  | 'gradual'
+  | 'all';
+
+export interface IronShopAccessState {
+  enabled: boolean;
+  mode: IronShopAvailabilityMode;
+  hasAccess: boolean;
+  reason: 'public' | 'admin' | 'early_access' | 'blocked' | 'unauthenticated';
+  message?: string;
+}
+
+export interface IronShopSettings {
+  ironshop_enabled: boolean;
+  availability_mode: IronShopAvailabilityMode;
+  gradual_percentage: number;
+  allowed_group?: string | null;
+  updated_at?: string;
+  updated_by?: string | null;
+}
+
+export interface IronShopAuditEntry {
+  id: string;
+  admin_id?: string | null;
+  admin_email?: string | null;
+  previous_state: IronShopSettings;
+  new_state: IronShopSettings;
+  reason?: string | null;
+  created_at: string;
+}
+
+export interface IronShopProduct {
+  id: string;
+  name: string;
+  category: 'supplement' | 'apparel' | 'accessory';
+  price: number;
+  image: string;
+  stock: number;
+  featured?: boolean;
+}

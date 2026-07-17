@@ -62,3 +62,18 @@ services:
       - key: APP_URL
         value: https://ironshape.online
         scope: RUN_TIME
+      - key: IRONSHOP_ENABLED
+        value: "false"
+        scope: RUN_TIME
+      - key: IRONSHOP_AVAILABILITY_MODE
+        value: blocked
+        scope: RUN_TIME
+      - key: IRONSHOP_GRADUAL_PERCENTAGE
+        value: "0"
+        scope: RUN_TIME
+      - key: IRONSHOP_ALLOWED_GROUP
+        value: ""
+        scope: RUN_TIME
+      - key: IRONSHOP_EARLY_ACCESS_EMAILS
+        value: ""
+        scope: RUN_TIME

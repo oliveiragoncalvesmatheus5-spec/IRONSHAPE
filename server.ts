@@ -36,11 +36,39 @@ const MIGRATION_SQL = `${BASE_MIGRATION_SQL}\n${SECURITY_MIGRATION_SQL}`;
 const ADMIN_EMAIL = "carlosalbertojuniorourak@gmail.com";
 const SUPABASE_PROJECT_URL = process.env.VITE_SUPABASE_URL || "https://olelsxjkoktjabyfgtoo.supabase.co";
 const SUPABASE_PUBLIC_KEY = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_Kah8D1eadG41rgfXhnztIQ_s4qc2ax9";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const EXERCISE_MEDIA_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const EXERCISE_MEDIA_EMPTY_CACHE_TTL = 60 * 60 * 1000;
 const exerciseMediaCache = new Map<string, { expiresAt: number; data: any[] }>();
 const AI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const aiRateLimit = new Map<string, { count: number; resetAt: number }>();
+type IronShopAvailabilityMode = "blocked" | "admins" | "testers" | "group" | "gradual" | "all";
+type IronShopSettings = {
+  ironshop_enabled: boolean;
+  availability_mode: IronShopAvailabilityMode;
+  gradual_percentage: number;
+  allowed_group: string | null;
+  updated_at?: string;
+  updated_by?: string | null;
+};
+type IronShopAuditEntry = {
+  id: string;
+  admin_id?: string | null;
+  admin_email?: string | null;
+  previous_state: IronShopSettings;
+  new_state: IronShopSettings;
+  reason?: string | null;
+  created_at: string;
+};
+const ironShopAuditFallback: IronShopAuditEntry[] = [];
+let ironShopSettingsFallback: IronShopSettings = {
+  ironshop_enabled: process.env.IRONSHOP_ENABLED === "true",
+  availability_mode: (process.env.IRONSHOP_AVAILABILITY_MODE as IronShopAvailabilityMode) || "blocked",
+  gradual_percentage: Number(process.env.IRONSHOP_GRADUAL_PERCENTAGE || 0),
+  allowed_group: process.env.IRONSHOP_ALLOWED_GROUP || null,
+  updated_at: new Date().toISOString(),
+  updated_by: null,
+};
 
 function getPlanValue(plan: string) {
   if (plan === "Pro") return 19.9;
@@ -109,17 +137,37 @@ async function updateProfilePlanFromPayment(event: any) {
         updatedAt: new Date().toISOString(),
       };
 
-  let updateQuery = admin.from("profiles").update(updatePayload);
-  if (userId) {
-    updateQuery = updateQuery.eq("id", userId);
-  } else if (customer?.email) {
-    updateQuery = updateQuery.eq("email", customer.email);
-  } else {
+  if (!userId && !customer?.email) {
     throw new Error("Webhook sem userId ou email para localizar o perfil.");
   }
 
-  const { error } = await updateQuery;
-  if (error) throw error;
+  const updateProfile = async (payload: typeof updatePayload, match: { id?: string; email?: string }) => {
+    let query = admin
+      .from("profiles")
+      .update(payload)
+      .select("id,email,plano,subscriptionStatus,updatedAt")
+      .limit(1);
+    if (match.id) query = query.eq("id", match.id);
+    if (match.email) query = query.eq("email", match.email);
+
+    const { data, error } = await query;
+    if (error?.code === "42703" && !isCancellation && "subscriptionPaidAt" in payload) {
+      console.warn("[abacatepay] subscriptionPaidAt column missing; retrying profile update without payment date.");
+      const { subscriptionPaidAt: _subscriptionPaidAt, ...fallbackPayload } = payload;
+      return updateProfile(fallbackPayload as typeof updatePayload, match);
+    }
+    if (error) throw error;
+    return data?.[0] || null;
+  };
+
+  let updatedProfile = userId ? await updateProfile(updatePayload, { id: userId }) : null;
+  if (!updatedProfile && customer?.email) {
+    updatedProfile = await updateProfile(updatePayload, { email: customer.email });
+  }
+
+  if (!updatedProfile) {
+    throw new Error(`Webhook não encontrou perfil para userId/email: ${userId || "sem userId"} / ${customer?.email || "sem email"}.`);
+  }
 
   if (isActivation && isPaidPlan(String(plan))) {
     const value = ((payment?.paidAmount || payment?.amount || subscription?.amount || 0) as number) / 100 || getPlanValue(String(plan));
@@ -214,6 +262,184 @@ async function runMigrations() {
   }
 }
 
+function getServiceAdminClient() {
+  if (!SUPABASE_PROJECT_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  return createClient(SUPABASE_PROJECT_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+}
+
+function normalizeIronShopMode(value: unknown): IronShopAvailabilityMode {
+  const mode = String(value || "").trim();
+  if (["blocked", "admins", "testers", "group", "gradual", "all"].includes(mode)) return mode as IronShopAvailabilityMode;
+  return "blocked";
+}
+
+function normalizeIronShopSettings(input: any): IronShopSettings {
+  return {
+    ironshop_enabled: Boolean(input?.ironshop_enabled),
+    availability_mode: normalizeIronShopMode(input?.availability_mode),
+    gradual_percentage: Math.min(100, Math.max(0, Number(input?.gradual_percentage || 0))),
+    allowed_group: input?.allowed_group ? String(input.allowed_group) : null,
+    updated_at: input?.updated_at || new Date().toISOString(),
+    updated_by: input?.updated_by || null,
+  };
+}
+
+async function readIronShopSettings(): Promise<IronShopSettings> {
+  const admin = getServiceAdminClient();
+  if (!admin) return normalizeIronShopSettings(ironShopSettingsFallback);
+
+  const { data, error } = await admin
+    .from("ironshop_settings")
+    .select("*")
+    .eq("id", "global")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[ironshop] settings unavailable; using fallback:", error.message);
+    return normalizeIronShopSettings(ironShopSettingsFallback);
+  }
+
+  if (!data) {
+    const defaultSettings = normalizeIronShopSettings(ironShopSettingsFallback);
+    await admin.from("ironshop_settings").upsert([{ id: "global", ...defaultSettings }], { onConflict: "id" });
+    return defaultSettings;
+  }
+
+  return normalizeIronShopSettings(data);
+}
+
+async function readIronShopAudit(): Promise<IronShopAuditEntry[]> {
+  const admin = getServiceAdminClient();
+  if (!admin) return ironShopAuditFallback.slice(0, 20);
+
+  const { data, error } = await admin
+    .from("ironshop_audit_logs")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.warn("[ironshop] audit unavailable; using fallback:", error.message);
+    return ironShopAuditFallback.slice(0, 20);
+  }
+
+  return (data || []) as IronShopAuditEntry[];
+}
+
+async function hasIronShopEarlyAccess(userId: string, email?: string | null) {
+  if (email === ADMIN_EMAIL) return true;
+
+  const envAllowList = (process.env.IRONSHOP_EARLY_ACCESS_EMAILS || "")
+    .split(",")
+    .map(item => item.trim().toLowerCase())
+    .filter(Boolean);
+  if (email && envAllowList.includes(email.toLowerCase())) return true;
+
+  const admin = getServiceAdminClient();
+  if (!admin) return false;
+
+  const { data, error } = await admin
+    .from("ironshop_early_access")
+    .select("user_id,email,active")
+    .or(`user_id.eq.${userId},email.eq.${email || ""}`)
+    .eq("active", true)
+    .limit(1);
+
+  if (error) {
+    console.warn("[ironshop] early access unavailable:", error.message);
+    return false;
+  }
+
+  return Boolean(data?.length);
+}
+
+function isInGradualRollout(userId: string, percentage: number) {
+  if (percentage >= 100) return true;
+  if (percentage <= 0) return false;
+  const hash = [...userId].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return (hash % 100) < percentage;
+}
+
+async function resolveIronShopAccess(authUser: { id: string; email?: string | null }) {
+  const settings = await readIronShopSettings();
+  const isAdmin = authUser.email === ADMIN_EMAIL;
+  const earlyAccess = await hasIronShopEarlyAccess(authUser.id, authUser.email);
+  const enabled = settings.ironshop_enabled || settings.availability_mode === "all";
+  let hasAccess = false;
+  let reason: "public" | "admin" | "early_access" | "blocked" = "blocked";
+
+  if (enabled || settings.availability_mode === "all") {
+    hasAccess = true;
+    reason = "public";
+  } else if (isAdmin && ["admins", "testers", "group", "gradual"].includes(settings.availability_mode)) {
+    hasAccess = true;
+    reason = "admin";
+  } else if (earlyAccess && ["testers", "group", "gradual"].includes(settings.availability_mode)) {
+    hasAccess = true;
+    reason = "early_access";
+  } else if (settings.availability_mode === "gradual" && isInGradualRollout(authUser.id, settings.gradual_percentage)) {
+    hasAccess = true;
+    reason = "early_access";
+  }
+
+  return {
+    enabled,
+    mode: settings.availability_mode,
+    hasAccess,
+    reason,
+    message: hasAccess ? undefined : "A IronShop está chegando!",
+  };
+}
+
+async function recordIronShopDeniedAccess(authUser: { id: string; email?: string | null }, source: string, req: express.Request) {
+  const admin = getServiceAdminClient();
+  const entry = {
+    user_id: authUser.id,
+    email: authUser.email || null,
+    source,
+    ip: req.ip || req.socket.remoteAddress || null,
+    user_agent: req.headers["user-agent"] || null,
+    created_at: new Date().toISOString(),
+  };
+
+  if (!admin) {
+    console.warn("[ironshop] denied access:", entry);
+    return;
+  }
+
+  const { error } = await admin.from("ironshop_access_attempts").insert([entry]);
+  if (error) console.warn("[ironshop] denied access log failed:", error.message, entry);
+}
+
+const IRONSHOP_PREVIEW_PRODUCTS = [
+  {
+    id: "whey-performance",
+    name: "Whey Performance IronShape",
+    category: "supplement",
+    price: 129.9,
+    image: "https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&w=900&q=80",
+    stock: 24,
+    featured: true,
+  },
+  {
+    id: "camiseta-dry-fit",
+    name: "Camiseta Dry Fit IronShape",
+    category: "apparel",
+    price: 89.9,
+    image: "https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=80",
+    stock: 40,
+    featured: true,
+  },
+  {
+    id: "shaker-steel",
+    name: "Shaker Steel 700ml",
+    category: "accessory",
+    price: 59.9,
+    image: "https://images.unsplash.com/photo-1581006852262-e4307cf6283a?auto=format&fit=crop&w=900&q=80",
+    stock: 18,
+  },
+];
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
@@ -277,6 +503,96 @@ async function startServer() {
       securityMigration: "20260628_secure_rls_policies",
       webhookAuth: "signature_only_20260628",
     });
+  });
+
+  app.get("/api/ironshop/access", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+
+    try {
+      const access = await resolveIronShopAccess({ id: authUser.id, email: authUser.email });
+      if (!access.hasAccess) await recordIronShopDeniedAccess({ id: authUser.id, email: authUser.email }, "access-status", req);
+      return res.json(access);
+    } catch (error: any) {
+      console.warn("[ironshop] access check failed:", error.message);
+      return res.status(500).json({ error: "Não foi possível verificar a disponibilidade da loja." });
+    }
+  });
+
+  app.get("/api/ironshop/products", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+
+    const access = await resolveIronShopAccess({ id: authUser.id, email: authUser.email });
+    if (!access.hasAccess) {
+      await recordIronShopDeniedAccess({ id: authUser.id, email: authUser.email }, "products", req);
+      return res.status(403).json({
+        error: "A IronShop está chegando! Em breve, você poderá encontrar suplementos, roupas e acessórios selecionados para ajudar na sua evolução.",
+      });
+    }
+
+    return res.json({ products: IRONSHOP_PREVIEW_PRODUCTS });
+  });
+
+  app.get("/api/admin/ironshop/settings", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+    if (authUser.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acesso restrito ao administrador." });
+
+    const settings = await readIronShopSettings();
+    const audit = await readIronShopAudit();
+    return res.json({ settings, audit });
+  });
+
+  app.post("/api/admin/ironshop/settings", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+    if (authUser.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acesso restrito ao administrador." });
+
+    const previous = await readIronShopSettings();
+    const incoming = req.body?.settings || {};
+    const next = normalizeIronShopSettings({
+      ...previous,
+      ...incoming,
+      ironshop_enabled: Boolean(incoming.ironshop_enabled),
+      updated_at: new Date().toISOString(),
+      updated_by: authUser.id,
+    });
+    const reason = String(req.body?.reason || "").trim().slice(0, 500) || null;
+    const admin = getServiceAdminClient();
+
+    if (admin) {
+      const { error } = await admin
+        .from("ironshop_settings")
+        .upsert([{ id: "global", ...next }], { onConflict: "id" });
+      if (error) {
+        console.warn("[ironshop] settings persistence failed; using fallback:", error.message);
+        ironShopSettingsFallback = next;
+      }
+
+      const { error: auditError } = await admin.from("ironshop_audit_logs").insert([{
+        admin_id: authUser.id,
+        admin_email: authUser.email || null,
+        previous_state: previous,
+        new_state: next,
+        reason,
+      }]);
+      if (auditError) console.warn("[ironshop] audit persistence failed:", auditError.message);
+    } else {
+      ironShopSettingsFallback = next;
+    }
+
+    ironShopAuditFallback.unshift({
+      id: `fallback-${Date.now()}`,
+      admin_id: authUser.id,
+      admin_email: authUser.email || null,
+      previous_state: previous,
+      new_state: next,
+      reason,
+      created_at: new Date().toISOString(),
+    });
+
+    return res.json({ settings: next, audit: await readIronShopAudit() });
   });
 
   app.post("/api/admin/update-user-plan", async (req, res) => {
@@ -616,6 +932,19 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       return null;
     };
 
+    const looksLikeStillImage = (value: any) =>
+      typeof value === "string" && /\.(jpe?g|png|webp)(\?|$)/i.test(value);
+
+    const hasMotionMedia = (item: any) =>
+      Boolean(
+        item?.videoUrl ||
+        item?.video_url ||
+        item?.video ||
+        (item?.gifUrl && !looksLikeStillImage(item.gifUrl)) ||
+        (item?.gif_url && !looksLikeStillImage(item.gif_url)) ||
+        (item?.gif && !looksLikeStillImage(item.gif)),
+      );
+
     const toArray = (value: any): string[] => {
       if (Array.isArray(value)) return value.map((item) => String(item));
       if (value) return [String(value)];
@@ -640,7 +969,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     };
 
     const fetchExerciseDetail = async (item: any) => {
-      if (!rapidHost.includes("ascendapi") || !item?.exerciseId || pickMedia(item)) return item;
+      if (!rapidHost.includes("ascendapi") || !item?.exerciseId || hasMotionMedia(item)) return item;
       try {
         const url = `https://${rapidHost}/api/v1/exercises/${encodeURIComponent(item.exerciseId)}`;
         const response = await fetch(url, { headers: rapidHeaders });

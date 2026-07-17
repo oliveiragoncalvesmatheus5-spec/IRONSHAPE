@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
-import { UserProfile, SocialProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion } from './types';
+import { UserProfile, SocialProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion, IronShopAccessState, IronShopAuditEntry, IronShopAvailabilityMode, IronShopProduct, IronShopSettings } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
 import { searchExercisesByName } from './services/exerciseMediaApi';
@@ -15,6 +15,7 @@ import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
 import { MobileNavItem, NavItem } from './components/navigation';
 import { PlanSimulator } from './components/PlanSimulator';
 import { PHYSICAL_LIMITATION_OPTIONS } from './data/physicalLimitations';
+import { ironshopService } from './services/ironshopService';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Dumbbell, 
@@ -89,7 +90,11 @@ import {
   UserMinus,
   Sun,
   Moon,
-  Languages
+  Languages,
+  ShoppingBag,
+  Package,
+  Shirt,
+  ShieldAlert
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -139,8 +144,8 @@ const LANGUAGE_OPTIONS: Array<{ code: LanguageCode; short: string; label: string
 ];
 
 const APP_TRANSLATIONS: Record<LanguageCode, {
-  nav: Record<'home' | 'workouts' | 'nutrition' | 'progress' | 'social' | 'affiliates' | 'settings' | 'admin' | 'plans' | 'logout' | 'more' | 'close', string>;
-  drawer: { title: string; subtitle: string; socialDesc: string; affiliatesDesc: string; settingsDesc: string; adminDesc: string };
+  nav: Record<'home' | 'workouts' | 'nutrition' | 'progress' | 'social' | 'shop' | 'affiliates' | 'settings' | 'admin' | 'plans' | 'logout' | 'more' | 'close', string>;
+  drawer: { title: string; subtitle: string; socialDesc: string; shopDesc: string; affiliatesDesc: string; settingsDesc: string; adminDesc: string };
   actions: { enableLight: string; enableDark: string; language: string };
   dashboard: {
     upgradeTitle: string;
@@ -291,6 +296,7 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       nutrition: 'Dieta',
       progress: 'Progresso',
       social: 'Social',
+      shop: 'Loja',
       affiliates: 'Afiliados',
       settings: 'Ajustes',
       admin: 'Admin',
@@ -303,6 +309,7 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       title: 'Mais opções',
       subtitle: 'Acessos secundários e configurações',
       socialDesc: 'Feed e comunidade',
+      shopDesc: 'Suplementos e acessórios',
       affiliatesDesc: 'Comissões e links',
       settingsDesc: 'Conta e preferências',
       adminDesc: 'Painel de administrador',
@@ -489,6 +496,7 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       nutrition: 'Nutrition',
       progress: 'Progress',
       social: 'Social',
+      shop: 'Shop',
       affiliates: 'Affiliates',
       settings: 'Settings',
       admin: 'Admin',
@@ -501,6 +509,7 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       title: 'More options',
       subtitle: 'Secondary access and settings',
       socialDesc: 'Feed and community',
+      shopDesc: 'Supplements and accessories',
       affiliatesDesc: 'Commissions and links',
       settingsDesc: 'Account and preferences',
       adminDesc: 'Admin dashboard',
@@ -687,6 +696,7 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       nutrition: 'Dieta',
       progress: 'Progreso',
       social: 'Social',
+      shop: 'Tienda',
       affiliates: 'Afiliados',
       settings: 'Ajustes',
       admin: 'Admin',
@@ -699,6 +709,7 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       title: 'Más opciones',
       subtitle: 'Accesos secundarios y configuración',
       socialDesc: 'Feed y comunidad',
+      shopDesc: 'Suplementos y accesorios',
       affiliatesDesc: 'Comisiones y enlaces',
       settingsDesc: 'Cuenta y preferencias',
       adminDesc: 'Panel de administrador',
@@ -1486,6 +1497,14 @@ export default function App() {
   const [language, setLanguage] = useState<LanguageCode>(getInitialLanguage);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const authHistoryGuardedRef = useRef(false);
+  const [ironShopAccess, setIronShopAccess] = useState<IronShopAccessState>({
+    enabled: false,
+    mode: 'blocked',
+    hasAccess: false,
+    reason: 'blocked',
+    message: 'A IronShop está chegando!',
+  });
+  const [ironShopNotice, setIronShopNotice] = useState(false);
   const text = APP_TRANSLATIONS[language];
 
   useEffect(() => {
@@ -1507,6 +1526,11 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackEvent('app_screen_view', { screen_name: activeTab });
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    ironshopService.getAccess().then(setIronShopAccess);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) {
@@ -1554,6 +1578,20 @@ export default function App() {
     setShowPricing(true);
   };
 
+  const openIronShop = async () => {
+    const latestAccess = await ironshopService.getAccess();
+    setIronShopAccess(latestAccess);
+    if (!latestAccess.hasAccess) {
+      setIronShopNotice(true);
+      trackEvent('ironshop_locked_click', {
+        mode: latestAccess.mode,
+        reason: latestAccess.reason,
+      });
+      return;
+    }
+    setDrawerOpen(false);
+    setActiveTab('shop');
+  };
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawerOpen(false); };
@@ -1806,6 +1844,7 @@ export default function App() {
           <NavItem icon={<Apple size={20} />} active={activeTab === 'nutrition'} onClick={() => setActiveTab('nutrition')} label={text.nav.nutrition} />
           <NavItem icon={<BarChart3 size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label={text.nav.progress} />
           <NavItem icon={<Users size={20} />} active={activeTab === 'community'} onClick={() => setActiveTab('community')} label={text.nav.social} />
+          <NavItem icon={<span className="relative flex"><ShoppingBag size={20} />{!ironShopAccess.hasAccess && <Lock size={11} className="absolute -right-2 -top-2 text-primary" />}</span>} active={activeTab === 'shop'} onClick={openIronShop} label={text.nav.shop} />
           <NavItem icon={<Wallet size={20} />} active={activeTab === 'affiliates'} onClick={() => setActiveTab('affiliates')} label={text.nav.affiliates} />
         </div>
 
@@ -1933,13 +1972,14 @@ export default function App() {
           <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
             {[
               { tab: 'community',  icon: <Users size={20} />,      label: text.nav.social,    desc: text.drawer.socialDesc },
+              { tab: 'shop', icon: <span className="relative flex"><ShoppingBag size={20} />{!ironShopAccess.hasAccess && <Lock size={10} className="absolute -right-2 -top-2 text-primary" />}</span>, label: text.nav.shop, desc: text.drawer.shopDesc, locked: !ironShopAccess.hasAccess },
               { tab: 'affiliates', icon: <Wallet size={20} />,     label: text.nav.affiliates, desc: text.drawer.affiliatesDesc },
               { tab: 'settings',   icon: <Settings size={20} />,   label: text.nav.settings,   desc: text.drawer.settingsDesc },
               ...(isAdmin ? [{ tab: 'admin', icon: <ShieldCheck size={20} />, label: text.nav.admin, desc: text.drawer.adminDesc }] : []),
             ].map(item => (
               <button
                 key={item.tab}
-                onClick={() => { setActiveTab(item.tab); setDrawerOpen(false); }}
+                onClick={() => { item.tab === 'shop' ? openIronShop() : (setActiveTab(item.tab), setDrawerOpen(false)); }}
                 className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all active:scale-95 min-h-[68px]"
                 style={{
                   background: themeMode === 'light' ? 'rgba(17,24,39,0.035)' : 'rgba(255,255,255,0.04)',
@@ -1955,6 +1995,7 @@ export default function App() {
                   <div className="flex items-center gap-1.5">
                     <span className="text-[13.5px] font-bold text-text-primary truncate">{item.label}</span>
                     {activeTab === item.tab && <span className="flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: 'var(--color-primary)' }} />}
+                    {'locked' in item && item.locked && <Lock size={10} className="text-primary shrink-0" />}
                   </div>
                   <p className="text-[10.5px] truncate" style={{ color: 'var(--color-text-muted)' }}>{item.desc}</p>
                 </div>
@@ -2006,12 +2047,151 @@ export default function App() {
             )}
             {activeTab === 'progress' && <BodyProgressView userId={profile.id} />}
             {activeTab === 'community' && <CommunityView profile={profile} />}
+            {activeTab === 'shop' && <IronShopView access={ironShopAccess} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} />}
             {activeTab === 'settings' && <SettingsView profile={profile} logout={logout} onUpgrade={() => openPricing('settings')} />}
             {activeTab === 'admin' && isAdmin && <AdminView />}
           </motion.div>
         </AnimatePresence>
       </main>
+      <AnimatePresence>
+        {ironShopNotice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-6"
+          >
+            <button
+              aria-label="Fechar aviso da IronShop"
+              className="absolute inset-0 bg-background/85 backdrop-blur-md"
+              onClick={() => setIronShopNotice(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 34, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 34, scale: 0.98 }}
+              className="relative w-full sm:max-w-md bg-surface border border-white/10 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-7"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-5">
+                <Lock size={24} />
+              </div>
+              <h3 className="text-2xl font-black tracking-tight">A IronShop está chegando!</h3>
+              <p className="text-sm text-text-secondary leading-relaxed mt-3">
+                Em breve, você poderá encontrar suplementos, roupas e acessórios selecionados para ajudar na sua evolução.
+              </p>
+              <button
+                onClick={() => setIronShopNotice(false)}
+                className="mt-7 w-full min-h-[48px] rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
+              >
+                Entendi
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function IronShopView({ access }: { access: IronShopAccessState }) {
+  const [products, setProducts] = useState<IronShopProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(access.hasAccess);
+  const [shopError, setShopError] = useState('');
+
+  useEffect(() => {
+    if (!access.hasAccess) {
+      setProducts([]);
+      setLoadingProducts(false);
+      return;
+    }
+
+    setLoadingProducts(true);
+    setShopError('');
+    ironshopService.getProducts()
+      .then(setProducts)
+      .catch((error: any) => setShopError(error?.message || 'Não foi possível carregar a IronShop.'))
+      .finally(() => setLoadingProducts(false));
+  }, [access.hasAccess]);
+
+  if (!access.hasAccess) {
+    return (
+      <div className="max-w-3xl mx-auto min-h-[70vh] flex items-center justify-center">
+        <section className="w-full bg-surface border border-white/5 rounded-[32px] p-8 sm:p-10 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mx-auto mb-6">
+            <Lock size={28} />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary mb-3">IronShop</p>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">A IronShop está chegando!</h1>
+          <p className="text-text-secondary max-w-xl mx-auto mt-4 leading-relaxed">
+            Em breve, você poderá encontrar suplementos, roupas e acessórios selecionados para ajudar na sua evolução.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-5">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary mb-2">IronShop</p>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Loja IronShape</h1>
+          <p className="text-text-muted mt-2 max-w-2xl">
+            Prévia interna com produtos selecionados para testes de permissão, estoque e vitrine antes da liberação pública.
+          </p>
+        </div>
+        <div className="rounded-2xl bg-success/10 border border-success/20 text-success px-4 py-3 text-[10px] font-black uppercase tracking-widest">
+          Acesso {access.reason === 'public' ? 'público' : access.reason === 'admin' ? 'admin' : 'antecipado'}
+        </div>
+      </header>
+
+      {shopError && (
+        <div className="bg-error/10 border border-error/20 rounded-3xl p-5 flex items-center gap-3 text-error">
+          <AlertTriangle size={20} />
+          <p className="text-sm font-bold">{shopError}</p>
+        </div>
+      )}
+
+      {loadingProducts ? (
+        <div className="bg-surface border border-white/5 rounded-[32px] p-12 flex flex-col items-center justify-center gap-4 text-text-muted">
+          <Loader2 className="animate-spin text-primary" size={34} />
+          <span className="text-xs font-black uppercase tracking-widest">Carregando vitrine protegida...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {products.map(product => (
+            <article key={product.id} className="bg-surface border border-white/5 rounded-[28px] overflow-hidden">
+              <div className="aspect-[4/3] bg-white/5 overflow-hidden">
+                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-black leading-tight">{product.name}</h3>
+                    <p className="text-[10px] text-text-muted font-black uppercase tracking-widest mt-2">
+                      {product.category === 'supplement' ? 'Suplemento' : product.category === 'apparel' ? 'Roupa' : 'Acessório'}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    {product.category === 'apparel' ? <Shirt size={18} /> : product.category === 'accessory' ? <Package size={18} /> : <ShoppingBag size={18} />}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xl font-black text-primary">{product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  <span className="text-[10px] text-text-muted font-bold">{product.stock} em estoque</span>
+                </div>
+                <button
+                  disabled
+                  className="w-full min-h-[44px] rounded-2xl bg-white/5 border border-white/10 text-text-muted text-[10px] font-black uppercase tracking-widest cursor-not-allowed"
+                >
+                  Checkout em validação
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -10960,7 +11140,7 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
 }
 
 function AdminView() {
-  const [adminTab, setAdminTab] = useState<'general' | 'affiliates'>('general');
+  const [adminTab, setAdminTab] = useState<'general' | 'affiliates' | 'shop'>('general');
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [adminError, setAdminError] = useState('');
   const [usersPage, setUsersPage] = useState(1);
@@ -10969,6 +11149,11 @@ function AdminView() {
   const [selectedAdminPlan, setSelectedAdminPlan] = useState<'free' | 'Pro' | 'Elite'>('free');
   const [savingUserPlan, setSavingUserPlan] = useState(false);
   const [userPlanError, setUserPlanError] = useState('');
+  const [ironShopSettings, setIronShopSettings] = useState<IronShopSettings | null>(null);
+  const [ironShopAudit, setIronShopAudit] = useState<IronShopAuditEntry[]>([]);
+  const [ironShopAdminLoading, setIronShopAdminLoading] = useState(false);
+  const [ironShopAdminError, setIronShopAdminError] = useState('');
+  const [ironShopReason, setIronShopReason] = useState('');
   const [adminData, setAdminData] = useState<{
     profiles: UserProfile[];
     workouts: WorkoutLog[];
@@ -11021,6 +11206,44 @@ function AdminView() {
   useEffect(() => {
     if (adminTab === 'general') fetchAdminData();
   }, [adminTab]);
+
+  const fetchIronShopAdmin = async () => {
+    setIronShopAdminLoading(true);
+    setIronShopAdminError('');
+    try {
+      const payload = await ironshopService.getAdminSettings();
+      setIronShopSettings(payload.settings);
+      setIronShopAudit(payload.audit);
+    } catch (error: any) {
+      setIronShopAdminError(error?.message || 'Erro ao carregar disponibilidade da IronShop.');
+    } finally {
+      setIronShopAdminLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (adminTab === 'shop') fetchIronShopAdmin();
+  }, [adminTab]);
+
+  const saveIronShopSettings = async (updates: Partial<IronShopSettings>) => {
+    if (!ironShopSettings) return;
+    setIronShopAdminLoading(true);
+    setIronShopAdminError('');
+    try {
+      const payload = await ironshopService.updateAdminSettings({ ...ironShopSettings, ...updates }, ironShopReason);
+      setIronShopSettings(payload.settings);
+      setIronShopAudit(payload.audit);
+      setIronShopReason('');
+      trackEvent('admin_ironshop_settings_updated', {
+        mode: payload.settings.availability_mode,
+        enabled: payload.settings.ironshop_enabled,
+      });
+    } catch (error: any) {
+      setIronShopAdminError(error?.message || 'Erro ao salvar disponibilidade da IronShop.');
+    } finally {
+      setIronShopAdminLoading(false);
+    }
+  };
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(adminData.profiles.length / 6));
@@ -11079,14 +11302,14 @@ function AdminView() {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const paidProfiles = adminData.profiles.filter(p => (p.plano === 'Pro' || p.plano === 'Elite') && p.subscriptionStatus === 'active');
+  const getAdminPlanValue = (plan?: Plan) => plan === 'Elite' ? 29.9 : plan === 'Pro' ? 19.9 : 0;
+  const getSubscriptionDate = (profile: UserProfile) => profile.subscriptionPaidAt || profile.updatedAt || profile.criado_em || '';
   const onboardingStuck = adminData.profiles.filter(p => !p.age || !p.weight || !p.height || !p.goal);
   const activeToday = new Set([
     ...adminData.workouts.filter(w => w.completedAt?.startsWith(today)).map(w => w.userUid),
     ...adminData.nutrition.filter(n => n.date === today).map(n => n.user_id),
   ]);
-  const monthlyRevenue = adminData.conversions
-    .filter(c => c.created_at && new Date(c.created_at) >= startOfMonth)
-    .reduce((sum, c) => sum + Number(c.valor_assinatura || 0), 0);
+  const monthlyRevenue = paidProfiles.reduce((sum, profile) => sum + getAdminPlanValue(profile.plano), 0);
   const pendingAffiliates = adminData.affiliates.filter(a => a.status === 'pendente');
   const planCounts = (['free', 'Pro', 'Elite', 'Admin'] as const).map(plan => ({
     plan,
@@ -11109,7 +11332,15 @@ function AdminView() {
 
     return Array.from(pages).sort((a, b) => a - b);
   };
-  const recentConversions = adminData.conversions.slice(0, 5);
+  const formatAdminShortDate = (value?: string) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (!isValid(date)) return '';
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+  const recentPaidProfiles = [...paidProfiles]
+    .sort((a, b) => new Date(getSubscriptionDate(b)).getTime() - new Date(getSubscriptionDate(a)).getTime())
+    .slice(0, 5);
   const getUserWorkouts = (userId: string) => adminData.workouts.filter(workout => workout.userUid === userId);
   const getUserNutrition = (userId: string) => adminData.nutrition.filter(nutrition => nutrition.user_id === userId);
   const getUserPosts = (userId: string) => adminData.posts.filter(post => post.user_id === userId);
@@ -11248,6 +11479,12 @@ function AdminView() {
           >
             Afiliados
           </button>
+          <button
+            onClick={() => setAdminTab('shop')}
+            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'shop' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-primary'}`}
+          >
+            IronShop
+          </button>
         </div>
       </header>
 
@@ -11285,7 +11522,7 @@ function AdminView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                 <AdminMetricCard icon={<Users size={22} />} label="Usuários" value={adminData.profiles.length.toString()} detail={`${activeToday.size} ativos hoje`} tone="text-primary" />
                 <AdminMetricCard icon={<Wallet size={22} />} label="Assinaturas" value={paidProfiles.length.toString()} detail={`${adminData.profiles.length ? Math.round((paidProfiles.length / adminData.profiles.length) * 100) : 0}% da base`} tone="text-success" />
-                <AdminMetricCard icon={<BarChart3 size={22} />} label="Receita Mês" value={monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} detail={`${recentConversions.length} conversões recentes`} tone="text-primary" />
+                <AdminMetricCard icon={<BarChart3 size={22} />} label="Receita Mês" value={monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} detail={`${paidProfiles.length} assinaturas ativas`} tone="text-primary" />
                 <AdminMetricCard icon={<UserCheck size={22} />} label="Afiliados Pendentes" value={pendingAffiliates.length.toString()} detail={`${adminData.affiliates.length} afiliados no total`} tone={pendingAffiliates.length ? 'text-error' : 'text-success'} />
               </div>
 
@@ -11493,23 +11730,28 @@ function AdminView() {
                   <div className="flex items-center gap-3">
                     <Wallet className="text-primary" size={22} />
                     <div>
-                      <h3 className="text-lg font-black uppercase tracking-tight">Conversões</h3>
-                      <p className="text-xs text-text-muted">Pagamentos e afiliados recentes.</p>
+                      <h3 className="text-lg font-black uppercase tracking-tight">Assinaturas recentes</h3>
+                      <p className="text-xs text-text-muted">Usuários com plano pago ativo.</p>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    {recentConversions.map(conv => (
-                      <div key={conv.id} className="bg-white/5 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-xs font-black uppercase tracking-widest">{conv.plano}</div>
-                          <div className="text-[10px] text-text-muted">{conv.status_pagamento}</div>
+                    {recentPaidProfiles.map(profile => (
+                      <button
+                        key={profile.id}
+                        onClick={() => setSelectedUser(profile)}
+                        className="w-full text-left bg-white/5 hover:bg-white/10 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition-all"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-black truncate">{profile.name || profile.email || 'Usuário sem nome'}</div>
+                          <div className="text-[10px] text-text-muted truncate">{profile.email}</div>
                         </div>
-                        <div className="text-sm font-black text-primary">
-                          {Number(conv.valor_assinatura || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-black uppercase tracking-widest text-primary">{profile.plano}</div>
+                          <div className="text-[10px] text-text-muted">{formatAdminShortDate(getSubscriptionDate(profile)) || 'ativo'}</div>
                         </div>
-                      </div>
+                      </button>
                     ))}
-                    {recentConversions.length === 0 && <p className="text-sm text-text-muted">Nenhuma conversão disponível ainda.</p>}
+                    {recentPaidProfiles.length === 0 && <p className="text-sm text-text-muted">Nenhuma assinatura ativa disponível ainda.</p>}
                   </div>
                 </div>
               </div>
@@ -11570,6 +11812,19 @@ function AdminView() {
             </>
           )}
         </div>
+      ) : adminTab === 'affiliates' ? (
+        <AdminAffiliatesView />
+      ) : adminTab === 'shop' ? (
+        <AdminIronShopSettings
+          settings={ironShopSettings}
+          audit={ironShopAudit}
+          loading={ironShopAdminLoading}
+          error={ironShopAdminError}
+          reason={ironShopReason}
+          onReasonChange={setIronShopReason}
+          onRefresh={fetchIronShopAdmin}
+          onSave={saveIronShopSettings}
+        />
       ) : (
         <AdminAffiliatesView />
       )}
@@ -11679,6 +11934,193 @@ function AdminView() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+const IRONSHOP_MODE_OPTIONS: Array<{ mode: IronShopAvailabilityMode; label: string; description: string }> = [
+  { mode: 'blocked', label: 'Bloqueada', description: 'Botão visível com cadeado para usuários comuns.' },
+  { mode: 'admins', label: 'Administradores', description: 'Somente administradores entram na loja em teste.' },
+  { mode: 'testers', label: 'Usuários de teste', description: 'Admin e lista de acesso antecipado podem validar.' },
+  { mode: 'group', label: 'Grupo específico', description: 'Preparado para liberar por grupo configurado.' },
+  { mode: 'gradual', label: 'Gradual', description: 'Liberação progressiva por percentual.' },
+  { mode: 'all', label: 'Todos', description: 'Loja liberada para todos os usuários autenticados.' },
+];
+
+function AdminIronShopSettings({
+  settings,
+  audit,
+  loading,
+  error,
+  reason,
+  onReasonChange,
+  onRefresh,
+  onSave,
+}: {
+  settings: IronShopSettings | null;
+  audit: IronShopAuditEntry[];
+  loading: boolean;
+  error: string;
+  reason: string;
+  onReasonChange: (reason: string) => void;
+  onRefresh: () => void;
+  onSave: (updates: Partial<IronShopSettings>) => Promise<void>;
+}) {
+  const formatAuditState = (state?: IronShopSettings) => {
+    if (!state) return 'indisponível';
+    if (state.ironshop_enabled || state.availability_mode === 'all') return 'Liberada para todos';
+    return IRONSHOP_MODE_OPTIONS.find(option => option.mode === state.availability_mode)?.label || state.availability_mode;
+  };
+
+  if (loading && !settings) {
+    return (
+      <div className="bg-surface border border-white/5 rounded-[40px] p-16 flex flex-col items-center justify-center gap-4 text-text-muted">
+        <Loader2 className="animate-spin text-primary" size={36} />
+        <span className="text-xs font-black uppercase tracking-widest">Carregando disponibilidade da IronShop...</span>
+      </div>
+    );
+  }
+
+  const currentSettings = settings || {
+    ironshop_enabled: false,
+    availability_mode: 'blocked' as IronShopAvailabilityMode,
+    gradual_percentage: 0,
+    allowed_group: null,
+  };
+
+  return (
+    <div className="space-y-6">
+      <section className="bg-surface border border-white/5 rounded-[32px] p-6 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
+              <ShieldAlert size={22} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black uppercase tracking-tight">Disponibilidade da IronShop</h3>
+              <p className="text-xs text-text-muted mt-1">Controle seguro de liberação sem expor dados da loja para quem não tem permissão.</p>
+            </div>
+          </div>
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text-primary hover:bg-white/10 transition-all disabled:opacity-60"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Atualizar
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-error/10 border border-error/20 rounded-3xl p-5 flex items-center gap-3 text-error">
+            <AlertTriangle size={20} />
+            <p className="text-sm font-bold">{error}</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <AdminMetricCard
+            icon={currentSettings.ironshop_enabled || currentSettings.availability_mode === 'all' ? <CheckCircle2 size={22} /> : <Lock size={22} />}
+            label="Estado público"
+            value={currentSettings.ironshop_enabled || currentSettings.availability_mode === 'all' ? 'Liberada' : 'Bloqueada'}
+            detail="botão segue visível"
+            tone={currentSettings.ironshop_enabled || currentSettings.availability_mode === 'all' ? 'text-success' : 'text-primary'}
+          />
+          <AdminMetricCard icon={<ShieldCheck size={22} />} label="Modo atual" value={formatAuditState(currentSettings)} detail="controle no servidor" tone="text-primary" />
+          <AdminMetricCard icon={<BarChart3 size={22} />} label="Gradual" value={`${currentSettings.gradual_percentage || 0}%`} detail="quando modo gradual estiver ativo" tone="text-primary" />
+        </div>
+
+        <div className="space-y-3">
+          <label className="text-[10px] font-black uppercase tracking-widest text-text-muted">Motivo da alteração</label>
+          <textarea
+            value={reason}
+            onChange={(event) => onReasonChange(event.target.value)}
+            placeholder="Ex.: liberação para validar carrinho em ambiente controlado"
+            className="w-full min-h-[86px] bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-text-primary outline-none focus:border-primary transition-all resize-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {IRONSHOP_MODE_OPTIONS.map(option => {
+            const selected = currentSettings.availability_mode === option.mode;
+            return (
+              <button
+                key={option.mode}
+                onClick={() => onSave({ availability_mode: option.mode, ironshop_enabled: option.mode === 'all' })}
+                disabled={loading}
+                className={`min-h-[104px] rounded-2xl border p-4 text-left transition-all disabled:opacity-60 ${
+                  selected
+                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
+                    : 'bg-white/5 border-white/10 text-text-secondary hover:border-primary/40 hover:bg-white/10'
+                }`}
+              >
+                <span className="block text-xs font-black uppercase tracking-widest">{option.label}</span>
+                <span className={`block text-xs mt-2 leading-relaxed ${selected ? 'text-white/80' : 'text-text-muted'}`}>{option.description}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted">Percentual gradual</label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={currentSettings.gradual_percentage || 0}
+              onChange={(event) => onSave({ gradual_percentage: Number(event.target.value) })}
+              disabled={loading}
+              className="w-full accent-primary"
+            />
+            <div className="flex items-center justify-between text-xs text-text-muted">
+              <span>0%</span>
+              <span className="font-black text-primary">{currentSettings.gradual_percentage || 0}%</span>
+              <span>100%</span>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-error/10 border border-error/20 p-4 flex flex-col justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-error">Falha crítica</p>
+              <p className="text-xs text-text-secondary mt-2 leading-relaxed">Bloqueia novamente a IronShop e mantém somente o botão com aviso público.</p>
+            </div>
+            <button
+              onClick={() => onSave({ availability_mode: 'blocked', ironshop_enabled: false, gradual_percentage: 0 })}
+              disabled={loading}
+              className="min-h-[44px] rounded-2xl bg-error/15 border border-error/30 text-error text-[10px] font-black uppercase tracking-widest hover:bg-error/20 transition-all disabled:opacity-60"
+            >
+              Bloquear agora
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-surface border border-white/5 rounded-[32px] overflow-hidden">
+        <div className="p-6 border-b border-white/5">
+          <h3 className="text-lg font-black uppercase tracking-tight">Histórico de auditoria</h3>
+          <p className="text-xs text-text-muted mt-1">Administrador, data, estado anterior, novo estado e motivo informado.</p>
+        </div>
+        <div className="divide-y divide-white/5">
+          {audit.length === 0 ? (
+            <div className="p-8 text-sm text-text-muted">Nenhuma alteração registrada ainda.</div>
+          ) : audit.map(entry => (
+            <div key={entry.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-black truncate">{entry.admin_email || entry.admin_id || 'Administrador'}</p>
+                <p className="text-[10px] text-text-muted font-bold mt-1">
+                  {new Date(entry.created_at).toLocaleString('pt-BR')}
+                </p>
+                {entry.reason && <p className="text-xs text-text-secondary mt-2 leading-relaxed">{entry.reason}</p>}
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
+                <span className="px-3 py-1 rounded-xl bg-white/5 border border-white/10">{formatAuditState(entry.previous_state)}</span>
+                <ChevronRight size={14} />
+                <span className="px-3 py-1 rounded-xl bg-primary/10 border border-primary/20 text-primary">{formatAuditState(entry.new_state)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { EmailService } from "./src/services/email.service";
 import {
   ABACATEPAY_API_URL,
   DEFAULT_ABACATEPAY_SIGNATURE_KEY,
@@ -42,6 +43,7 @@ const EXERCISE_MEDIA_EMPTY_CACHE_TTL = 60 * 60 * 1000;
 const exerciseMediaCache = new Map<string, { expiresAt: number; data: any[] }>();
 const AI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const aiRateLimit = new Map<string, { count: number; resetAt: number }>();
+const welcomeEmailSentUsers = new Set<string>();
 type IronShopAvailabilityMode = "blocked" | "admins" | "testers" | "group" | "gradual" | "all";
 type IronShopSettings = {
   ironshop_enabled: boolean;
@@ -515,6 +517,33 @@ async function startServer() {
     });
   });
 
+  app.post("/api/send-welcome-email", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+
+    if (!authUser.email) {
+      return res.status(400).json({ error: "Usuário sem email para receber boas-vindas." });
+    }
+
+    if (welcomeEmailSentUsers.has(authUser.id)) {
+      return res.json({ ok: true, skipped: true, reason: "welcome_email_already_sent" });
+    }
+
+    try {
+      const data = await EmailService.sendWelcomeEmail({
+        to: authUser.email,
+        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || "atleta",
+        dashboardUrl: `${process.env.APP_URL || "http://localhost:3000"}/dashboard`,
+      });
+
+      welcomeEmailSentUsers.add(authUser.id);
+      return res.json({ ok: true, id: data?.id });
+    } catch (error: any) {
+      console.error("[resend] welcome email failed:", error.message);
+      return res.status(500).json({ error: error.message || "Erro ao enviar email de boas-vindas." });
+    }
+  });
+
   app.get("/api/ironshop/access", async (req, res) => {
     const authUser = await requireAuthenticatedUser(req, res);
     if (!authUser) return;
@@ -603,6 +632,32 @@ async function startServer() {
     });
 
     return res.json({ settings: next, audit: await readIronShopAudit() });
+  });
+
+  app.post("/api/admin/send-test-email", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+    if (authUser.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acesso restrito ao administrador." });
+
+    const to = String(req.body?.to || authUser.email || "").trim();
+    if (!to) return res.status(400).json({ error: "Email de destino não informado." });
+
+    try {
+      const data = await EmailService.sendWelcomeEmail({
+        to,
+        name: authUser.user_metadata?.full_name || "Administrador",
+        dashboardUrl: `${process.env.APP_URL || "http://localhost:3000"}/dashboard`,
+      });
+
+      return res.json({
+        ok: true,
+        id: data?.id,
+        to,
+      });
+    } catch (error: any) {
+      console.error("[resend] test email failed:", error.message);
+      return res.status(500).json({ error: error.message || "Erro ao enviar email de teste." });
+    }
   });
 
   app.post("/api/admin/update-user-plan", async (req, res) => {

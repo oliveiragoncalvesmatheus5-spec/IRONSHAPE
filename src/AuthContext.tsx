@@ -71,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [simulatedPlan, setSimulatedPlan] = useState<Plan | null>(null);
   const profileFetchingRef = useRef(false);
+  const welcomeEmailSendingRef = useRef(new Set<string>());
   const [profileLoading, setProfileLoading] = useState(false);
 
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -111,6 +112,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const getWelcomeEmailKeys = (targetUser: User, email?: string) => {
+    const normalizedEmail = (email || targetUser.email || '').trim().toLowerCase();
+    return [
+      `pending_welcome_email_${targetUser.id}`,
+      normalizedEmail ? `pending_welcome_email_${normalizedEmail}` : '',
+    ].filter(Boolean);
+  };
+
+  const sendPendingWelcomeEmail = async (targetUser: User) => {
+    if (typeof window === 'undefined') return;
+    const pendingKeys = getWelcomeEmailKeys(targetUser);
+    const hasPendingWelcomeEmail = pendingKeys.some(key => localStorage.getItem(key) === 'true');
+    const sentKey = `welcome_email_sent_${targetUser.id}`;
+
+    if (!hasPendingWelcomeEmail || localStorage.getItem(sentKey) === 'true' || welcomeEmailSendingRef.current.has(targetUser.id)) {
+      return;
+    }
+
+    welcomeEmailSendingRef.current.add(targetUser.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const response = await fetch('/api/send-welcome-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Erro ao enviar email de boas-vindas.');
+      }
+
+      localStorage.setItem(sentKey, 'true');
+      pendingKeys.forEach(key => localStorage.removeItem(key));
+    } catch (error: any) {
+      console.warn('[email] welcome email not sent:', error.message);
+    } finally {
+      welcomeEmailSendingRef.current.delete(targetUser.id);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -125,7 +172,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (currentUser) cleanAuthUrl('/');
         setUser(currentUser);
         setLoading(false);
-        if (currentUser) fetchProfileBackground(currentUser.id, currentUser);
+        if (currentUser) {
+          fetchProfileBackground(currentUser.id, currentUser);
+          sendPendingWelcomeEmail(currentUser);
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
@@ -308,6 +358,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
     if (error) throw error;
+    if (data.user) {
+      getWelcomeEmailKeys(data.user, email).forEach(key => localStorage.setItem(key, 'true'));
+    }
     return data;
   };
 

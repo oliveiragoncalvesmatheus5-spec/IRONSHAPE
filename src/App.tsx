@@ -9,6 +9,7 @@ import { searchExercisesByName } from './services/exerciseMediaApi';
 import { getAnalyticsClientId, initAnalytics, trackEvent, trackPlanEvent } from './services/analytics';
 import { getLocalExerciseMedia, translateExerciseName } from './utils/exerciseTranslations';
 import { getExerciseDisplay, getWorkoutDisplay, translateMuscleGroup, translateWorkoutName } from './utils/workoutDataI18n';
+import { installUiAutoTranslate } from './utils/uiAutoTranslate';
 import AIChat from './AIChat';
 import { DashboardMetricCard } from './components/dashboardCards';
 import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
@@ -97,7 +98,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { enUS, es, ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
 
 function getEntitledPlan(profile?: Pick<UserProfile, 'plano' | 'subscriptionStatus'> | null, simulatedPlan?: Plan | null): Plan {
@@ -142,6 +143,9 @@ const LANGUAGE_OPTIONS: Array<{ code: LanguageCode; short: string; label: string
   { code: 'en', short: 'EN', label: 'English' },
   { code: 'es', short: 'ES', label: 'Español' },
 ];
+
+const getLocaleCode = (language: LanguageCode) => language === 'pt-BR' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US';
+const getDateFnsLocale = (language: LanguageCode) => language === 'pt-BR' ? ptBR : language === 'es' ? es : enUS;
 
 const APP_TRANSLATIONS: Record<LanguageCode, {
   nav: Record<'home' | 'workouts' | 'nutrition' | 'progress' | 'social' | 'shop' | 'affiliates' | 'settings' | 'admin' | 'plans' | 'logout' | 'more' | 'close', string>;
@@ -1523,6 +1527,10 @@ export default function App() {
   }, [language]);
 
   useEffect(() => {
+    return installUiAutoTranslate(language);
+  }, [language, activeTab, showPricing, drawerOpen, ironShopNotice]);
+
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     trackEvent('app_screen_view', { screen_name: activeTab });
   }, [activeTab]);
@@ -2045,12 +2053,12 @@ export default function App() {
                 }}
               />
             )}
-            {activeTab === 'progress' && <BodyProgressView userId={profile.id} />}
-            {activeTab === 'community' && <CommunityView profile={profile} />}
-            {activeTab === 'shop' && <IronShopView access={ironShopAccess} />}
-            {activeTab === 'affiliates' && <AffiliateView profile={profile} />}
-            {activeTab === 'settings' && <SettingsView profile={profile} logout={logout} onUpgrade={() => openPricing('settings')} />}
-            {activeTab === 'admin' && isAdmin && <AdminView />}
+            {activeTab === 'progress' && <BodyProgressView userId={profile.id} language={language} />}
+            {activeTab === 'community' && <CommunityView profile={profile} language={language} />}
+            {activeTab === 'shop' && <IronShopView access={ironShopAccess} language={language} />}
+            {activeTab === 'affiliates' && <AffiliateView profile={profile} language={language} />}
+            {activeTab === 'settings' && <SettingsView profile={profile} language={language} logout={logout} onUpgrade={() => openPricing('settings')} />}
+            {activeTab === 'admin' && isAdmin && <AdminView language={language} />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -2094,7 +2102,8 @@ export default function App() {
   );
 }
 
-function IronShopView({ access }: { access: IronShopAccessState }) {
+function IronShopView({ access, language }: { access: IronShopAccessState; language: LanguageCode }) {
+  const locale = getLocaleCode(language);
   const [products, setProducts] = useState<IronShopProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(access.hasAccess);
   const [shopError, setShopError] = useState('');
@@ -2178,7 +2187,7 @@ function IronShopView({ access }: { access: IronShopAccessState }) {
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xl font-black text-primary">{product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                  <span className="text-xl font-black text-primary">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
                   <span className="text-[10px] text-text-muted font-bold">{product.stock} em estoque</span>
                 </div>
                 <button
@@ -2196,7 +2205,7 @@ function IronShopView({ access }: { access: IronShopAccessState }) {
   );
 }
 
-function AffiliateView({ profile }: { profile: UserProfile | null }) {
+function AffiliateView({ profile, language: _language }: { profile: UserProfile | null; language: LanguageCode }) {
   const [affiliate, setAffiliate] = useState<Affiliate | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
@@ -5633,16 +5642,16 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
               </>
             )}
 
-            {activeSubTab === 'registro' && <LoadTrackerView userId={user?.id || ''} />}
+            {activeSubTab === 'registro' && <LoadTrackerView userId={user?.id || ''} language={language} />}
             {activeSubTab === 'ia' && (
               hasPro
-                ? <IAAdaptativaView profile={profile} onUpgrade={onUpgrade} isAdmin={isAdmin} />
+                ? <IAAdaptativaView profile={profile} language={language} onUpgrade={onUpgrade} isAdmin={isAdmin} />
                 : <LockedFeatureOverlay onUpgrade={onUpgrade} plan="Pro" title="Iron Coach IA" description="Seu personal trainer inteligente disponível 24h. Exclusivo para assinantes Pro e Elite." />
             )}
-            {activeSubTab === 'history' && <WorkoutHistoryView userUid={user?.id || ''} />}
-            {activeSubTab === 'ranking' && <GlobalRankingView />}
-            {activeSubTab === 'spreadsheet' && <AthleteSpreadsheetView onSelectWorkout={setSelectedWorkout} />}
-            {activeSubTab === 'early' && <EarlyAccessView onSelectWorkout={setSelectedWorkout} />}
+            {activeSubTab === 'history' && <WorkoutHistoryView userUid={user?.id || ''} language={language} />}
+            {activeSubTab === 'ranking' && <GlobalRankingView language={language} />}
+            {activeSubTab === 'spreadsheet' && <AthleteSpreadsheetView language={language} onSelectWorkout={setSelectedWorkout} />}
+            {activeSubTab === 'early' && <EarlyAccessView language={language} onSelectWorkout={setSelectedWorkout} />}
           </div>
         )}
       </div>
@@ -6789,6 +6798,7 @@ function WorkoutDetailView({
   const [displayPoints, setDisplayPoints] = useState(currentPoints);
   const [isAwardingWorkout, setIsAwardingWorkout] = useState(false);
   const workoutDisplay = getWorkoutDisplay(workout, language);
+  const locale = getLocaleCode(language);
 
   const POINTS_PER_WORKOUT = 100;
 
@@ -7012,7 +7022,7 @@ function WorkoutDetailView({
                     {isLimitNotice
                       ? isFreePointsPlan
                         ? `Você chegou aos ${freePointsLimit} pontos e completou sua jornada inicial. Assine Pro ou Elite para continuar com novos protocolos e evolução contínua.`
-                        : `Você alcançou a meta máxima de ${planPointsLimit.toLocaleString('pt-BR')} pontos do seu plano.`
+                        : `Você alcançou a meta máxima de ${planPointsLimit.toLocaleString(locale)} pontos do seu plano.`
                       : isEarnedLimitNotice
                       ? `Você ganhou +${POINTS_PER_WORKOUT} pontos e fechou a primeira fase do IronShape. Agora desbloqueie Pro ou Elite para seguir para a próxima etapa.`
                       : isCompleteNotice
@@ -7030,7 +7040,7 @@ function WorkoutDetailView({
                   <div className="flex items-center justify-center gap-3">
                     <Zap size={22} className="text-primary" />
                     <div className="text-5xl font-black text-primary tracking-tighter">
-                      {isLimitNotice ? planPointsLimit.toLocaleString('pt-BR') : isCompleteNotice ? displayPoints.toLocaleString('pt-BR') : `+${POINTS_PER_WORKOUT}`}
+                      {isLimitNotice ? planPointsLimit.toLocaleString(locale) : isCompleteNotice ? displayPoints.toLocaleString(locale) : `+${POINTS_PER_WORKOUT}`}
                     </div>
                     <span className="text-xs font-black uppercase tracking-widest text-text-muted">pts</span>
                   </div>
@@ -7039,7 +7049,7 @@ function WorkoutDetailView({
                 <div className="space-y-3 text-left">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Seu progresso</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{displayPoints.toLocaleString('pt-BR')} pts</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{displayPoints.toLocaleString(locale)} pts</span>
                   </div>
                   <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
                     <motion.div
@@ -7051,7 +7061,7 @@ function WorkoutDetailView({
                   </div>
                   <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-text-muted">
                     <span>0</span>
-                    <span>{isFreePointsPlan ? `Fase 1: ${freePointsLimit.toLocaleString('pt-BR')} pts` : `Meta ${planPointsLimit.toLocaleString('pt-BR')} pts`}</span>
+                    <span>{isFreePointsPlan ? `Fase 1: ${freePointsLimit.toLocaleString(locale)} pts` : `Meta ${planPointsLimit.toLocaleString(locale)} pts`}</span>
                   </div>
                 </div>
 
@@ -7100,11 +7110,11 @@ function WorkoutDetailView({
               <Trophy size={18} className="text-primary" />
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Pontos</div>
-                <div className="text-sm font-black">{displayPoints.toLocaleString('pt-BR')} pts</div>
+                <div className="text-sm font-black">{displayPoints.toLocaleString(locale)} pts</div>
               </div>
             </div>
             <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">
-              {isFreePointsPlan ? `Fase 1: ${freePointsLimit.toLocaleString('pt-BR')} pts` : `Meta ${planPointsLimit.toLocaleString('pt-BR')} pts`}
+              {isFreePointsPlan ? `Fase 1: ${freePointsLimit.toLocaleString(locale)} pts` : `Meta ${planPointsLimit.toLocaleString(locale)} pts`}
             </span>
           </div>
           <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -7321,7 +7331,8 @@ function StepperControl({ field, step, value, onChange, onStep }: {
   );
 }
 
-function BodyProgressView({ userId }: { userId: string }) {
+function BodyProgressView({ userId, language }: { userId: string; language: LanguageCode }) {
+  const locale = getLocaleCode(language);
   const storageKey = `body_measurements_${userId}`;
   const todayKey = new Date().toISOString().split('T')[0];
 
@@ -7377,7 +7388,7 @@ function BodyProgressView({ userId }: { userId: string }) {
   const chartData = measurements
     .filter(m => m[chartMetric] !== undefined)
     .map(m => ({
-      date: new Date(m.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+      date: new Date(m.date + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'short' }),
       value: m[chartMetric] as number,
     }));
 
@@ -7411,7 +7422,7 @@ function BodyProgressView({ userId }: { userId: string }) {
             {todayEntry ? 'Atualizar medidas de hoje' : 'Registrar medidas de hoje'}
           </span>
           <span className="text-[10px] text-text-muted font-bold">
-            {new Date(todayKey + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            {new Date(todayKey + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' })}
           </span>
         </div>
 
@@ -7512,7 +7523,7 @@ function BodyProgressView({ userId }: { userId: string }) {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Última Medição</span>
             <span className="text-[10px] text-text-muted font-bold">
-              {new Date(latest.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+              {new Date(latest.date + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -7555,7 +7566,7 @@ function BodyProgressView({ userId }: { userId: string }) {
                 {[...measurements].reverse().map((m, i) => (
                   <tr key={m.date} className={`border-b border-white/5 ${i === 0 ? 'text-text-primary' : 'text-text-secondary'}`}>
                     <td className="py-3 pr-4 font-black text-[11px] whitespace-nowrap">
-                      {new Date(m.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                      {new Date(m.date + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'short', year: '2-digit' })}
                       {i === 0 && <span className="ml-2 text-[9px] text-primary font-black">HOJE</span>}
                     </td>
                     {MEASURE_FIELDS.map(f => (
@@ -7586,6 +7597,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 }) {
   const { isAdmin, simulatedPlan } = useAuth();
   const nutritionText = APP_TRANSLATIONS[language].nutrition;
+  const locale = getLocaleCode(language);
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
   const hasIronCoachAccess = simulatedPlan
     ? simulatedPlan === 'Pro' || simulatedPlan === 'Elite' || simulatedPlan === 'Admin'
@@ -8798,7 +8810,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                       <div key={log.date} className="bg-white/5 border border-white/5 rounded-2xl p-4">
                         <div className="flex items-center justify-between gap-2 mb-3">
                           <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                            {new Date(log.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            {new Date(log.date + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'short' })}
                           </span>
                           <span className="text-[10px] font-black text-primary">{log.meals?.length || 0} itens</span>
                         </div>
@@ -9986,7 +9998,8 @@ async function createCommunityStory(post: Post) {
   }
 }
 
-function CommunityView({ profile }: { profile: UserProfile }) {
+function CommunityView({ profile, language }: { profile: UserProfile; language: LanguageCode }) {
+  const dateFnsLocale = getDateFnsLocale(language);
   const { updateProfile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [postProfiles, setPostProfiles] = useState<Record<string, SocialProfile>>({});
@@ -10730,7 +10743,7 @@ function CommunityView({ profile }: { profile: UserProfile }) {
                     {postProfiles[post.user_id]?.name || post.user_name}
                   </button>
                   <span className="text-[10px] md:text-xs text-text-muted">
-                    {formatDistanceToNow(new Date(post.criado_em), { addSuffix: true, locale: ptBR })}
+                    {formatDistanceToNow(new Date(post.criado_em), { addSuffix: true, locale: dateFnsLocale })}
                   </span>
                 </div>
               </div>
@@ -10909,8 +10922,9 @@ function CommunityView({ profile }: { profile: UserProfile }) {
   );
 }
 
-function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserProfile, logout: () => void, onUpgrade: () => void }) {
+function SettingsView({ profile, language, logout: _logout, onUpgrade }: { profile: UserProfile, language: LanguageCode, logout: () => void, onUpgrade: () => void }) {
   const { isAdmin, simulatedPlan, setSimulatedPlan, user, logout, updateProfile } = useAuth();
+  const dateFnsLocale = getDateFnsLocale(language);
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
   const [adminTestStatus, setAdminTestStatus] = useState('');
   const [trainingPlace, setTrainingPlace] = useState<'gym' | 'home'>(() => {
@@ -10929,7 +10943,7 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
   const planLabel = isFreePlan ? 'Free' : effectivePlan;
   const paidAt = profile.subscriptionPaidAt ? new Date(profile.subscriptionPaidAt) : null;
   const nextBillingDate = paidAt && isValid(paidAt)
-    ? format(addMonths(paidAt, 1), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+    ? format(addMonths(paidAt, 1), language === 'en' ? 'MMMM d, yyyy' : "d 'de' MMMM 'de' yyyy", { locale: dateFnsLocale })
     : null;
   const handleTrainingPlaceChange = (nextTrainingPlace: 'gym' | 'home') => {
     if (!user?.id) return;
@@ -11139,7 +11153,9 @@ function SettingsView({ profile, logout: _logout, onUpgrade }: { profile: UserPr
   );
 }
 
-function AdminView() {
+function AdminView({ language }: { language: LanguageCode }) {
+  const locale = getLocaleCode(language);
+  const dateFnsLocale = getDateFnsLocale(language);
   const [adminTab, setAdminTab] = useState<'general' | 'affiliates' | 'shop'>('general');
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const [adminError, setAdminError] = useState('');
@@ -11336,7 +11352,7 @@ function AdminView() {
     if (!value) return '';
     const date = new Date(value);
     if (!isValid(date)) return '';
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
   };
   const recentPaidProfiles = [...paidProfiles]
     .sort((a, b) => new Date(getSubscriptionDate(b)).getTime() - new Date(getSubscriptionDate(a)).getTime())
@@ -11445,11 +11461,11 @@ function AdminView() {
     const registrationDate = new Date(value);
     if (!isValid(registrationDate)) return 'Data de cadastro indisponível';
 
-    return `Cadastrado em ${registrationDate.toLocaleDateString('pt-BR', {
+    return `Cadastrado em ${registrationDate.toLocaleDateString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
-    })} às ${registrationDate.toLocaleTimeString('pt-BR', {
+    })} às ${registrationDate.toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
     })}`;
@@ -11522,7 +11538,7 @@ function AdminView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                 <AdminMetricCard icon={<Users size={22} />} label="Usuários" value={adminData.profiles.length.toString()} detail={`${activeToday.size} ativos hoje`} tone="text-primary" />
                 <AdminMetricCard icon={<Wallet size={22} />} label="Assinaturas" value={paidProfiles.length.toString()} detail={`${adminData.profiles.length ? Math.round((paidProfiles.length / adminData.profiles.length) * 100) : 0}% da base`} tone="text-success" />
-                <AdminMetricCard icon={<BarChart3 size={22} />} label="Receita Mês" value={monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} detail={`${paidProfiles.length} assinaturas ativas`} tone="text-primary" />
+                <AdminMetricCard icon={<BarChart3 size={22} />} label="Receita Mês" value={monthlyRevenue.toLocaleString(locale, { style: 'currency', currency: 'BRL' })} detail={`${paidProfiles.length} assinaturas ativas`} tone="text-primary" />
                 <AdminMetricCard icon={<UserCheck size={22} />} label="Afiliados Pendentes" value={pendingAffiliates.length.toString()} detail={`${adminData.affiliates.length} afiliados no total`} tone={pendingAffiliates.length ? 'text-error' : 'text-success'} />
               </div>
 
@@ -11578,7 +11594,7 @@ function AdminView() {
                                   {latestActivity && (
                                     <>
                                       <span>•</span>
-                                      <span>{formatDistanceToNow(latestActivity, { addSuffix: true, locale: ptBR })}</span>
+                                      <span>{formatDistanceToNow(latestActivity, { addSuffix: true, locale: dateFnsLocale })}</span>
                                     </>
                                   )}
                                 </div>
@@ -11821,6 +11837,7 @@ function AdminView() {
           loading={ironShopAdminLoading}
           error={ironShopAdminError}
           reason={ironShopReason}
+          language={language}
           onReasonChange={setIronShopReason}
           onRefresh={fetchIronShopAdmin}
           onSave={saveIronShopSettings}
@@ -11842,6 +11859,7 @@ function AdminView() {
             normalizePlan={normalizeAdminPlan}
             formatRegistrationDate={formatUserRegistrationDate}
             latestActivity={getLatestUserActivity(selectedUser)}
+            language={language}
             onClose={() => setSelectedUser(null)}
             onManagePlan={() => openPlanManager(selectedUser)}
           />
@@ -11953,6 +11971,7 @@ function AdminIronShopSettings({
   loading,
   error,
   reason,
+  language,
   onReasonChange,
   onRefresh,
   onSave,
@@ -11962,6 +11981,7 @@ function AdminIronShopSettings({
   loading: boolean;
   error: string;
   reason: string;
+  language: LanguageCode;
   onReasonChange: (reason: string) => void;
   onRefresh: () => void;
   onSave: (updates: Partial<IronShopSettings>) => Promise<void>;
@@ -12108,7 +12128,7 @@ function AdminIronShopSettings({
               <div className="min-w-0">
                 <p className="text-sm font-black truncate">{entry.admin_email || entry.admin_id || 'Administrador'}</p>
                 <p className="text-[10px] text-text-muted font-bold mt-1">
-                  {new Date(entry.created_at).toLocaleString('pt-BR')}
+                  {new Date(entry.created_at).toLocaleString(locale)}
                 </p>
                 {entry.reason && <p className="text-xs text-text-secondary mt-2 leading-relaxed">{entry.reason}</p>}
               </div>
@@ -12143,6 +12163,7 @@ function AdminUserDetailsDrawer({
   normalizePlan,
   formatRegistrationDate,
   latestActivity,
+  language,
   onClose,
   onManagePlan,
 }: {
@@ -12156,9 +12177,12 @@ function AdminUserDetailsDrawer({
   normalizePlan: (plan?: Plan) => 'free' | 'Pro' | 'Elite' | 'Admin';
   formatRegistrationDate: (value?: string) => string;
   latestActivity: Date | null;
+  language: LanguageCode;
   onClose: () => void;
   onManagePlan: () => void;
 }) {
+  const locale = getLocaleCode(language);
+  const dateFnsLocale = getDateFnsLocale(language);
   const completedWorkoutIds = new Set(workouts.map(workout => workout.workoutId).filter(Boolean));
   const workoutTemplates = allWorkouts.filter(workout => completedWorkoutIds.has(workout.id));
   const completedExercises = workoutTemplates.flatMap(workout =>
@@ -12178,20 +12202,20 @@ function AdminUserDetailsDrawer({
     if (!value) return 'Sem data';
     const date = new Date(value);
     if (!isValid(date)) return 'Data inválida';
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' às ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' às ' + date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatShortDate = (value?: string) => {
     if (!value) return 'Sem data';
     const date = new Date(value);
     if (!isValid(date)) return 'Data inválida';
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
   };
 
   const timeline = [
     user.criado_em ? { type: 'Cadastro', label: 'Criou conta', date: user.criado_em, tone: 'text-primary' } : null,
     latestWorkout ? { type: 'Treino', label: `Concluiu ${latestWorkout.workoutName || 'um treino'}`, date: latestWorkout.completedAt, tone: 'text-success' } : null,
-    latestNutrition ? { type: 'Nutrição', label: `Registrou ${Number(latestNutrition.calories || 0).toLocaleString('pt-BR')} kcal`, date: latestNutrition.date, tone: 'text-primary' } : null,
+    latestNutrition ? { type: 'Nutrição', label: `Registrou ${Number(latestNutrition.calories || 0).toLocaleString(locale)} kcal`, date: latestNutrition.date, tone: 'text-primary' } : null,
     posts[0] ? { type: 'Comunidade', label: 'Publicou na comunidade', date: posts[0].criado_em, tone: 'text-text-secondary' } : null,
     latestConversion ? { type: 'Conversão', label: `${latestConversion.plano} • ${latestConversion.status_pagamento}`, date: latestConversion.created_at, tone: 'text-success' } : null,
   ].filter(Boolean)
@@ -12264,7 +12288,7 @@ function AdminUserDetailsDrawer({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <AdminDetailLine label="Cadastro" value={formatRegistrationDate(user.criado_em)} />
-              <AdminDetailLine label="Última atividade" value={latestActivity ? formatDistanceToNow(latestActivity, { addSuffix: true, locale: ptBR }) : 'Não detectada'} />
+              <AdminDetailLine label="Última atividade" value={latestActivity ? formatDistanceToNow(latestActivity, { addSuffix: true, locale: dateFnsLocale }) : 'Não detectada'} />
               <AdminDetailLine label="Objetivo" value={user.goal || 'Não informado'} />
               <AdminDetailLine label="Corpo" value={hasCompletedOnboarding ? `${user.weight}kg • ${user.height}cm • ${user.age} anos` : 'Dados incompletos'} />
               <AdminDetailLine label="Pontos / streak" value={`${Number(user.points || 0)} pts • ${Number(user.streak || 0)} dias`} />
@@ -12349,7 +12373,7 @@ function AdminUserDetailsDrawer({
               <div className="space-y-3">
                 {nutrition.slice(0, 4).map(item => (
                   <div key={item.id} className="grid grid-cols-4 gap-2 bg-white/5 border border-white/5 rounded-2xl p-4 text-center">
-                    <AdminMacro label={formatShortDate(item.date)} value={`${Number(item.calories || 0).toLocaleString('pt-BR')}`} />
+                    <AdminMacro label={formatShortDate(item.date)} value={`${Number(item.calories || 0).toLocaleString(locale)}`} />
                     <AdminMacro label="Prot." value={`${Number(item.protein || 0)}g`} />
                     <AdminMacro label="Carb." value={`${Number(item.carbs || 0)}g`} />
                     <AdminMacro label="Gord." value={`${Number(item.fat || 0)}g`} />
@@ -12441,7 +12465,7 @@ function MiniAdminStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function IAAdaptativaView({ profile, onUpgrade, isAdmin = false }: { profile: UserProfile; onUpgrade: () => void; isAdmin?: boolean }) {
+function IAAdaptativaView({ profile, language, onUpgrade, isAdmin = false }: { profile: UserProfile; language: LanguageCode; onUpgrade: () => void; isAdmin?: boolean }) {
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-br from-primary/20 to-transparent p-6 rounded-[40px] border border-primary/20 flex items-center gap-4">
@@ -12455,7 +12479,7 @@ function IAAdaptativaView({ profile, onUpgrade, isAdmin = false }: { profile: Us
       </div>
 
       <div className="bg-surface rounded-[40px] border border-white/5 p-6 h-[600px] flex flex-col">
-        <AIChat profile={profile} onUpgrade={onUpgrade} isAdmin={isAdmin} />
+        <AIChat profile={profile} language={language} onUpgrade={onUpgrade} isAdmin={isAdmin} />
       </div>
     </div>
   );
@@ -12465,7 +12489,8 @@ type LoadSet = { reps: number; weight: number };
 type LoadSession = { date: string; sets: LoadSet[] };
 type LoadData = Record<string, LoadSession[]>;
 
-function LoadTrackerView({ userId }: { userId: string }) {
+function LoadTrackerView({ userId, language }: { userId: string; language: LanguageCode }) {
+  const locale = getLocaleCode(language);
   const storageKey = `load_tracker_${userId}`;
   const todayKey = new Date().toISOString().split('T')[0];
 
@@ -12700,7 +12725,7 @@ function LoadTrackerView({ userId }: { userId: string }) {
               >
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                    {new Date(session.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {new Date(session.date + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}
                   </div>
                   <div className="text-sm font-black mt-1">
                     {session.sets.map(s => `${s.reps}x${s.weight}kg`).join(' · ')}
@@ -12719,7 +12744,8 @@ function LoadTrackerView({ userId }: { userId: string }) {
   );
 }
 
-function WorkoutHistoryView({ userUid }: { userUid: string }) {
+function WorkoutHistoryView({ userUid, language }: { userUid: string; language: LanguageCode }) {
+  const locale = getLocaleCode(language);
   const [history, setHistory] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -12747,7 +12773,7 @@ function WorkoutHistoryView({ userUid }: { userUid: string }) {
       ) : (
         <div className="space-y-4">
           {history.map((item) => {
-            const date = new Date(item.completedAt).toLocaleDateString('pt-BR');
+            const date = new Date(item.completedAt).toLocaleDateString(locale);
             return (
               <div key={item.id} className="bg-surface p-6 rounded-3xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all">
                 <div className="flex items-center gap-4">
@@ -12771,7 +12797,7 @@ function WorkoutHistoryView({ userUid }: { userUid: string }) {
   );
 }
 
-function GlobalRankingView() {
+function GlobalRankingView({ language: _language }: { language: LanguageCode }) {
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -12837,7 +12863,7 @@ function GlobalRankingView() {
   );
 }
 
-function AthleteSpreadsheetView({ onSelectWorkout }: { onSelectWorkout: (w: Workout) => void }) {
+function AthleteSpreadsheetView({ language: _language, onSelectWorkout }: { language: LanguageCode; onSelectWorkout: (w: Workout) => void }) {
   const [selectedPlan, setSelectedPlan] = useState<'Iniciante' | 'Pro' | 'Elite'>('Elite');
 
   const schedules: Record<'Iniciante' | 'Pro' | 'Elite', WeeklySchedule[]> = {
@@ -12924,7 +12950,7 @@ function AthleteSpreadsheetView({ onSelectWorkout }: { onSelectWorkout: (w: Work
   );
 }
 
-function EarlyAccessView({ onSelectWorkout: _onSelectWorkout }: { onSelectWorkout: (w: Workout) => void }) {
+function EarlyAccessView({ language: _language, onSelectWorkout: _onSelectWorkout }: { language: LanguageCode; onSelectWorkout: (w: Workout) => void }) {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">

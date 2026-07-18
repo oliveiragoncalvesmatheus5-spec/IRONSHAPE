@@ -7,6 +7,8 @@ import { ALL_WORKOUTS } from './data/workouts';
 import { PHYSICAL_LIMITATION_OPTIONS } from './data/physicalLimitations';
 import { sendMessage, AIProfile, Message } from './services/claudeService';
 
+type LanguageCode = 'pt-BR' | 'en' | 'es';
+
 const IRON_COACH_LIMITATION_OPTIONS = PHYSICAL_LIMITATION_OPTIONS.filter(option => ![
   'Costas/dorsal',
   'Cervical/pescoço',
@@ -26,7 +28,7 @@ const IRON_COACH_LIMITATION_OPTIONS = PHYSICAL_LIMITATION_OPTIONS.filter(option 
 
 // ─── Onboarding config ────────────────────────────────────────────────────────
 
-const STEPS = [
+const STEPS_PT = [
   {
     id: 'trainingDays',
     title: 'Quantos dias por semana você pode treinar?',
@@ -65,6 +67,180 @@ const STEPS = [
   },
 ];
 
+const IRON_COACH_TEXT: Record<LanguageCode, {
+  initialSetup: string;
+  start: string;
+  next: string;
+  reset: string;
+  daysPerWeek: (days: number) => string;
+  greeting: (name: string) => string;
+  intro: string;
+  thinking: string;
+  placeholder: string;
+  upgradeText: string;
+  benefits: string[];
+  viewPlans: string;
+  error: string;
+  suggestions: string[];
+}> = {
+  'pt-BR': {
+    initialSetup: 'Configuração inicial',
+    start: 'Começar',
+    next: 'Próximo',
+    reset: 'Reiniciar configuração',
+    daysPerWeek: days => `${days} dias/semana`,
+    greeting: name => `Olá, ${name}!`,
+    intro: 'Sou seu personal trainer virtual. Me pergunte sobre treinos, exercícios, nutrição ou motivação.',
+    thinking: 'Pensando...',
+    placeholder: 'Pergunte qualquer coisa...',
+    upgradeText: 'Seu personal trainer com IA adaptativa está disponível nos planos Pro e Elite.',
+    benefits: [
+      'Recomendações personalizadas ao seu perfil',
+      'Ajusta treinos com base na sua evolução',
+      'Chat ilimitado com seu coach 24/7',
+    ],
+    viewPlans: 'Ver planos',
+    error: 'Erro ao conectar com o Iron Coach. Tente novamente.',
+    suggestions: [
+      'Qual treino é melhor para hoje?',
+      'Como faço para ganhar mais massa?',
+      'Me dá uma dica de alimentação pré-treino',
+      'Estou sem disposição, o que fazer?',
+    ],
+  },
+  en: {
+    initialSetup: 'Initial setup',
+    start: 'Start',
+    next: 'Next',
+    reset: 'Reset setup',
+    daysPerWeek: days => `${days} days/week`,
+    greeting: name => `Hi, ${name}!`,
+    intro: 'I am your virtual personal trainer. Ask me about workouts, exercises, nutrition, or motivation.',
+    thinking: 'Thinking...',
+    placeholder: 'Ask anything...',
+    upgradeText: 'Your adaptive AI personal trainer is available on the Pro and Elite plans.',
+    benefits: [
+      'Recommendations personalized to your profile',
+      'Adjusts workouts based on your progress',
+      'Unlimited chat with your coach 24/7',
+    ],
+    viewPlans: 'View plans',
+    error: 'Error connecting to Iron Coach. Please try again.',
+    suggestions: [
+      'What workout is best for today?',
+      'How can I gain more muscle mass?',
+      'Give me a pre-workout nutrition tip',
+      'I feel low on energy, what should I do?',
+    ],
+  },
+  es: {
+    initialSetup: 'Configuración inicial',
+    start: 'Comenzar',
+    next: 'Siguiente',
+    reset: 'Reiniciar configuración',
+    daysPerWeek: days => `${days} días/semana`,
+    greeting: name => `¡Hola, ${name}!`,
+    intro: 'Soy tu entrenador personal virtual. Pregúntame sobre entrenos, ejercicios, nutrición o motivación.',
+    thinking: 'Pensando...',
+    placeholder: 'Pregunta cualquier cosa...',
+    upgradeText: 'Tu entrenador personal con IA adaptativa está disponible en los planes Pro y Elite.',
+    benefits: [
+      'Recomendaciones personalizadas para tu perfil',
+      'Ajusta entrenos con base en tu evolución',
+      'Chat ilimitado con tu coach 24/7',
+    ],
+    viewPlans: 'Ver planes',
+    error: 'Error al conectar con Iron Coach. Inténtalo de nuevo.',
+    suggestions: [
+      '¿Qué entreno es mejor para hoy?',
+      '¿Cómo puedo ganar más masa muscular?',
+      'Dame un consejo de alimentación pre-entreno',
+      'Estoy sin energía, ¿qué hago?',
+    ],
+  },
+};
+
+const STEP_TRANSLATIONS: Record<Exclude<LanguageCode, 'pt-BR'>, typeof STEPS_PT> = {
+  en: [
+    {
+      id: 'trainingDays',
+      title: 'How many days per week can you train?',
+      subtitle: 'This defines your ideal weekly frequency.',
+      type: 'single' as const,
+      options: ['3 days', '4 days', '5 days', '6+ days'],
+    },
+    {
+      id: 'experience',
+      title: 'How long have you been training?',
+      subtitle: 'This adjusts the complexity of the recommendations.',
+      type: 'single' as const,
+      options: ['Less than 6 months', '6 months to 2 years', '2 to 5 years', 'More than 5 years'],
+    },
+    {
+      id: 'limitations',
+      title: 'Do you have any physical limitation?',
+      subtitle: 'Select all that apply.',
+      type: 'multi' as const,
+      options: IRON_COACH_LIMITATION_OPTIONS,
+    },
+    {
+      id: 'priorityMuscles',
+      title: 'Which muscle groups do you want to prioritize?',
+      subtitle: 'Select up to 3.',
+      type: 'multi' as const,
+      options: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'],
+      max: 3,
+    },
+    {
+      id: 'sessionDuration',
+      title: 'How much time do you have per workout?',
+      subtitle: 'Including warm-up and stretching.',
+      type: 'single' as const,
+      options: ['30-45 min', '45-60 min', '60-90 min', 'More than 90 min'],
+    },
+  ],
+  es: [
+    {
+      id: 'trainingDays',
+      title: '¿Cuántos días por semana puedes entrenar?',
+      subtitle: 'Esto define tu frecuencia semanal ideal.',
+      type: 'single' as const,
+      options: ['3 días', '4 días', '5 días', '6+ días'],
+    },
+    {
+      id: 'experience',
+      title: '¿Hace cuánto tiempo entrenas?',
+      subtitle: 'Esto ajusta la complejidad de las recomendaciones.',
+      type: 'single' as const,
+      options: ['Menos de 6 meses', '6 meses a 2 años', '2 a 5 años', 'Más de 5 años'],
+    },
+    {
+      id: 'limitations',
+      title: '¿Tienes alguna limitación física?',
+      subtitle: 'Selecciona todas las que correspondan.',
+      type: 'multi' as const,
+      options: IRON_COACH_LIMITATION_OPTIONS,
+    },
+    {
+      id: 'priorityMuscles',
+      title: '¿Qué grupos musculares quieres priorizar?',
+      subtitle: 'Selecciona hasta 3.',
+      type: 'multi' as const,
+      options: ['Pecho', 'Espalda', 'Piernas', 'Hombros', 'Brazos', 'Abdomen'],
+      max: 3,
+    },
+    {
+      id: 'sessionDuration',
+      title: '¿Cuánto tiempo tienes por entreno?',
+      subtitle: 'Incluyendo calentamiento y estiramiento.',
+      type: 'single' as const,
+      options: ['30-45 min', '45-60 min', '60-90 min', 'Más de 90 min'],
+    },
+  ],
+};
+
+const getSteps = (language: LanguageCode) => language === 'pt-BR' ? STEPS_PT : STEP_TRANSLATIONS[language];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function profileKey(userId: string) {
@@ -84,12 +260,8 @@ function visiblePlan(profile: UserProfile) {
 }
 
 function parseAIProfile(answers: Record<string, string | string[]>): AIProfile {
-  const daysMap: Record<string, number> = {
-    '3 dias': 3,
-    '4 dias': 4,
-    '5 dias': 5,
-    '6+ dias': 6,
-  };
+  const trainingDaysAnswer = String(answers.trainingDays || '');
+  const parsedDays = parseInt(trainingDaysAnswer, 10);
 
   const limitations = (answers.limitations as string[]) ?? [];
   const limitationsText = limitations.includes('Nenhuma')
@@ -97,7 +269,7 @@ function parseAIProfile(answers: Record<string, string | string[]>): AIProfile {
     : limitations.join(', ');
 
   return {
-    trainingDays: daysMap[answers.trainingDays as string] ?? 4,
+    trainingDays: Number.isFinite(parsedDays) ? parsedDays : 4,
     experience: (answers.experience as string) ?? '',
     limitations: limitationsText,
     priorityMuscles: (answers.priorityMuscles as string[]) ?? [],
@@ -168,11 +340,13 @@ function ChatBubble({ msg }: { msg: Message }) {
 
 // ─── Onboarding ───────────────────────────────────────────────────────────────
 
-function Onboarding({ onComplete }: { onComplete: (answers: Record<string, string | string[]>) => void }) {
+function Onboarding({ language, onComplete }: { language: LanguageCode; onComplete: (answers: Record<string, string | string[]>) => void }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
 
-  const current = STEPS[step];
+  const steps = getSteps(language);
+  const current = steps[step];
+  const text = IRON_COACH_TEXT[language];
   const value = answers[current.id];
 
   function toggleOption(option: string) {
@@ -216,14 +390,14 @@ function Onboarding({ onComplete }: { onComplete: (answers: Record<string, strin
 
   function next() {
     if (!canAdvance()) return;
-    if (step === STEPS.length - 1) {
+    if (step === steps.length - 1) {
       onComplete(answers);
     } else {
       setStep(s => s + 1);
     }
   }
 
-  const isLast = step === STEPS.length - 1;
+  const isLast = step === steps.length - 1;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -234,13 +408,13 @@ function Onboarding({ onComplete }: { onComplete: (answers: Record<string, strin
         </div>
         <div>
           <h2 className="text-text-primary font-bold text-lg">Iron Coach</h2>
-          <p className="text-text-muted text-xs">Configuração inicial</p>
+          <p className="text-text-muted text-xs">{text.initialSetup}</p>
         </div>
       </div>
 
       {/* Progress */}
       <div className="flex gap-1.5 mb-5 sm:mb-8 flex-shrink-0">
-        {STEPS.map((_, i) => (
+        {steps.map((_, i) => (
           <div
             key={i}
             className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= step ? 'bg-primary' : 'bg-white/10'}`}
@@ -285,7 +459,7 @@ function Onboarding({ onComplete }: { onComplete: (answers: Record<string, strin
             : 'bg-white/5 text-text-muted cursor-not-allowed'
           }`}
       >
-        {isLast ? 'Começar' : 'Próximo'}
+        {isLast ? text.start : text.next}
         <ChevronRight size={16} />
       </button>
     </div>
@@ -302,6 +476,7 @@ function Chat({
   loading,
   error,
   onReset,
+  language,
 }: {
   profile: UserProfile;
   aiProfile: AIProfile;
@@ -310,9 +485,11 @@ function Chat({
   loading: boolean;
   error: string | null;
   onReset: () => void;
+  language: LanguageCode;
 }) {
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const text = IRON_COACH_TEXT[language];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -325,12 +502,7 @@ function Chat({
     onSend(text);
   }
 
-  const SUGGESTIONS = [
-    'Qual treino é melhor para hoje?',
-    'Como faço para ganhar mais massa?',
-    'Me dá uma dica de alimentação pré-treino',
-    'Estou sem disposição, o que fazer?',
-  ];
+  const SUGGESTIONS = text.suggestions;
 
   return (
     <div className="flex flex-col h-full">
@@ -343,13 +515,13 @@ function Chat({
           <div>
             <h2 className="text-text-primary font-bold">Iron Coach</h2>
             <p className="text-text-muted text-xs">
-              {visiblePlan(profile)} · {aiProfile.trainingDays} dias/semana
+              {visiblePlan(profile)} · {text.daysPerWeek(aiProfile.trainingDays)}
             </p>
           </div>
         </div>
         <button
           onClick={onReset}
-          title="Reiniciar configuração"
+          title={text.reset}
           className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors"
         >
           <RotateCcw size={16} />
@@ -364,9 +536,9 @@ function Chat({
               <Sparkles size={28} className="text-primary" />
             </div>
             <div>
-              <p className="text-text-primary font-semibold mb-1">Olá, {profile.name.split(' ')[0]}!</p>
+              <p className="text-text-primary font-semibold mb-1">{text.greeting(profile.name.split(' ')[0])}</p>
               <p className="text-text-muted text-sm max-w-xs">
-                Sou seu personal trainer virtual. Me pergunte sobre treinos, exercícios, nutrição ou motivação.
+                {text.intro}
               </p>
             </div>
             <div className="flex flex-col gap-2 w-full mt-2">
@@ -394,7 +566,7 @@ function Chat({
             </div>
             <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-surface border border-white/5 flex items-center gap-2">
               <Loader2 size={14} className="text-primary animate-spin" />
-              <span className="text-text-muted text-sm">Pensando...</span>
+              <span className="text-text-muted text-sm">{text.thinking}</span>
             </div>
           </div>
         )}
@@ -415,7 +587,7 @@ function Chat({
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder="Pergunte qualquer coisa..."
+          placeholder={text.placeholder}
           disabled={loading}
           className="flex-1 bg-surface border border-white/10 rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-primary/50 transition-colors disabled:opacity-50"
         />
@@ -437,7 +609,8 @@ function Chat({
 
 // ─── Upgrade prompt ──────────────────────────────────────────────────────────
 
-function UpgradePrompt({ onUpgrade }: { onUpgrade: () => void }) {
+function UpgradePrompt({ language, onUpgrade }: { language: LanguageCode; onUpgrade: () => void }) {
+  const text = IRON_COACH_TEXT[language];
   return (
     <div className="flex flex-col items-center justify-center h-full text-center gap-6">
       <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center">
@@ -446,28 +619,28 @@ function UpgradePrompt({ onUpgrade }: { onUpgrade: () => void }) {
       <div>
         <h2 className="text-text-primary font-bold text-xl mb-2">Iron Coach</h2>
         <p className="text-text-muted text-sm max-w-xs leading-relaxed">
-          Seu personal trainer com IA adaptativa está disponível nos planos <span className="text-primary font-semibold">Pro</span> e <span className="text-primary font-semibold">Elite</span>.
+          {text.upgradeText}
         </p>
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <div className="flex items-start gap-3 text-left">
           <Sparkles size={16} className="text-primary mt-0.5 flex-shrink-0" />
-          <p className="text-text-muted text-sm">Recomendações personalizadas ao seu perfil</p>
+          <p className="text-text-muted text-sm">{text.benefits[0]}</p>
         </div>
         <div className="flex items-start gap-3 text-left">
           <Sparkles size={16} className="text-primary mt-0.5 flex-shrink-0" />
-          <p className="text-text-muted text-sm">Ajusta treinos com base na sua evolução</p>
+          <p className="text-text-muted text-sm">{text.benefits[1]}</p>
         </div>
         <div className="flex items-start gap-3 text-left">
           <Sparkles size={16} className="text-primary mt-0.5 flex-shrink-0" />
-          <p className="text-text-muted text-sm">Chat ilimitado com seu coach 24/7</p>
+          <p className="text-text-muted text-sm">{text.benefits[2]}</p>
         </div>
       </div>
       <button
         onClick={onUpgrade}
         className="w-full max-w-xs py-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary/90 active:scale-[0.98] transition-all"
       >
-        Ver planos
+        {text.viewPlans}
       </button>
     </div>
   );
@@ -479,10 +652,12 @@ export default function AIChat({
   profile,
   onUpgrade,
   isAdmin = false,
+  language = 'pt-BR',
 }: {
   profile: UserProfile | null;
   onUpgrade: () => void;
   isAdmin?: boolean;
+  language?: LanguageCode;
 }) {
   const [aiProfile, setAIProfile] = useState<AIProfile | null>(null);
   const [history, setHistory] = useState<Message[]>([]);
@@ -523,7 +698,7 @@ export default function AIChat({
       setHistory(finalHistory);
       localStorage.setItem(historyKey(profile.id), JSON.stringify(finalHistory));
     } catch (err) {
-      setError('Erro ao conectar com o Iron Coach. Tente novamente.');
+      setError(IRON_COACH_TEXT[language].error);
     } finally {
       setLoading(false);
     }
@@ -549,7 +724,7 @@ export default function AIChat({
   }
 
   if (!profile || !isPro) {
-    return <UpgradePrompt onUpgrade={onUpgrade} />;
+    return <UpgradePrompt language={language} onUpgrade={onUpgrade} />;
   }
 
   return (
@@ -562,7 +737,7 @@ export default function AIChat({
           exit={{ opacity: 0 }}
           className="h-full"
         >
-          <Onboarding onComplete={handleOnboardingComplete} />
+          <Onboarding language={language} onComplete={handleOnboardingComplete} />
         </motion.div>
       ) : (
         <motion.div
@@ -579,6 +754,7 @@ export default function AIChat({
             loading={loading}
             error={error}
             onReset={handleReset}
+            language={language}
           />
         </motion.div>
       )}

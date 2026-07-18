@@ -1502,6 +1502,7 @@ export default function App() {
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
   const [initTimeout, setInitTimeout] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [language, setLanguage] = useState<LanguageCode>(getInitialLanguage);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
@@ -1583,6 +1584,7 @@ export default function App() {
   const openPricing = (source: string, plan?: Plan | null) => {
     if (plan) setCheckoutPlan(plan);
     else setCheckoutPlan(null);
+    setSettingsMenuOpen(false);
     trackEvent('click_upgrade', {
       source,
       plan: plan || 'not_selected',
@@ -1603,8 +1605,15 @@ export default function App() {
       return;
     }
     setDrawerOpen(false);
+    setSettingsMenuOpen(false);
     setActiveTab('shop');
   };
+
+  const openDesktopNavTab = (tab: string) => {
+    setSettingsMenuOpen(false);
+    setActiveTab(tab);
+  };
+
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawerOpen(false); };
@@ -1615,6 +1624,13 @@ export default function App() {
       document.body.style.overflow = '';
     };
   }, [drawerOpen]);
+
+  useEffect(() => {
+    if (!settingsMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSettingsMenuOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [settingsMenuOpen]);
 
   useEffect(() => {
     // Last-resort escape hatch: if loading is still true after 5s, force past it
@@ -1858,19 +1874,70 @@ export default function App() {
           <NavItem icon={<BarChart3 size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label={text.nav.progress} />
           <NavItem icon={<Users size={20} />} active={activeTab === 'community'} onClick={() => setActiveTab('community')} label={text.nav.social} />
           <NavItem icon={<span className="relative flex"><ShoppingBag size={20} />{!ironShopAccess.hasAccess && <Lock size={11} className="absolute -right-2 -top-2 text-primary" />}</span>} active={activeTab === 'shop'} onClick={openIronShop} label={text.nav.shop} />
-          <NavItem icon={<Wallet size={20} />} active={activeTab === 'affiliates'} onClick={() => setActiveTab('affiliates')} label={text.nav.affiliates} />
         </div>
 
         <div className="hidden md:flex md:flex-col md:gap-8 md:mt-auto md:mb-12 w-full items-center">
-          <button
-            onClick={() => openPricing('desktop_sidebar')}
-            className={`p-3 rounded-2xl transition-all duration-300 ${effectivePlan === 'free' ? 'text-primary bg-primary/10 animate-pulse' : 'text-text-muted hover:text-primary hover:bg-primary/10'}`}
-            title={text.nav.plans}
-          >
-            <Zap size={24} />
-          </button>
-          <NavItem icon={<Settings size={24} />} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label={text.nav.settings} />
-          {isAdmin && <NavItem icon={<ShieldCheck size={20} />} active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} label={text.nav.admin} />}
+          <div className="relative w-full flex justify-center">
+            <button
+              onClick={() => setSettingsMenuOpen((open) => !open)}
+              className={`flex flex-col items-center justify-center gap-1 transition-all duration-500 group relative ${['affiliates', 'settings', 'admin'].includes(activeTab) ? 'text-primary' : 'text-text-muted hover:text-text-primary'}`}
+              title={text.nav.settings}
+              aria-expanded={settingsMenuOpen}
+              aria-haspopup="menu"
+            >
+              <div className={`p-3 rounded-2xl transition-all duration-500 relative ${['affiliates', 'settings', 'admin'].includes(activeTab) ? 'bg-primary/10 shadow-[0_0_20px_rgba(255,106,0,0.1)]' : 'group-hover:bg-white/5'}`}>
+                <Settings size={24} />
+                {['affiliates', 'settings', 'admin'].includes(activeTab) && (
+                  <motion.div
+                    layoutId="nav-glow"
+                    className="absolute inset-0 bg-primary/20 blur-xl rounded-full -z-10"
+                  />
+                )}
+              </div>
+              <span className={`text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-500 ${['affiliates', 'settings', 'admin'].includes(activeTab) ? 'opacity-100' : 'opacity-50'}`}>
+                {text.nav.settings}
+              </span>
+              {['affiliates', 'settings', 'admin'].includes(activeTab) && (
+                <motion.div
+                  layoutId="nav-indicator"
+                  className="absolute -right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-l-full"
+                />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {settingsMenuOpen && (
+                <motion.div
+                  role="menu"
+                  initial={{ opacity: 0, x: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -8, scale: 0.96 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute left-[88px] bottom-0 w-56 rounded-2xl border border-white/10 bg-surface/95 p-2 shadow-2xl shadow-black/30 backdrop-blur-2xl"
+                >
+                  {[
+                    { key: 'affiliates', icon: <Wallet size={18} />, label: text.nav.affiliates, onClick: () => openDesktopNavTab('affiliates') },
+                    { key: 'plans', icon: <Zap size={18} />, label: text.nav.plans, onClick: () => openPricing('desktop_settings_menu') },
+                    { key: 'settings', icon: <Settings size={18} />, label: text.nav.settings, onClick: () => openDesktopNavTab('settings') },
+                    ...(isAdmin ? [{ key: 'admin', icon: <ShieldCheck size={18} />, label: text.nav.admin, onClick: () => openDesktopNavTab('admin') }] : []),
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      role="menuitem"
+                      onClick={item.onClick}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-all ${activeTab === item.key ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'}`}
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
+                        {item.icon}
+                      </span>
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <button
             onClick={logout}
             className="p-3 rounded-2xl text-text-muted hover:text-error hover:bg-error/10 transition-all duration-300"
@@ -2165,9 +2232,50 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
   const productCategoryLabel = (category: IronShopProduct['category']) => (
     category === 'supplement' ? 'Suplemento' : category === 'apparel' ? 'Roupa' : 'Acessório'
   );
+  const findProduct = (matcher: (product: IronShopProduct) => boolean) => products.find(matcher) || products[0];
+  const wheyProduct = findProduct(product => product.id.includes('whey') || product.name.toLowerCase().includes('whey'));
+  const apparelProduct = findProduct(product => product.category === 'apparel' || product.name.toLowerCase().includes('camiseta'));
+  const shakerProduct = findProduct(product => product.name.toLowerCase().includes('shaker') || product.category === 'accessory');
+  const bestSellingProducts = [
+    {
+      id: 'best-whey-protein',
+      name: 'Whey Protein IronShape',
+      category: 'supplement' as IronShopProduct['category'],
+      price: wheyProduct?.price || 129.9,
+      image: wheyProduct?.image || firstProductImage
+    },
+    {
+      id: 'best-camiseta-dry-fit',
+      name: 'Camiseta Dry Fit IronShape',
+      category: 'apparel' as IronShopProduct['category'],
+      price: apparelProduct?.price || 89.9,
+      image: apparelProduct?.image || secondProductImage
+    },
+    {
+      id: 'best-shaker-steel',
+      name: 'Shaker Steel 700ml',
+      category: 'accessory' as IronShopProduct['category'],
+      price: shakerProduct?.price || 59.9,
+      image: shakerProduct?.image || thirdProductImage
+    },
+    {
+      id: 'best-creatina',
+      name: 'Creatina Monohidratada IronShape',
+      category: 'supplement' as IronShopProduct['category'],
+      price: 89.9,
+      image: firstProductImage || thirdProductImage
+    },
+    {
+      id: 'best-pre-treino',
+      name: 'Pré-Treino IronShape',
+      category: 'supplement' as IronShopProduct['category'],
+      price: 119.9,
+      image: thirdProductImage || firstProductImage
+    }
+  ];
 
   return (
-    <div className="bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-14 sm:space-y-16 pb-10">
+    <div id="ironshop-full-catalog" className="bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-14 sm:space-y-16 pb-10">
       <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
           <h1 className="text-[42px] sm:text-5xl font-black leading-[0.95] tracking-normal"><span className="text-primary">Loja</span> IronShape</h1>
@@ -2256,31 +2364,43 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
           <section className="space-y-5">
             <div className="flex items-center justify-between gap-5">
               <h2 className="text-[32px] sm:text-[38px] font-black tracking-normal">Mais vendidos</h2>
-              <button className="text-sm sm:text-base font-black text-primary flex items-center gap-2 hover:text-[#FF7E1F] transition-colors duration-200">Ver todos <ArrowRight size={18} /></button>
+              <a href="#ironshop-full-catalog" className="text-sm sm:text-base font-black text-primary flex items-center gap-2 hover:text-[#FF7E1F] active:scale-[0.98] transition-all duration-200">Ver todos <ArrowRight size={18} /></a>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
-              {products.map(product => (
-                <article key={product.id} className="group h-[420px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden hover:border-primary hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] hover:-translate-y-1 transition-all duration-[250ms]">
-                  <div className="relative h-[70%] bg-[#090909] overflow-hidden">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />
-                    <button className="absolute top-4 right-4 w-11 h-11 rounded-full bg-[#090909]/80 border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary transition-all duration-200" aria-label="Favoritar">
-                      <Heart size={19} />
-                    </button>
-                  </div>
-                  <div className="h-[30%] p-5 flex flex-col justify-between">
-                    <div className="space-y-2.5">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6F6F6F]">{productCategoryLabel(product.category)}</p>
-                      <h3 className="text-[22px] font-black leading-[1.05] line-clamp-2">{product.name}</h3>
-                    </div>
-                    <div className="flex items-end justify-between gap-3">
-                      <span className="text-[30px] xl:text-[34px] 2xl:text-[38px] font-black text-primary leading-none">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
-                      <button className="w-12 h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
-                        <Plus size={22} />
+            <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scroll-smooth touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex gap-3 sm:gap-4 pb-2 will-change-transform">
+                {bestSellingProducts.map(product => (
+                  <article key={product.id} className="group snap-center shrink-0 w-[172px] min-[390px]:w-[185px] sm:w-[220px] lg:w-[280px] h-[300px] sm:h-[340px] lg:h-[420px] rounded-[20px] border border-[#232323] bg-[#0D0D0D]/95 overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:border-primary lg:hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] lg:hover:-translate-y-1 transition-all duration-[250ms]">
+                    <div className="relative h-[65%] bg-[#090909] overflow-hidden">
+                      {product.image && (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover translate-z-0 group-hover:lg:scale-[1.03] transition-transform duration-200"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#090909]/55 via-transparent to-transparent" />
+                      <button className="absolute top-3 right-3 w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-[#090909]/70 backdrop-blur-md border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Favoritar">
+                        <Heart size={17} />
                       </button>
                     </div>
-                  </div>
-                </article>
-              ))}
+                    <div className="h-[35%] p-3.5 sm:p-4 lg:p-5 flex flex-col justify-between bg-[#111111]/90 backdrop-blur-md">
+                      <div className="space-y-1.5 lg:space-y-2.5">
+                        <p className="text-[10px] lg:text-xs font-black uppercase tracking-[0.16em] text-[#6F6F6F]">{productCategoryLabel(product.category)}</p>
+                        <h3 className="text-[14px] sm:text-base lg:text-[22px] font-black leading-[1.08] line-clamp-2">{product.name}</h3>
+                      </div>
+                      <div className="flex items-end justify-between gap-2">
+                        <span className="text-xl sm:text-2xl lg:text-[38px] font-black text-primary leading-none">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
+                        <button className="w-9 h-9 lg:w-12 lg:h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white active:scale-95 lg:hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
+                          <Plus size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+                <div aria-hidden className="shrink-0 w-1" />
+              </div>
             </div>
           </section>
 

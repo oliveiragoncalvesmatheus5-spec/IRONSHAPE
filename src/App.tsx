@@ -95,6 +95,11 @@ import {
   ShoppingBag,
   Package,
   Shirt,
+  Search,
+  Heart,
+  Truck,
+  CreditCard,
+  Headphones,
   ShieldAlert
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
@@ -2126,7 +2131,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
   if (!access.hasAccess) {
     return (
       <div className="max-w-3xl mx-auto min-h-[70vh] flex items-center justify-center">
-        <section className="w-full bg-surface border border-white/5 rounded-[32px] p-8 sm:p-10 text-center">
+        <section className="w-full bg-[#111111] border border-[#232323] rounded-[32px] p-8 sm:p-10 text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mx-auto mb-6">
             <Lock size={28} />
           </div>
@@ -2140,66 +2145,177 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
     );
   }
 
+  const featuredProducts = products.length > 0 ? products : [];
+  const firstProductImage = featuredProducts[0]?.image || '';
+  const secondProductImage = featuredProducts[1]?.image || firstProductImage;
+  const thirdProductImage = featuredProducts[2]?.image || firstProductImage;
+  const fourthProductImage = featuredProducts[3]?.image || secondProductImage;
+  const categoryCards = [
+    { name: 'Suplementos', image: firstProductImage, icon: <ShoppingBag size={22} /> },
+    { name: 'Roupas', image: secondProductImage, icon: <Shirt size={22} /> },
+    { name: 'Acessórios', image: thirdProductImage, icon: <Package size={22} /> },
+    { name: 'Kits', image: fourthProductImage, icon: <Star size={22} /> }
+  ];
+  const benefits = [
+    { label: 'Frete grátis', icon: <Truck size={22} /> },
+    { label: 'Compra segura', icon: <ShieldCheck size={22} /> },
+    { label: 'Parcelamento', icon: <CreditCard size={22} /> },
+    { label: 'Suporte', icon: <Headphones size={22} /> }
+  ];
+  const productCategoryLabel = (category: IronShopProduct['category']) => (
+    category === 'supplement' ? 'Suplemento' : category === 'apparel' ? 'Roupa' : 'Acessório'
+  );
+
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-5">
+    <div className="bg-[#090909] text-white space-y-10 pb-8">
+      <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary mb-2">IronShop</p>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Loja IronShape</h1>
-          <p className="text-text-muted mt-2 max-w-2xl">
-            Prévia interna com produtos selecionados para testes de permissão, estoque e vitrine antes da liberação pública.
+          <h1 className="text-[42px] sm:text-5xl font-black leading-[0.95] tracking-normal">Loja IronShape</h1>
+          <p className="text-lg font-normal text-[#AFAFAF] mt-4 max-w-2xl">
+            Tudo o que você precisa para evoluir seus resultados.
           </p>
         </div>
-        <div className="rounded-2xl bg-success/10 border border-success/20 text-success px-4 py-3 text-[10px] font-black uppercase tracking-widest">
-          Acesso {access.reason === 'public' ? 'público' : access.reason === 'admin' ? 'admin' : 'antecipado'}
+        <div className="flex items-center gap-3 w-full xl:w-auto">
+          <div className="flex-1 xl:w-[360px] h-14 rounded-2xl border border-[#232323] bg-[#111111] px-5 flex items-center gap-3 text-[#6F6F6F]">
+            <Search size={20} className="text-[#AFAFAF]" />
+            <span className="text-sm font-semibold">Buscar suplementos, roupas e kits</span>
+          </div>
+          <button className="w-14 h-14 rounded-2xl border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary transition-all duration-200" aria-label="Carrinho">
+            <ShoppingBag size={22} />
+          </button>
+          <button className="w-14 h-14 rounded-2xl border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary transition-all duration-200" aria-label="Usuário">
+            <UserIcon size={22} />
+          </button>
         </div>
       </header>
 
       {shopError && (
-        <div className="bg-error/10 border border-error/20 rounded-3xl p-5 flex items-center gap-3 text-error">
+        <div className="bg-[#111111] border border-[#232323] rounded-3xl p-5 flex items-center gap-3 text-white">
           <AlertTriangle size={20} />
           <p className="text-sm font-bold">{shopError}</p>
         </div>
       )}
 
       {loadingProducts ? (
-        <div className="bg-surface border border-white/5 rounded-[32px] p-12 flex flex-col items-center justify-center gap-4 text-text-muted">
+        <div className="bg-[#111111] border border-[#232323] rounded-[32px] p-12 flex flex-col items-center justify-center gap-4 text-[#AFAFAF]">
           <Loader2 className="animate-spin text-primary" size={34} />
-          <span className="text-xs font-black uppercase tracking-widest">Carregando vitrine protegida...</span>
+          <span className="text-xs font-black uppercase tracking-widest">Carregando vitrine premium...</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {products.map(product => (
-            <article key={product.id} className="bg-surface border border-white/5 rounded-[28px] overflow-hidden">
-              <div className="aspect-[4/3] bg-white/5 overflow-hidden">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+        <>
+          <section className="min-h-[420px] rounded-[28px] border border-[#232323] bg-[#111111] overflow-hidden grid lg:grid-cols-[45%_55%]">
+            <div className="p-7 sm:p-10 lg:p-12 flex flex-col justify-center">
+              <p className="text-xs font-black uppercase tracking-[0.26em] text-primary mb-5">SUPLEMENTOS</p>
+              <h2 className="text-[40px] sm:text-[48px] font-black leading-[0.98] tracking-normal max-w-xl">
+                DE QUALIDADE<br />PARA RESULTADOS REAIS
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8 text-sm font-bold text-[#D7D7D7]">
+                {['Produtos selecionados', 'Entrega rápida', 'Compra segura', 'Parcelamento'].map(item => (
+                  <span key={item} className="flex items-center gap-2">
+                    <CheckCircle2 size={17} className="text-primary" />
+                    {item}
+                  </span>
+                ))}
               </div>
-              <div className="p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-black leading-tight">{product.name}</h3>
-                    <p className="text-[10px] text-text-muted font-black uppercase tracking-widest mt-2">
-                      {product.category === 'supplement' ? 'Suplemento' : product.category === 'apparel' ? 'Roupa' : 'Acessório'}
-                    </p>
+              <button className="mt-9 w-fit min-h-[52px] px-8 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-[#FF7E1F] hover:scale-[1.03] transition-all duration-200">
+                Ver Produtos
+              </button>
+            </div>
+            <div className="relative min-h-[280px] bg-[#090909]">
+              {firstProductImage && <img src={firstProductImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#111111] via-[#111111]/25 to-transparent" />
+            </div>
+          </section>
+
+          <section className="space-y-5">
+            <h2 className="text-[26px] font-black tracking-normal">Categorias</h2>
+            <div className="flex md:grid md:grid-cols-4 gap-5 overflow-x-auto pb-2 snap-x">
+              {categoryCards.map(category => (
+                <article key={category.name} className="min-w-[250px] md:min-w-0 h-[300px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden group hover:border-primary hover:shadow-[0_24px_80px_rgba(255,106,0,0.14)] hover:-translate-y-1 transition-all duration-200 snap-start">
+                  <div className="h-[205px] bg-[#090909] overflow-hidden">
+                    {category.image && <img src={category.image} alt="" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />}
                   </div>
-                  <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    {product.category === 'apparel' ? <Shirt size={18} /> : product.category === 'accessory' ? <Package size={18} /> : <ShoppingBag size={18} />}
+                  <div className="p-5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="w-11 h-11 rounded-2xl bg-[#090909] border border-[#232323] text-primary flex items-center justify-center">{category.icon}</span>
+                      <h3 className="text-lg font-black">{category.name}</h3>
+                    </div>
+                    <button className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:text-[#FF7E1F] transition-colors duration-200">
+                      Ver produtos <ArrowRight size={15} />
+                    </button>
                   </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-5">
+            <h2 className="text-[26px] font-black tracking-normal">Mais vendidos</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4 sm:gap-5">
+              {products.map(product => (
+                <article key={product.id} className="group min-h-[420px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden hover:border-primary hover:shadow-[0_24px_80px_rgba(255,106,0,0.14)] hover:-translate-y-1 hover:scale-[1.03] transition-all duration-200">
+                  <div className="relative h-[70%] min-h-[270px] bg-[#090909] overflow-hidden">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />
+                    <button className="absolute top-4 right-4 w-11 h-11 rounded-full bg-[#111111]/90 border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary transition-all duration-200" aria-label="Favoritar">
+                      <Heart size={19} />
+                    </button>
+                  </div>
+                  <div className="p-4 sm:p-5 space-y-3">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6F6F6F]">{productCategoryLabel(product.category)}</p>
+                    <h3 className="text-lg font-black leading-tight min-h-[44px]">{product.name}</h3>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[26px] sm:text-[30px] font-black text-white leading-none">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
+                      <button className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center hover:bg-[#FF7E1F] hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
+                        <Plus size={22} />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="grid lg:grid-cols-2 gap-5">
+            {[
+              { title: 'Roupas IronShape', image: secondProductImage },
+              { title: 'Kits Promocionais', image: fourthProductImage }
+            ].map(banner => (
+              <article key={banner.title} className="min-h-[260px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden grid sm:grid-cols-2 group hover:border-primary hover:shadow-[0_24px_80px_rgba(255,106,0,0.14)] transition-all duration-200">
+                <div className="p-7 flex flex-col justify-center">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-3">IronShape</p>
+                  <h3 className="text-3xl font-black leading-tight">{banner.title}</h3>
+                  <button className="mt-7 w-fit min-h-[46px] px-6 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-[#FF7E1F] hover:scale-[1.03] transition-all duration-200">
+                    Ver mais
+                  </button>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xl font-black text-primary">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
-                  <span className="text-[10px] text-text-muted font-bold">{product.stock} em estoque</span>
+                <div className="min-h-[220px] bg-[#090909] overflow-hidden">
+                  {banner.image && <img src={banner.image} alt="" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />}
                 </div>
-                <button
-                  disabled
-                  className="w-full min-h-[44px] rounded-2xl bg-white/5 border border-white/10 text-text-muted text-[10px] font-black uppercase tracking-widest cursor-not-allowed"
-                >
-                  Checkout em validação
-                </button>
+              </article>
+            ))}
+          </section>
+
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 rounded-3xl border border-[#232323] bg-[#111111] p-4 sm:p-5">
+            {benefits.map(benefit => (
+              <div key={benefit.label} className="min-h-[96px] rounded-2xl bg-[#090909] border border-[#232323] flex items-center gap-4 px-5">
+                <span className="w-12 h-12 rounded-2xl bg-[#111111] border border-[#232323] text-primary flex items-center justify-center">{benefit.icon}</span>
+                <span className="text-sm sm:text-base font-black">{benefit.label}</span>
               </div>
-            </article>
-          ))}
-        </div>
+            ))}
+          </section>
+
+          <footer className="border-t border-[#232323] pt-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 text-[#6F6F6F]">
+            <div>
+              <h2 className="text-2xl font-black text-white">IronShape</h2>
+              <p className="text-xs font-semibold mt-2">Performance, tecnologia e evolução em cada detalhe.</p>
+            </div>
+            <nav className="flex flex-wrap gap-x-6 gap-y-3 text-xs font-black uppercase tracking-widest">
+              {['Política', 'Privacidade', 'Trocas', 'Contato', 'Termos'].map(link => (
+                <span key={link} className="hover:text-primary transition-colors duration-200">{link}</span>
+              ))}
+            </nav>
+          </footer>
+        </>
       )}
     </div>
   );

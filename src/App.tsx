@@ -2167,23 +2167,24 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
   );
 
   return (
-    <div className="bg-[#090909] text-white space-y-10 pb-8">
+    <div className="bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-14 sm:space-y-16 pb-10">
       <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
-          <h1 className="text-[42px] sm:text-5xl font-black leading-[0.95] tracking-normal">Loja IronShape</h1>
-          <p className="text-lg font-normal text-[#AFAFAF] mt-4 max-w-2xl">
+          <h1 className="text-[42px] sm:text-5xl font-black leading-[0.95] tracking-normal"><span className="text-primary">Loja</span> IronShape</h1>
+          <p className="text-base sm:text-lg font-normal text-[#AFAFAF] mt-4 max-w-xl leading-relaxed">
             Tudo o que você precisa para evoluir seus resultados.
           </p>
         </div>
         <div className="flex items-center gap-3 w-full xl:w-auto">
-          <div className="flex-1 xl:w-[360px] h-14 rounded-2xl border border-[#232323] bg-[#111111] px-5 flex items-center gap-3 text-[#6F6F6F]">
+          <div className="flex-1 xl:w-[520px] h-14 rounded-2xl border border-[#232323] bg-[#111111] px-5 flex items-center gap-3 text-[#6F6F6F] shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
             <Search size={20} className="text-[#AFAFAF]" />
             <span className="text-sm font-semibold">Buscar suplementos, roupas e kits</span>
           </div>
-          <button className="w-14 h-14 rounded-2xl border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary transition-all duration-200" aria-label="Carrinho">
+          <button className="relative w-14 h-14 rounded-2xl border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary hover:-translate-y-1 transition-all duration-200 shadow-[0_12px_35px_rgba(0,0,0,0.35)]" aria-label="Carrinho">
             <ShoppingBag size={22} />
+            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">2</span>
           </button>
-          <button className="w-14 h-14 rounded-2xl border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary transition-all duration-200" aria-label="Usuário">
+          <button className="w-14 h-14 rounded-full border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary hover:-translate-y-1 transition-all duration-200 shadow-[0_12px_35px_rgba(0,0,0,0.35)]" aria-label="Usuário">
             <UserIcon size={22} />
           </button>
         </div>
@@ -2203,13 +2204,12 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
         </div>
       ) : (
         <>
-          <section className="min-h-[420px] rounded-[28px] border border-[#232323] bg-[#111111] overflow-hidden grid lg:grid-cols-[45%_55%]">
-            <div className="p-7 sm:p-10 lg:p-12 flex flex-col justify-center">
-              <p className="text-xs font-black uppercase tracking-[0.26em] text-primary mb-5">SUPLEMENTOS</p>
-              <h2 className="text-[40px] sm:text-[48px] font-black leading-[0.98] tracking-normal max-w-xl">
-                DE QUALIDADE<br />PARA RESULTADOS REAIS
+          <section className="min-h-[420px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden grid lg:grid-cols-[45%_55%] shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+            <div className="relative z-10 p-8 sm:p-10 lg:p-12 flex flex-col justify-center">
+              <h2 className="text-[40px] sm:text-[52px] font-black italic leading-[0.98] tracking-normal max-w-xl">
+                SUPLEMENTOS<br /><span className="text-primary">DE QUALIDADE</span><br />PARA RESULTADOS REAIS
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8 text-sm font-bold text-[#D7D7D7]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 text-sm font-semibold text-[#D7D7D7]">
                 {['Produtos selecionados', 'Entrega rápida', 'Compra segura', 'Parcelamento'].map(item => (
                   <span key={item} className="flex items-center gap-2">
                     <CheckCircle2 size={17} className="text-primary" />
@@ -2223,25 +2223,29 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
             </div>
             <div className="relative min-h-[280px] bg-[#090909]">
               {firstProductImage && <img src={firstProductImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#111111] via-[#111111]/25 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#111111] via-[#111111]/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#090909]/70 via-transparent to-transparent" />
             </div>
           </section>
 
           <section className="space-y-5">
-            <h2 className="text-[26px] font-black tracking-normal">Categorias</h2>
-            <div className="flex md:grid md:grid-cols-4 gap-5 overflow-x-auto pb-2 snap-x">
+            <div className="flex items-center justify-between gap-5">
+              <h2 className="text-[32px] sm:text-[38px] font-black tracking-normal">Categorias</h2>
+              <button className="text-sm sm:text-base font-black text-primary flex items-center gap-2 hover:text-[#FF7E1F] transition-colors duration-200">Ver todos <ArrowRight size={18} /></button>
+            </div>
+            <div className="flex md:grid md:grid-cols-4 gap-6 overflow-x-auto pb-2 snap-x">
               {categoryCards.map(category => (
-                <article key={category.name} className="min-w-[250px] md:min-w-0 h-[300px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden group hover:border-primary hover:shadow-[0_24px_80px_rgba(255,106,0,0.14)] hover:-translate-y-1 transition-all duration-200 snap-start">
-                  <div className="h-[205px] bg-[#090909] overflow-hidden">
+                <article key={category.name} className="min-w-[260px] md:min-w-0 h-[220px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden group hover:border-primary hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] hover:-translate-y-1 transition-all duration-200 snap-start">
+                  <div className="h-[154px] bg-[#090909] overflow-hidden">
                     {category.image && <img src={category.image} alt="" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />}
                   </div>
-                  <div className="p-5 flex items-center justify-between gap-4">
+                  <div className="h-[66px] px-5 flex items-center justify-between gap-4 bg-[#111111]">
                     <div className="flex items-center gap-3">
-                      <span className="w-11 h-11 rounded-2xl bg-[#090909] border border-[#232323] text-primary flex items-center justify-center">{category.icon}</span>
-                      <h3 className="text-lg font-black">{category.name}</h3>
+                      <span className="w-10 h-10 rounded-full bg-[#090909] border border-[#232323] text-primary flex items-center justify-center">{category.icon}</span>
+                      <h3 className="text-base sm:text-lg font-black uppercase">{category.name}</h3>
                     </div>
-                    <button className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:text-[#FF7E1F] transition-colors duration-200">
-                      Ver produtos <ArrowRight size={15} />
+                    <button className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 hover:text-[#FF7E1F] transition-colors duration-200">
+                      Ver produtos <ArrowRight size={16} />
                     </button>
                   </div>
                 </article>
@@ -2250,22 +2254,27 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
           </section>
 
           <section className="space-y-5">
-            <h2 className="text-[26px] font-black tracking-normal">Mais vendidos</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4 sm:gap-5">
+            <div className="flex items-center justify-between gap-5">
+              <h2 className="text-[32px] sm:text-[38px] font-black tracking-normal">Mais vendidos</h2>
+              <button className="text-sm sm:text-base font-black text-primary flex items-center gap-2 hover:text-[#FF7E1F] transition-colors duration-200">Ver todos <ArrowRight size={18} /></button>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
               {products.map(product => (
-                <article key={product.id} className="group min-h-[420px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden hover:border-primary hover:shadow-[0_24px_80px_rgba(255,106,0,0.14)] hover:-translate-y-1 hover:scale-[1.03] transition-all duration-200">
-                  <div className="relative h-[70%] min-h-[270px] bg-[#090909] overflow-hidden">
+                <article key={product.id} className="group h-[420px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden hover:border-primary hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] hover:-translate-y-1 transition-all duration-[250ms]">
+                  <div className="relative h-[70%] bg-[#090909] overflow-hidden">
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />
-                    <button className="absolute top-4 right-4 w-11 h-11 rounded-full bg-[#111111]/90 border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary transition-all duration-200" aria-label="Favoritar">
+                    <button className="absolute top-4 right-4 w-11 h-11 rounded-full bg-[#090909]/80 border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary transition-all duration-200" aria-label="Favoritar">
                       <Heart size={19} />
                     </button>
                   </div>
-                  <div className="p-4 sm:p-5 space-y-3">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6F6F6F]">{productCategoryLabel(product.category)}</p>
-                    <h3 className="text-lg font-black leading-tight min-h-[44px]">{product.name}</h3>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[26px] sm:text-[30px] font-black text-white leading-none">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
-                      <button className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center hover:bg-[#FF7E1F] hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
+                  <div className="h-[30%] p-5 flex flex-col justify-between">
+                    <div className="space-y-2.5">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6F6F6F]">{productCategoryLabel(product.category)}</p>
+                      <h3 className="text-[22px] font-black leading-[1.05] line-clamp-2">{product.name}</h3>
+                    </div>
+                    <div className="flex items-end justify-between gap-3">
+                      <span className="text-[30px] xl:text-[34px] 2xl:text-[38px] font-black text-primary leading-none">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
+                      <button className="w-12 h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
                         <Plus size={22} />
                       </button>
                     </div>
@@ -2275,16 +2284,16 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
             </div>
           </section>
 
-          <section className="grid lg:grid-cols-2 gap-5">
+          <section className="grid lg:grid-cols-2 gap-6">
             {[
               { title: 'Roupas IronShape', image: secondProductImage },
               { title: 'Kits Promocionais', image: fourthProductImage }
             ].map(banner => (
-              <article key={banner.title} className="min-h-[260px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden grid sm:grid-cols-2 group hover:border-primary hover:shadow-[0_24px_80px_rgba(255,106,0,0.14)] transition-all duration-200">
-                <div className="p-7 flex flex-col justify-center">
+              <article key={banner.title} className="min-h-[260px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden grid sm:grid-cols-2 group hover:border-primary hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] hover:-translate-y-1 transition-all duration-[250ms]">
+                <div className="p-8 flex flex-col justify-center">
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-3">IronShape</p>
-                  <h3 className="text-3xl font-black leading-tight">{banner.title}</h3>
-                  <button className="mt-7 w-fit min-h-[46px] px-6 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-[#FF7E1F] hover:scale-[1.03] transition-all duration-200">
+                  <h3 className="text-[34px] sm:text-[38px] font-black italic leading-[1.02]">{banner.title}</h3>
+                  <button className="mt-7 w-fit min-h-[46px] px-8 rounded-2xl border border-primary bg-transparent text-primary text-sm font-black uppercase tracking-widest hover:bg-primary hover:text-white hover:scale-[1.03] transition-all duration-200">
                     Ver mais
                   </button>
                 </div>
@@ -2304,17 +2313,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
             ))}
           </section>
 
-          <footer className="border-t border-[#232323] pt-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 text-[#6F6F6F]">
-            <div>
-              <h2 className="text-2xl font-black text-white">IronShape</h2>
-              <p className="text-xs font-semibold mt-2">Performance, tecnologia e evolução em cada detalhe.</p>
-            </div>
-            <nav className="flex flex-wrap gap-x-6 gap-y-3 text-xs font-black uppercase tracking-widest">
-              {['Política', 'Privacidade', 'Trocas', 'Contato', 'Termos'].map(link => (
-                <span key={link} className="hover:text-primary transition-colors duration-200">{link}</span>
-              ))}
-            </nav>
-          </footer>
+          <div aria-hidden className="h-10 border-t border-[#232323]" />
         </>
       )}
     </div>
@@ -10808,6 +10807,34 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
     }
   };
 
+  const communityStoryProfiles = Array.from(
+    new Map(
+      posts
+        .filter(post => post.user_id)
+        .map(post => [
+          post.user_id,
+          {
+            id: post.user_id,
+            name: postProfiles[post.user_id]?.name || post.user_name || 'Atleta',
+            avatar: postProfiles[post.user_id]?.avatar_url || (post.user_avatar?.startsWith('http') ? post.user_avatar : ''),
+            initial: (postProfiles[post.user_id]?.name || post.user_name || 'I')[0]?.toUpperCase() || 'I',
+          },
+        ])
+    ).values()
+  ).slice(0, 6);
+  const visualStoryItems = communityStoryProfiles.length >= 5
+    ? communityStoryProfiles
+    : [
+        ...communityStoryProfiles,
+        { id: 'visual-ana', name: 'Ana', avatar: '', initial: 'A' },
+        { id: 'visual-lucas', name: 'Lucas', avatar: '', initial: 'L' },
+        { id: 'visual-maya', name: 'Maya', avatar: '', initial: 'M' },
+        { id: 'visual-rafa', name: 'Rafa', avatar: '', initial: 'R' },
+        { id: 'visual-bia', name: 'Bia', avatar: '', initial: 'B' },
+        { id: 'visual-joao', name: 'Joao', avatar: '', initial: 'J' },
+      ].slice(0, 6);
+  const communityFilters = ['Todos', 'Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'];
+
   if (activeSocialProfile) {
     const isOwnSocialProfile = activeSocialProfile.id === profile.id;
     const socialPosts = posts.filter(post => post.user_id === activeSocialProfile.id);
@@ -11034,28 +11061,126 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight">Comunidade 🤝</h1>
-          <p className="text-text-muted text-sm md:text-base">Compartilhe sua jornada</p>
+    <div className="space-y-6 md:space-y-8">
+      <header className="space-y-5 rounded-[24px] md:rounded-[28px] border border-[#232323] bg-[#090909] px-4 py-5 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:px-5 md:px-6">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.78fr)] lg:items-start">
+          <div className="min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-[28px] font-black leading-[1.05] tracking-normal text-white sm:text-[32px] md:text-[34px]">
+                  <span>Comunidade</span>{' '}
+                  <span className="text-primary">IronShape</span>
+                  <span className="ml-2 text-[24px] align-[-1px]" aria-hidden="true">🤝</span>
+                </h1>
+              </div>
+              <button
+                onClick={() => openSocialProfile(profile.id, profile)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818] sm:h-11 sm:w-11 lg:hidden"
+                aria-label="Abrir meu perfil social"
+              >
+                {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
+              </button>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary sm:text-base">
+              Compartilhe sua jornada, inspire outras pessoas e evolua junto com a comunidade.
+            </p>
+          </div>
+
+          <div className="space-y-3 lg:pt-0.5">
+            <div className="relative">
+              <Search size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                readOnly
+                value=""
+                placeholder="Pesquisar usuários, posts, hashtags..."
+                className="h-12 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50"
+                aria-label="Pesquisar usuários, posts e hashtags"
+              />
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_44px_44px] gap-2 sm:grid-cols-[minmax(0,1fr)_48px_48px] lg:grid-cols-[minmax(0,1fr)_48px_48px_48px]">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex h-12 min-w-0 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-sm font-bold text-white shadow-[0_12px_28px_rgba(255,106,0,0.24)] transition-all hover:bg-primary-hover active:scale-[0.98]"
+              >
+                <Plus size={19} />
+                <span>Nova publicação</span>
+              </button>
+              <button
+                type="button"
+                className="relative flex h-11 min-h-[44px] w-11 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white sm:h-12 sm:w-12"
+                aria-label="Notificações"
+              >
+                <BellRing size={19} />
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">3</span>
+              </button>
+              <button
+                type="button"
+                className="relative flex h-11 min-h-[44px] w-11 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white sm:h-12 sm:w-12"
+                aria-label="Mensagens"
+              >
+                <Send size={18} />
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">2</span>
+              </button>
+              <button
+                onClick={() => openSocialProfile(profile.id, profile)}
+                className="hidden h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818] lg:flex"
+                aria-label="Abrir meu perfil social"
+              >
+                {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => openSocialProfile(profile.id, profile)}
-            className="w-12 h-12 rounded-2xl border border-white/10 bg-surface overflow-hidden flex items-center justify-center font-black text-primary hover:border-primary/40 transition-all shrink-0"
-            aria-label="Abrir meu perfil social"
-          >
-            {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="w-full h-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-primary w-12 h-12 flex items-center justify-center rounded-2xl text-text-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform shrink-0"
-            aria-label="Criar publicação"
-          >
-            <Plus size={24} />
-          </button>
-        </div>
+
+        <section className="space-y-3" aria-label="Momentos da comunidade">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-black tracking-normal text-white">Momentos</h2>
+            <button type="button" className="min-h-[44px] px-1 text-xs font-bold text-primary transition-colors hover:text-primary-hover">
+              Ver todos
+            </button>
+          </div>
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden">
+            <button type="button" className="w-[70px] shrink-0 text-center">
+              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#232323] bg-[#121212] text-primary transition-all hover:border-primary/50">
+                <Plus size={22} />
+              </span>
+              <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">Seu story</span>
+            </button>
+            {visualStoryItems.map((item, index) => (
+              <button key={`${item.id}-${index}`} type="button" className="w-[70px] shrink-0 text-center">
+                <span className="mx-auto block h-16 w-16 rounded-full border border-primary p-[2px]">
+                  <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#121212] text-base font-black text-white">
+                    {item.avatar ? (
+                      <img src={item.avatar} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(255,106,0,0.42),rgba(18,18,18,0.95)_62%)]">
+                        {item.initial}
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">{item.name}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
+          {communityFilters.map((filter, index) => (
+            <button
+              key={filter}
+              type="button"
+              className={`h-10 shrink-0 rounded-full border px-4 text-sm font-bold transition-all ${
+                index === 0
+                  ? 'border-primary bg-primary text-white shadow-[0_10px_24px_rgba(255,106,0,0.2)]'
+                  : 'border-[#232323] bg-[#121212] text-text-secondary hover:border-primary/40 hover:text-white'
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
+        </nav>
       </header>
 
       {shareFeedback && (

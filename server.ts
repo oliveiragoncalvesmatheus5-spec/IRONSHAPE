@@ -932,7 +932,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     }
   });
 
-  // Exercise media proxy — AscendAPI is the single remote media provider.
+  // Exercise media proxy — WorkoutX is the single remote media provider.
   app.get("/api/workout-gif", async (req, res) => {
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
@@ -944,14 +944,9 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     }
     if (cached) exerciseMediaCache.delete(cacheKey);
 
-    const rapidApiKey = process.env.RAPIDAPI_KEY;
-    const rapidHost = process.env.RAPIDAPI_HOST || "edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
-    const rapidHeaders = rapidApiKey
-      ? {
-          'x-rapidapi-host': rapidHost,
-          'x-rapidapi-key': rapidApiKey,
-        }
-      : null;
+    const workoutXKey = process.env.WORKOUTX_API_KEY;
+    const workoutXBaseUrl = (process.env.WORKOUTX_BASE_URL || "https://api.workoutxapp.com/v1").replace(/\/+$/, "");
+    const workoutXHeaders = workoutXKey ? { "X-WorkoutX-Key": workoutXKey } : null;
 
     const pickArray = (payload: any): any[] => {
       if (Array.isArray(payload)) return payload;
@@ -963,93 +958,18 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       return [];
     };
 
-    const pickMedia = (item: any): string | null => {
-      const direct = [
-        item?.gifUrl,
-        item?.gif_url,
-        item?.gif,
-        item?.videoUrl,
-        item?.video_url,
-        item?.video,
-        item?.imageUrl,
-        item?.image_url,
-        item?.image,
-        item?.thumbnail,
-      ].find(Boolean);
-      if (typeof direct === "string") return direct;
-      const media = item?.media || item?.assets || {};
-      const nested = [media?.gifUrl, media?.gif, media?.videoUrl, media?.video, media?.imageUrl, media?.image].find(Boolean);
-      if (typeof nested === "string") return nested;
-      const images = item?.images || media?.images;
-      if (Array.isArray(images)) {
-        const first = images.find((img: any) => typeof img === "string" || img?.url || img?.src);
-        if (typeof first === "string") return first;
-        if (first?.url) return first.url;
-        if (first?.src) return first.src;
-      }
-      const videos = item?.videos || media?.videos;
-      if (Array.isArray(videos)) {
-        const first = videos.find((vid: any) => typeof vid === "string" || vid?.url || vid?.src);
-        if (typeof first === "string") return first;
-        if (first?.url) return first.url;
-        if (first?.src) return first.src;
-      }
-      return null;
-    };
-
-    const looksLikeStillImage = (value: any) =>
-      typeof value === "string" && /\.(jpe?g|png|webp)(\?|$)/i.test(value);
-
-    const hasMotionMedia = (item: any) =>
-      Boolean(
-        item?.videoUrl ||
-        item?.video_url ||
-        item?.video ||
-        (item?.gifUrl && !looksLikeStillImage(item.gifUrl)) ||
-        (item?.gif_url && !looksLikeStillImage(item.gif_url)) ||
-        (item?.gif && !looksLikeStillImage(item.gif)),
-      );
-
     const toArray = (value: any): string[] => {
       if (Array.isArray(value)) return value.map((item) => String(item));
       if (value) return [String(value)];
       return [];
     };
 
-    const isPlayableMediaUrl = (value: any) =>
-      typeof value === "string" && /\.(gif|mp4|webm)(\?|$)/i.test(value);
     const isGifMediaUrl = (value: any) =>
-      typeof value === "string" && /\.gif(\?|$)/i.test(value);
-    const isVideoMediaUrl = (value: any) =>
-      typeof value === "string" && /\.(mp4|webm)(\?|$)/i.test(value);
-
-    const hasPlayableMedia = (item: any) => {
-      const media = item?.media || item?.assets || {};
-      const direct = [
-        item?.gifUrl,
-        item?.gif_url,
-        item?.gif,
-        item?.videoUrl,
-        item?.video_url,
-        item?.video,
-        media?.gifUrl,
-        media?.gif,
-        media?.videoUrl,
-        media?.video,
-      ];
-      if (direct.some(isPlayableMediaUrl)) return true;
-      const videos = item?.videos || media?.videos;
-      if (Array.isArray(videos)) {
-        return videos.some((vid: any) => isPlayableMediaUrl(typeof vid === "string" ? vid : vid?.url || vid?.src));
-      }
-      return false;
-    };
+      typeof value === "string" && (/\.gif(\?|$)/i.test(value) || /\/gifs\/[^/?#]+(\?|$)/i.test(value));
 
     const normalizeMediaResult = (item: any) => {
-      const id = item?.id || item?.exerciseId;
-      const pickedMedia = pickMedia(item);
-      const directGif = [item?.gifUrl, item?.gif_url, item?.gif, pickedMedia].find(isGifMediaUrl) || null;
-      const directVideo = [item?.videoUrl, item?.video_url, item?.video, pickedMedia].find(isVideoMediaUrl) || null;
+      const id = String(item?.id || item?.exerciseId || "").trim();
+      const gifUrl = [item?.gifUrl, item?.gif_url, item?.gif].find(isGifMediaUrl) || null;
       return {
         ...item,
         id,
@@ -1058,19 +978,23 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
         bodyParts: toArray(item?.bodyParts || item?.bodyPart),
         targetMuscles: toArray(item?.targetMuscles || item?.target),
         equipments: toArray(item?.equipments || item?.equipment),
-        gifUrl: directGif,
-        imageUrl: item?.imageUrl || item?.image_url || item?.image || pickedMedia,
-        videoUrl: directVideo,
+        bodyPart: item?.bodyPart,
+        target: item?.target,
+        equipment: item?.equipment,
+        gifUrl,
+        imageUrl: null,
+        videoUrl: null,
+        provider: "workoutx",
       };
     };
 
     const fetchExerciseDetail = async (item: any) => {
-      if (!rapidHost.includes("ascendapi") || !item?.exerciseId || hasPlayableMedia(item)) return item;
+      if (!workoutXHeaders || !item?.id || item?.gifUrl) return item;
       try {
-        const url = `https://${rapidHost}/api/v1/exercises/${encodeURIComponent(item.exerciseId)}`;
-        const response = await fetch(url, { headers: rapidHeaders });
+        const url = `${workoutXBaseUrl}/exercises/exercise/${encodeURIComponent(item.id)}`;
+        const response = await fetch(url, { headers: workoutXHeaders });
         if (response.status === 429) {
-          const error: any = new Error("Cota mensal da API de exercícios atingida.");
+          const error: any = new Error("Cota mensal da WorkoutX atingida.");
           error.status = 429;
           throw error;
         }
@@ -1079,7 +1003,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
         return { ...item, ...(payload?.data || payload) };
       } catch (error: any) {
         if (error?.status === 429) throw error;
-        console.warn(`[workout-gif] Detail fetch failed for ${item.exerciseId}:`, error?.message);
+        console.warn(`[workout-gif] WorkoutX detail fetch failed for ${item.id}:`, error?.message);
         return item;
       }
     };
@@ -1090,9 +1014,10 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     const scoreResult = (item: any, searchName: string) => {
       const itemName = normalizeSearchText(String(item?.name || ""));
       const query = normalizeSearchText(searchName);
-      const bodyParts = (item?.bodyParts || []).map((part: string) => normalizeSearchText(String(part)));
-      const targetMuscles = (item?.targetMuscles || []).map((muscle: string) => normalizeSearchText(String(muscle)));
-      const itemContext = [itemName, ...bodyParts, ...targetMuscles].join(" ");
+      const bodyParts = toArray(item?.bodyParts || item?.bodyPart).map((part: string) => normalizeSearchText(String(part)));
+      const targetMuscles = toArray(item?.targetMuscles || item?.target).map((muscle: string) => normalizeSearchText(String(muscle)));
+      const equipment = toArray(item?.equipments || item?.equipment).map((equip: string) => normalizeSearchText(String(equip)));
+      const itemContext = [itemName, ...bodyParts, ...targetMuscles, ...equipment].join(" ");
       const words = query.split(" ").filter(word => word.length > 2);
       const isChestQuery = query.includes("chest") || query.includes("bench") || query.includes("fly");
       const isShoulderQuery = query.includes("shoulder") || query.includes("lateral raise");
@@ -1104,7 +1029,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       for (const word of words) {
         if (itemName.includes(word)) score += 12;
       }
-      if (pickMedia(item)) score += 8;
+      if (isGifMediaUrl(item?.gifUrl)) score += 15;
       if (itemContext.includes("neck") && !query.includes("neck")) score -= 35;
       if (itemContext.includes("calf") && !query.includes("calf")) score -= 25;
       if ((itemName.includes("reverse") || itemName.includes("rear") || itemName.includes("bent over")) && !query.includes("reverse") && !query.includes("rear")) score -= 45;
@@ -1125,33 +1050,30 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       return score;
     };
 
-    const searchRapidApi = async (searchName: string) => {
-      if (!rapidHeaders) return null;
-      const url = rapidHost.includes("ascendapi")
-        ? `https://${rapidHost}/api/v1/exercises/search?search=${encodeURIComponent(searchName)}`
-        : `https://${rapidHost}/exercises/name/${encodeURIComponent(searchName)}?limit=5&offset=0`;
-      console.log(`[workout-gif] Searching ${rapidHost} for: "${searchName}"`);
-      const response = await fetch(url, { headers: rapidHeaders });
-      const data = await response.json();
+    const searchWorkoutX = async (searchName: string) => {
+      if (!workoutXHeaders) return null;
+      const url = `${workoutXBaseUrl}/exercises?name=${encodeURIComponent(searchName)}&limit=10&offset=0`;
+      console.log(`[workout-gif] Searching WorkoutX for: "${searchName}"`);
+      const response = await fetch(url, { headers: workoutXHeaders });
       if (response.status === 429) {
-        const error: any = new Error("Cota mensal da API de exercícios atingida.");
+        const error: any = new Error("Cota mensal da WorkoutX atingida.");
         error.status = 429;
         throw error;
       }
       if (!response.ok) return null;
+      const data = await response.json();
 
       const listBase = pickArray(data)
         .map(normalizeMediaResult)
         .map((item: any) => ({ ...item, matchScore: scoreResult(item, searchName) }))
         .sort((a, b) => b.matchScore - a.matchScore);
-      const detailLimit = rapidHost.includes("ascendapi") ? 3 : 2;
-      const detailCandidates = listBase.filter((item: any) => item.matchScore >= 12).slice(0, detailLimit);
+      const detailCandidates = listBase.filter((item: any) => item.matchScore >= 12).slice(0, 5);
       const list = (await Promise.all(detailCandidates.map(fetchExerciseDetail)))
         .map(normalizeMediaResult)
-        .map((item: any) => ({ ...item, provider: "rapidapi", matchScore: scoreResult(item, searchName) }))
+        .map((item: any) => ({ ...item, matchScore: scoreResult(item, searchName) }))
         .sort((a, b) => b.matchScore - a.matchScore);
-      const safeList = list.filter((item: any) => item.matchScore >= 35);
-      console.log(`[workout-gif] Status: ${response.status}, Results: ${list.length}, Safe: ${safeList.length}`);
+      const safeList = list.filter((item: any) => item.matchScore >= 35 && isGifMediaUrl(item.gifUrl));
+      console.log(`[workout-gif] WorkoutX status: ${response.status}, Results: ${list.length}, Safe GIFs: ${safeList.length}`);
       if (safeList.length > 0) return { status: response.status, data: safeList.slice(0, 5) };
       return null;
     };
@@ -1194,8 +1116,13 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     };
 
     try {
-      if (!rapidHeaders) {
-        return res.status(500).json({ error: "RAPIDAPI_KEY não configurada" });
+      if (!workoutXHeaders) {
+        exerciseMediaCache.set(cacheKey, {
+          data: [],
+          expiresAt: Date.now() + EXERCISE_MEDIA_EMPTY_CACHE_TTL,
+        });
+        res.setHeader("X-Exercise-Media-Provider", "workoutx-not-configured");
+        return res.status(200).json([]);
       }
 
       const normalized = name.toLowerCase().trim();
@@ -1211,9 +1138,9 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
         ...(fallbackQueries[normalized] || []),
       ].filter((query, index, arr) => query && arr.indexOf(query) === index);
 
-      let result: Awaited<ReturnType<typeof searchRapidApi>> = null;
+      let result: Awaited<ReturnType<typeof searchWorkoutX>> = null;
       for (const query of candidates) {
-        result = await searchRapidApi(query);
+        result = await searchWorkoutX(query);
         if (result) break;
       }
 
@@ -1231,7 +1158,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
           data: [],
           expiresAt: Date.now() + EXERCISE_MEDIA_EMPTY_CACHE_TTL,
         });
-        res.setHeader("X-Exercise-Media-Provider", "quota-exceeded");
+        res.setHeader("X-Exercise-Media-Provider", "workoutx-quota-exceeded");
         return res.status(200).json([]);
       }
       return res.status(error?.status || 500).json({ error: error.message });

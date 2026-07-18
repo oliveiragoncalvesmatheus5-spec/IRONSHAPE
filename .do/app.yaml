@@ -26,11 +26,11 @@ services:
       - key: IRON_COACH_MODEL
         value: claude-haiku-4-5
         scope: RUN_TIME
-      - key: RAPIDAPI_KEY
+      - key: WORKOUTX_API_KEY
         scope: RUN_TIME
         type: SECRET
-      - key: RAPIDAPI_HOST
-        value: edb-with-videos-and-images-by-ascendapi.p.rapidapi.com
+      - key: WORKOUTX_BASE_URL
+        value: https://api.workoutxapp.com/v1
         scope: RUN_TIME
       - key: VITE_SUPABASE_URL
         scope: RUN_AND_BUILD_TIME

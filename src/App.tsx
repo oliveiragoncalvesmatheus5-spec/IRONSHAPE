@@ -5525,7 +5525,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
       {/* Content Area */}
       <div className="relative min-h-[500px]">
         {!hasAccess(selectedPlanTab) ? (
-          <LockedFeatureOverlay onUpgrade={onUpgrade} plan={selectedPlanTab} />
+          <LockedFeatureOverlay onUpgrade={onUpgrade} plan={selectedPlanTab} language={language} />
         ) : (
           <div className="space-y-12">
             {activeSubTab === 'workouts' && (
@@ -5646,7 +5646,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
             {activeSubTab === 'ia' && (
               hasPro
                 ? <IAAdaptativaView profile={profile} language={language} onUpgrade={onUpgrade} isAdmin={isAdmin} />
-                : <LockedFeatureOverlay onUpgrade={onUpgrade} plan="Pro" title="Iron Coach IA" description="Seu personal trainer inteligente disponível 24h. Exclusivo para assinantes Pro e Elite." />
+                : <LockedFeatureOverlay onUpgrade={onUpgrade} plan="Pro" language={language} title="Iron Coach IA" description="Seu personal trainer inteligente disponível 24h. Exclusivo para assinantes Pro e Elite." />
             )}
             {activeSubTab === 'history' && <WorkoutHistoryView userUid={user?.id || ''} language={language} />}
             {activeSubTab === 'ranking' && <GlobalRankingView language={language} />}
@@ -5677,9 +5677,31 @@ function SubTabButton({ active, onClick, label, icon }: { active: boolean, onCli
   );
 }
 
-function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgrade: () => void, plan: Plan, title?: string, description?: string }) {
-  const defaultTitle = "Acesso Restrito";
-  const defaultDescription = `O módulo ${plan} faz parte dos nossos protocolos premium de treinamento.`;
+function LockedFeatureOverlay({ onUpgrade, plan, language, title, description }: { onUpgrade: () => void, plan: Plan, language: LanguageCode, title?: string, description?: string }) {
+  const lockedText = {
+    'pt-BR': {
+      title: 'Acesso Restrito',
+      description: `O módulo ${plan} faz parte dos nossos protocolos premium de treinamento.`,
+      button: `FAZER UPGRADE PARA ${(plan || '').toUpperCase()}`,
+      ironCoachDescription: 'Seu personal trainer inteligente disponível 24h. Exclusivo para assinantes Pro e Elite.',
+    },
+    en: {
+      title: 'Restricted Access',
+      description: `The ${plan} module is part of our premium training protocols.`,
+      button: `UPGRADE TO ${(plan || '').toUpperCase()}`,
+      ironCoachDescription: 'Your smart personal trainer, available 24/7. Exclusive to Pro and Elite subscribers.',
+    },
+    es: {
+      title: 'Acceso Restringido',
+      description: `El módulo ${plan} forma parte de nuestros protocolos premium de entrenamiento.`,
+      button: `MEJORAR A ${(plan || '').toUpperCase()}`,
+      ironCoachDescription: 'Tu entrenador personal inteligente, disponible 24h. Exclusivo para suscriptores Pro y Elite.',
+    },
+  }[language];
+  const defaultTitle = lockedText.title;
+  const defaultDescription = description === 'Seu personal trainer inteligente disponível 24h. Exclusivo para assinantes Pro e Elite.'
+    ? lockedText.ironCoachDescription
+    : lockedText.description;
 
   return (
     <motion.div 
@@ -5705,7 +5727,7 @@ function LockedFeatureOverlay({ onUpgrade, plan, title, description }: { onUpgra
           onClick={onUpgrade}
           className="bg-primary text-text-primary font-black px-8 sm:px-12 py-4 sm:py-5 rounded-[20px] sm:rounded-[24px] hover:bg-primary-hover hover:scale-105 transition-all shadow-2xl shadow-primary/30 active:scale-95 flex items-center gap-3 mx-auto text-xs sm:text-sm"
         >
-          FAZER UPGRADE PARA {(plan || '').toUpperCase()}
+          {lockedText.button}
           <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
@@ -7701,6 +7723,38 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
     gain: nutritionText.gain,
   };
   const selectedGoalFocusLabel = goalFocusOptions[calcData.goal].find(option => option.value === calcData.goalFocus)?.label || '';
+  const nutritionCoachCardText = {
+    'pt-BR': {
+      title: 'Ficou com alguma dúvida?',
+      proBadge: 'Recurso Pro',
+      description: 'O Iron Coach explica suas calorias e macros e ajuda a aplicar este protocolo na rotina.',
+      talk: 'Conversar com o Iron Coach',
+      unlock: 'Desbloquear Iron Coach',
+      disclaimer: 'Orientações educativas. Para diagnóstico, condições clínicas ou plano alimentar individual, consulte um nutricionista.',
+      analysisIntro: 'Analise meu protocolo nutricional e explique de forma simples.',
+      professionalNote: 'Trate como orientação educativa e recomende acompanhamento profissional em caso de condição clínica.',
+    },
+    en: {
+      title: 'Still have questions?',
+      proBadge: 'Pro Feature',
+      description: 'Iron Coach explains your calories and macros and helps you apply this protocol to your routine.',
+      talk: 'Talk to Iron Coach',
+      unlock: 'Unlock Iron Coach',
+      disclaimer: 'Educational guidance. For diagnosis, clinical conditions, or an individual meal plan, consult a nutritionist.',
+      analysisIntro: 'Analyze my nutrition protocol and explain it simply.',
+      professionalNote: 'Treat this as educational guidance and recommend professional support for any clinical condition.',
+    },
+    es: {
+      title: '¿Te quedó alguna duda?',
+      proBadge: 'Recurso Pro',
+      description: 'Iron Coach explica tus calorías y macros y te ayuda a aplicar este protocolo en la rutina.',
+      talk: 'Conversar con Iron Coach',
+      unlock: 'Desbloquear Iron Coach',
+      disclaimer: 'Orientaciones educativas. Para diagnóstico, condiciones clínicas o un plan alimentario individual, consulta a un nutricionista.',
+      analysisIntro: 'Analiza mi protocolo nutricional y explícalo de forma simple.',
+      professionalNote: 'Trátalo como orientación educativa y recomienda acompañamiento profesional en caso de condición clínica.',
+    },
+  }[language];
 
   useEffect(() => {
     if (!showCoachUpgradeModal) return;
@@ -8393,15 +8447,15 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">Ficou com alguma dúvida?</h4>
+                        <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">{nutritionCoachCardText.title}</h4>
                         {!hasIronCoachAccess && (
                           <span className="px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">
-                            Recurso Pro
+                            {nutritionCoachCardText.proBadge}
                           </span>
                         )}
                       </div>
                       <p className="text-text-secondary text-sm leading-relaxed">
-                        O Iron Coach explica suas calorias e macros e ajuda a aplicar este protocolo na rotina.
+                        {nutritionCoachCardText.description}
                       </p>
                     </div>
                     <button
@@ -8418,22 +8472,22 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                         }
                         const goalLabel = calcData.goal === 'lose' ? 'emagrecer' : calcData.goal === 'gain' ? 'ganhar massa' : 'manter o peso';
                         onOpenIronCoach(
-                          `Analise meu protocolo nutricional e explique de forma simples. Meu objetivo é ${goalLabel}, com prioridade em ${selectedGoalFocusLabel.toLowerCase()}. ` +
+                          `${nutritionCoachCardText.analysisIntro} Meu objetivo é ${goalLabel}, com prioridade em ${selectedGoalFocusLabel.toLowerCase()}. ` +
                           `Dados: ${calcData.weight} kg, ${calcData.height} cm, ${calcData.age} anos, ` +
                           `atividade ${calcData.activityLevel}, TMB ${results.bmr} kcal, TDEE ${results.tdee} kcal, ` +
                           `meta ${results.calories} kcal, proteínas ${results.protein} g, carboidratos ${results.carbs} g e gorduras ${results.fat} g. ` +
                           `Explique por que esses valores foram sugeridos, como distribuí-los nas refeições e quais sinais indicam necessidade de ajuste. ` +
-                          `Trate como orientação educativa e recomende acompanhamento profissional em caso de condição clínica.`
+                          nutritionCoachCardText.professionalNote
                         );
                       }}
                       className="w-full sm:w-auto min-h-[50px] px-5 rounded-2xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover active:scale-[0.98] transition-all flex items-center justify-center gap-2 shrink-0"
                     >
-                      {hasIronCoachAccess ? 'Conversar com o Iron Coach' : 'Desbloquear Iron Coach'}
+                      {hasIronCoachAccess ? nutritionCoachCardText.talk : nutritionCoachCardText.unlock}
                       <ArrowRight size={16} />
                     </button>
                   </div>
                   <p className="mt-4 text-[10px] sm:text-xs text-text-muted leading-relaxed border-t border-white/5 pt-4">
-                    Orientações educativas. Para diagnóstico, condições clínicas ou plano alimentar individual, consulte um nutricionista.
+                    {nutritionCoachCardText.disclaimer}
                   </p>
                 </div>
               </div>

@@ -7839,6 +7839,197 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
     gain: nutritionText.gain,
   };
   const selectedGoalFocusLabel = goalFocusOptions[calcData.goal].find(option => option.value === calcData.goalFocus)?.label || '';
+  const nutritionTrackerText = {
+    'pt-BR': {
+      calories: 'Calorias',
+      protein: 'Proteína',
+      carbs: 'Carboidrato',
+      fat: 'Gordura',
+      left: (value: string) => `faltam ${value}`,
+      over: (value: string) => `${value} acima`,
+      hit: 'meta batida',
+      registeredToday: 'Refeições registradas hoje',
+      addMeal: 'Adicionar Refeição',
+      quickFavorites: 'Favoritos rápidos',
+      quickFavoritesHelp: 'Toque para lançar no tracker de hoje.',
+      aiFreeTitle: 'Registrar refeição com IA',
+      aiProTitle: 'Calcular macros com IA',
+      aiFreeHelp: 'Descreva o que comeu e escolha uma porção. A IA estima os macros para você.',
+      aiProHelp: 'Use gramas/ml para uma análise mais precisa de proteínas, carboidratos e gorduras.',
+      simpleMode: 'Modo simples',
+      preciseMode: 'Modo preciso Pro',
+      gramsPrompt: 'Quer pesar em gramas?',
+      gramsHelp: 'O registro exato por g/ml fica liberado nos planos Pro e Elite.',
+      unlockPrecision: 'Liberar precisão',
+      foodLabelFree: 'O que você comeu?',
+      foodLabelPro: 'Alimento',
+      foodPlaceholderFree: 'Ex: Arroz, feijão, frango e salada',
+      foodPlaceholderPro: 'Ex: Frango grelhado',
+      portionSize: 'Tamanho da porção',
+      preciseQuantity: 'Quantidade exata (g ou ml)',
+      proteins: 'Proteínas',
+      carbohydrates: 'Carboidratos',
+      fats: 'Gorduras',
+      addToTracker: 'Adicionar ao Tracker',
+      dailyLimitReached: 'Limite diário atingido',
+      analyses: 'análises',
+      analysesToday: 'Análises hoje',
+      upgradeUnlimited: 'Fazer Upgrade para Pro — Análises Ilimitadas',
+      analyzing: 'Analisando...',
+      analyzeWithAi: 'Analisar com IA',
+      noMeals: 'Nenhuma refeição registrada',
+      noMealsHelp: 'Registre sua primeira refeição para acompanhar calorias e macros do dia.',
+      recentHistory: 'Histórico recente',
+      days: 'dias',
+      items: 'itens',
+      customDiet: 'Dieta Personalizada',
+      strategicPlan: 'Plano Estratégico',
+      menuSuggestion: 'Sugestão de Cardápio',
+      personalizedFor: 'Personalizado para',
+      goal: 'Meta',
+      dailyKcal: 'kcal/dia',
+      conditioning: 'Condicionamento',
+      generating: 'Gerando...',
+      generateNewDiet: 'Gerar Nova Dieta',
+      generatingMealPlan: 'IA gerando seu cardápio personalizado...',
+      newMeal: 'Nova Refeição',
+      mealName: 'Nome da Refeição',
+      mealNamePlaceholder: 'Ex: Frango com Arroz',
+      saveMeal: 'Salvar Refeição',
+      cancel: 'Cancelar',
+      portions: {
+        small: { label: 'Pouco', detail: 'lanche ou prato pequeno' },
+        medium: { label: 'Normal', detail: 'prato comum' },
+        large: { label: 'Bastante', detail: 'prato reforçado' },
+      },
+    },
+    en: {
+      calories: 'Calories',
+      protein: 'Protein',
+      carbs: 'Carbs',
+      fat: 'Fat',
+      left: (value: string) => `${value} left`,
+      over: (value: string) => `${value} over`,
+      hit: 'goal hit',
+      registeredToday: "Today's logged meals",
+      addMeal: 'Add Meal',
+      quickFavorites: 'Quick favorites',
+      quickFavoritesHelp: "Tap to add to today's tracker.",
+      aiFreeTitle: 'Log meal with AI',
+      aiProTitle: 'Calculate macros with AI',
+      aiFreeHelp: 'Describe what you ate and choose a portion. AI estimates the macros for you.',
+      aiProHelp: 'Use grams/ml for a more precise analysis of protein, carbs, and fats.',
+      simpleMode: 'Simple mode',
+      preciseMode: 'Precise Pro mode',
+      gramsPrompt: 'Want to weigh in grams?',
+      gramsHelp: 'Exact g/ml logging is unlocked on Pro and Elite plans.',
+      unlockPrecision: 'Unlock precision',
+      foodLabelFree: 'What did you eat?',
+      foodLabelPro: 'Food',
+      foodPlaceholderFree: 'Ex: Rice, beans, chicken and salad',
+      foodPlaceholderPro: 'Ex: Grilled chicken',
+      portionSize: 'Portion size',
+      preciseQuantity: 'Exact quantity (g or ml)',
+      proteins: 'Proteins',
+      carbohydrates: 'Carbohydrates',
+      fats: 'Fats',
+      addToTracker: 'Add to Tracker',
+      dailyLimitReached: 'Daily limit reached',
+      analyses: 'analyses',
+      analysesToday: 'Analyses today',
+      upgradeUnlimited: 'Upgrade to Pro — Unlimited Analyses',
+      analyzing: 'Analyzing...',
+      analyzeWithAi: 'Analyze with AI',
+      noMeals: 'No meal logged',
+      noMealsHelp: 'Log your first meal to track calories and macros for the day.',
+      recentHistory: 'Recent history',
+      days: 'days',
+      items: 'items',
+      customDiet: 'Personalized Diet',
+      strategicPlan: 'Strategic Plan',
+      menuSuggestion: 'Meal Plan Suggestion',
+      personalizedFor: 'Personalized for',
+      goal: 'Goal',
+      dailyKcal: 'kcal/day',
+      conditioning: 'Conditioning',
+      generating: 'Generating...',
+      generateNewDiet: 'Generate New Diet',
+      generatingMealPlan: 'AI is generating your personalized meal plan...',
+      newMeal: 'New Meal',
+      mealName: 'Meal Name',
+      mealNamePlaceholder: 'Ex: Chicken with Rice',
+      saveMeal: 'Save Meal',
+      cancel: 'Cancel',
+      portions: {
+        small: { label: 'Small', detail: 'snack or small plate' },
+        medium: { label: 'Normal', detail: 'regular plate' },
+        large: { label: 'Large', detail: 'full plate' },
+      },
+    },
+    es: {
+      calories: 'Calorías',
+      protein: 'Proteína',
+      carbs: 'Carbohidrato',
+      fat: 'Grasa',
+      left: (value: string) => `faltan ${value}`,
+      over: (value: string) => `${value} por encima`,
+      hit: 'meta alcanzada',
+      registeredToday: 'Comidas registradas hoy',
+      addMeal: 'Agregar Comida',
+      quickFavorites: 'Favoritos rápidos',
+      quickFavoritesHelp: 'Toca para registrar en el tracker de hoy.',
+      aiFreeTitle: 'Registrar comida con IA',
+      aiProTitle: 'Calcular macros con IA',
+      aiFreeHelp: 'Describe lo que comiste y elige una porción. La IA estima los macros para ti.',
+      aiProHelp: 'Usa gramos/ml para un análisis más preciso de proteínas, carbohidratos y grasas.',
+      simpleMode: 'Modo simple',
+      preciseMode: 'Modo preciso Pro',
+      gramsPrompt: '¿Quieres pesar en gramos?',
+      gramsHelp: 'El registro exacto por g/ml se libera en los planes Pro y Elite.',
+      unlockPrecision: 'Liberar precisión',
+      foodLabelFree: '¿Qué comiste?',
+      foodLabelPro: 'Alimento',
+      foodPlaceholderFree: 'Ej: Arroz, frijoles, pollo y ensalada',
+      foodPlaceholderPro: 'Ej: Pollo a la plancha',
+      portionSize: 'Tamaño de la porción',
+      preciseQuantity: 'Cantidad exacta (g o ml)',
+      proteins: 'Proteínas',
+      carbohydrates: 'Carbohidratos',
+      fats: 'Grasas',
+      addToTracker: 'Agregar al Tracker',
+      dailyLimitReached: 'Límite diario alcanzado',
+      analyses: 'análisis',
+      analysesToday: 'Análisis hoy',
+      upgradeUnlimited: 'Mejorar a Pro — Análisis Ilimitados',
+      analyzing: 'Analizando...',
+      analyzeWithAi: 'Analizar con IA',
+      noMeals: 'Ninguna comida registrada',
+      noMealsHelp: 'Registra tu primera comida para acompañar calorías y macros del día.',
+      recentHistory: 'Historial reciente',
+      days: 'días',
+      items: 'ítems',
+      customDiet: 'Dieta Personalizada',
+      strategicPlan: 'Plan Estratégico',
+      menuSuggestion: 'Sugerencia de Menú',
+      personalizedFor: 'Personalizado para',
+      goal: 'Meta',
+      dailyKcal: 'kcal/día',
+      conditioning: 'Condicionamiento',
+      generating: 'Generando...',
+      generateNewDiet: 'Generar Nueva Dieta',
+      generatingMealPlan: 'La IA está generando tu menú personalizado...',
+      newMeal: 'Nueva Comida',
+      mealName: 'Nombre de la Comida',
+      mealNamePlaceholder: 'Ej: Pollo con Arroz',
+      saveMeal: 'Guardar Comida',
+      cancel: 'Cancelar',
+      portions: {
+        small: { label: 'Poco', detail: 'snack o plato pequeño' },
+        medium: { label: 'Normal', detail: 'plato común' },
+        large: { label: 'Bastante', detail: 'plato reforzado' },
+      },
+    },
+  }[language];
   const nutritionCoachCardText = {
     'pt-BR': {
       title: 'Ficou com alguma dúvida?',
@@ -7960,9 +8151,9 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
   const macroRemaining = (current: number, target: number, unit = '') => {
     const diff = target - current;
-    if (diff > 0) return `faltam ${diff}${unit}`;
-    if (diff < 0) return `${Math.abs(diff)}${unit} acima`;
-    return 'meta batida';
+    if (diff > 0) return nutritionTrackerText.left(`${diff}${unit}`);
+    if (diff < 0) return nutritionTrackerText.over(`${Math.abs(diff)}${unit}`);
+    return nutritionTrackerText.hit;
   };
 
   useEffect(() => {
@@ -8191,9 +8382,9 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
   const AI_FREE_LIMIT = 3;
   const AI_PORTION_OPTIONS = [
-    { value: 'small', label: 'Pouco', detail: 'lanche ou prato pequeno', grams: 180 },
-    { value: 'medium', label: 'Normal', detail: 'prato comum', grams: 320 },
-    { value: 'large', label: 'Bastante', detail: 'prato reforcado', grams: 480 },
+    { value: 'small', label: nutritionTrackerText.portions.small.label, detail: nutritionTrackerText.portions.small.detail, grams: 180 },
+    { value: 'medium', label: nutritionTrackerText.portions.medium.label, detail: nutritionTrackerText.portions.medium.detail, grams: 320 },
+    { value: 'large', label: nutritionTrackerText.portions.large.label, detail: nutritionTrackerText.portions.large.detail, grams: 480 },
   ] as const;
   const _todayKey = new Date().toISOString().split('T')[0];
   const aiAnalysisKey = `ai_food_analyses_${profile.id}_${_todayKey}`;
@@ -8704,10 +8895,10 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {[
-                { label: 'Calorias', value: macroRemaining(dailyTracker.calories, results.calories, ' kcal'), color: dailyTracker.calories > results.calories ? 'text-error' : 'text-primary' },
-                { label: 'Proteína', value: macroRemaining(dailyTracker.protein, results.protein, 'g'), color: dailyTracker.protein >= results.protein ? 'text-success' : 'text-primary' },
-                { label: 'Carboidrato', value: macroRemaining(dailyTracker.carbs, results.carbs, 'g'), color: dailyTracker.carbs > results.carbs ? 'text-error' : 'text-text-primary' },
-                { label: 'Gordura', value: macroRemaining(dailyTracker.fat, results.fat, 'g'), color: dailyTracker.fat > results.fat ? 'text-error' : 'text-text-primary' },
+                { label: nutritionTrackerText.calories, value: macroRemaining(dailyTracker.calories, results.calories, ' kcal'), color: dailyTracker.calories > results.calories ? 'text-error' : 'text-primary' },
+                { label: nutritionTrackerText.protein, value: macroRemaining(dailyTracker.protein, results.protein, 'g'), color: dailyTracker.protein >= results.protein ? 'text-success' : 'text-primary' },
+                { label: nutritionTrackerText.carbs, value: macroRemaining(dailyTracker.carbs, results.carbs, 'g'), color: dailyTracker.carbs > results.carbs ? 'text-error' : 'text-text-primary' },
+                { label: nutritionTrackerText.fat, value: macroRemaining(dailyTracker.fat, results.fat, 'g'), color: dailyTracker.fat > results.fat ? 'text-error' : 'text-text-primary' },
               ].map(item => (
                 <div key={item.label} className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
                   <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">{item.label}</div>
@@ -8718,13 +8909,13 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
             <div className="pt-5 sm:pt-6 border-t border-white/5">
               <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-3 mb-5 sm:mb-6">
-                <h4 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-text-muted">Refeições registradas hoje</h4>
+                <h4 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-text-muted">{nutritionTrackerText.registeredToday}</h4>
                 <button
                   onClick={() => setIsAddMealModalOpen(true)}
                   className="w-full min-[380px]:w-auto min-h-[42px] flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
                 >
                   <Plus size={14} />
-                  Adicionar Refeição
+                  {nutritionTrackerText.addMeal}
                 </button>
               </div>
 
@@ -8732,8 +8923,8 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 <div className="mb-6 bg-white/5 border border-white/5 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h5 className="text-[10px] font-black uppercase tracking-widest text-text-muted">Favoritos rápidos</h5>
-                      <p className="text-[10px] text-text-muted mt-1">Toque para lançar no tracker de hoje.</p>
+                      <h5 className="text-[10px] font-black uppercase tracking-widest text-text-muted">{nutritionTrackerText.quickFavorites}</h5>
+                      <p className="text-[10px] text-text-muted mt-1">{nutritionTrackerText.quickFavoritesHelp}</p>
                     </div>
                     <span className="text-[10px] font-black text-primary">{favoriteFoods.length}</span>
                   </div>
@@ -8764,33 +8955,33 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                     </div>
                     <div>
                       <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-primary leading-relaxed">
-                        {isFreePlan ? 'Registrar refeição com IA' : 'Calcular macros com IA'}
+                        {isFreePlan ? nutritionTrackerText.aiFreeTitle : nutritionTrackerText.aiProTitle}
                       </span>
                       <p className="text-[9px] sm:text-[10px] text-text-muted mt-1 leading-relaxed">
                         {isFreePlan
-                          ? 'Descreva o que comeu e escolha uma porção. A IA estima os macros para voce.'
-                          : 'Use gramas/ml para uma analise mais precisa de proteinas, carboidratos e gorduras.'}
+                          ? nutritionTrackerText.aiFreeHelp
+                          : nutritionTrackerText.aiProHelp}
                       </p>
                     </div>
                   </div>
                   <div className={`self-start px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-[0.2em] ${
                     isFreePlan ? 'bg-white/5 border-white/10 text-text-muted' : 'bg-primary/10 border-primary/20 text-primary'
                   }`}>
-                    {isFreePlan ? 'Modo simples' : 'Modo preciso Pro'}
+                    {isFreePlan ? nutritionTrackerText.simpleMode : nutritionTrackerText.preciseMode}
                   </div>
                 </div>
 
                 {isFreePlan && (
                   <div className="bg-background/70 border border-white/10 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-text-primary">Quer pesar em gramas?</div>
-                      <p className="text-[10px] text-text-muted mt-1">O registro exato por g/ml fica liberado nos planos Pro e Elite.</p>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-text-primary">{nutritionTrackerText.gramsPrompt}</div>
+                      <p className="text-[10px] text-text-muted mt-1">{nutritionTrackerText.gramsHelp}</p>
                     </div>
                     <button
                       onClick={onUpgrade}
                       className="w-full sm:w-auto min-h-[42px] px-4 py-2 bg-white/5 text-primary border border-primary/20 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all"
                     >
-                      Liberar precisao
+                      {nutritionTrackerText.unlockPrecision}
                     </button>
                   </div>
                 )}
@@ -8798,11 +8989,11 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 <div className={isFreePlan ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-3'}>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
-                      {isFreePlan ? 'O que voce comeu?' : 'Alimento'}
+                      {isFreePlan ? nutritionTrackerText.foodLabelFree : nutritionTrackerText.foodLabelPro}
                     </label>
                     <input
                       type="text"
-                      placeholder={isFreePlan ? 'Ex: Arroz, feijao, frango e salada' : 'Ex: Frango grelhado'}
+                      placeholder={isFreePlan ? nutritionTrackerText.foodPlaceholderFree : nutritionTrackerText.foodPlaceholderPro}
                       value={aiFood}
                       onChange={(e) => { setAiFood(e.target.value); setAiResult(null); }}
                       onKeyDown={(e) => e.key === 'Enter' && analyzeWithAI()}
@@ -8812,7 +9003,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
                   {isFreePlan ? (
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Tamanho da porcao</label>
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.portionSize}</label>
                       <div className="grid grid-cols-3 gap-2">
                         {AI_PORTION_OPTIONS.map((option) => (
                           <button
@@ -8835,7 +9026,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Quantidade exata (g ou ml)</label>
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.preciseQuantity}</label>
                       <input
                         type="number"
                         placeholder="Ex: 150"
@@ -8859,15 +9050,15 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="bg-white/5 rounded-xl p-3 text-center">
-                          <div className="text-[9px] text-text-muted uppercase tracking-widest font-black">Proteínas</div>
+                          <div className="text-[9px] text-text-muted uppercase tracking-widest font-black">{nutritionTrackerText.proteins}</div>
                           <div className="text-lg font-black text-primary mt-1">{aiResult.protein}g</div>
                         </div>
                         <div className="bg-white/5 rounded-xl p-3 text-center">
-                          <div className="text-[9px] text-text-muted uppercase tracking-widest font-black">Carboidratos</div>
+                          <div className="text-[9px] text-text-muted uppercase tracking-widest font-black">{nutritionTrackerText.carbohydrates}</div>
                           <div className="text-lg font-black mt-1">{aiResult.carbs}g</div>
                         </div>
                         <div className="bg-white/5 rounded-xl p-3 text-center">
-                          <div className="text-[9px] text-text-muted uppercase tracking-widest font-black">Gorduras</div>
+                          <div className="text-[9px] text-text-muted uppercase tracking-widest font-black">{nutritionTrackerText.fats}</div>
                           <div className="text-lg font-black mt-1">{aiResult.fat}g</div>
                         </div>
                       </div>
@@ -8878,7 +9069,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                         className="flex-1 py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                       >
                         <Plus size={14} />
-                        Adicionar ao Tracker
+                        {nutritionTrackerText.addToTracker}
                       </button>
                       <button
                         onClick={() => toggleFavoriteFood(aiResult)}
@@ -8898,22 +9089,22 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 ) : aiLimitReached ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">Limite diário atingido</span>
-                      <span className="text-[10px] font-black text-primary">{AI_FREE_LIMIT}/{AI_FREE_LIMIT} análises</span>
+                      <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">{nutritionTrackerText.dailyLimitReached}</span>
+                      <span className="text-[10px] font-black text-primary">{AI_FREE_LIMIT}/{AI_FREE_LIMIT} {nutritionTrackerText.analyses}</span>
                     </div>
                     <button
                       onClick={onUpgrade}
                       className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                     >
                       <Zap size={14} />
-                      Fazer Upgrade para Pro — Análises Ilimitadas
+                      {nutritionTrackerText.upgradeUnlimited}
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {isFreePlan && (
                       <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">Análises hoje</span>
+                        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">{nutritionTrackerText.analysesToday}</span>
                         <span className="text-[10px] font-black text-text-muted">{aiAnalysesUsed}/{AI_FREE_LIMIT}</span>
                       </div>
                     )}
@@ -8927,12 +9118,12 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                           <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
                             <RefreshCw size={14} />
                           </motion.div>
-                          Analisando...
+                          {nutritionTrackerText.analyzing}
                         </>
                       ) : (
                         <>
                           <Zap size={14} />
-                          Analisar com IA
+                          {nutritionTrackerText.analyzeWithAi}
                         </>
                       )}
                     </button>
@@ -8979,16 +9170,16 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                     <div className="w-11 h-11 mx-auto rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
                       <Utensils size={20} />
                     </div>
-                    <h5 className="mt-4 text-sm sm:text-base font-black tracking-tight text-text-primary">Nenhuma refeição registrada</h5>
+                    <h5 className="mt-4 text-sm sm:text-base font-black tracking-tight text-text-primary">{nutritionTrackerText.noMeals}</h5>
                     <p className="mt-1.5 mx-auto max-w-[260px] text-[11px] sm:text-xs leading-relaxed text-text-muted">
-                      Registre sua primeira refeição para acompanhar calorias e macros do dia.
+                      {nutritionTrackerText.noMealsHelp}
                     </p>
                     <button
                       onClick={() => setIsAddMealModalOpen(true)}
                       className="mt-4 w-full sm:w-auto min-h-[44px] px-5 rounded-xl bg-white/5 border border-white/10 text-primary text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-white transition-all inline-flex items-center justify-center gap-2"
                     >
                       <Plus size={14} />
-                      Registrar refeição
+                      {nutritionTrackerText.addMeal}
                     </button>
                   </div>
                 )}
@@ -8997,8 +9188,8 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               {nutritionHistory.length > 0 && (
                 <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-text-muted">Histórico recente</h4>
-                    <span className="text-[10px] font-black text-text-muted">{nutritionHistory.length} dias</span>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-text-muted">{nutritionTrackerText.recentHistory}</h4>
+                    <span className="text-[10px] font-black text-text-muted">{nutritionHistory.length} {nutritionTrackerText.days}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {nutritionHistory.slice(0, 4).map((log) => (
@@ -9007,7 +9198,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                           <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
                             {new Date(log.date + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'short' })}
                           </span>
-                          <span className="text-[10px] font-black text-primary">{log.meals?.length || 0} itens</span>
+                          <span className="text-[10px] font-black text-primary">{log.meals?.length || 0} {nutritionTrackerText.items}</span>
                         </div>
                         <div className="text-2xl font-black">{log.calories} <span className="text-xs text-text-muted">kcal</span></div>
                         <div className="mt-2 text-[10px] text-text-muted font-bold">P:{log.protein}g C:{log.carbs}g G:{log.fat}g</div>
@@ -9041,7 +9232,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                         <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
                           <Plus size={24} />
                         </div>
-                        <h3 className="text-xl font-black uppercase tracking-tight">Nova Refeição</h3>
+                        <h3 className="text-xl font-black uppercase tracking-tight">{nutritionTrackerText.newMeal}</h3>
                       </div>
                       <button 
                         onClick={() => setIsAddMealModalOpen(false)}
@@ -9053,10 +9244,10 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
                     <div className="space-y-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Nome da Refeição</label>
+                        <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.mealName}</label>
                         <input 
                           type="text" 
-                          placeholder="Ex: Frango com Arroz"
+                          placeholder={nutritionTrackerText.mealNamePlaceholder}
                           value={newMeal.name}
                           onChange={(e) => setNewMeal({...newMeal, name: e.target.value})}
                           className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold focus:border-primary outline-none transition-all"
@@ -9065,7 +9256,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Calorias (kcal)</label>
+                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.calories} (kcal)</label>
                           <input 
                             type="number" 
                             value={newMeal.calories}
@@ -9074,7 +9265,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Proteína (g)</label>
+                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.protein} (g)</label>
                           <input 
                             type="number" 
                             value={newMeal.protein}
@@ -9083,7 +9274,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Carboidrato (g)</label>
+                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.carbs} (g)</label>
                           <input 
                             type="number" 
                             value={newMeal.carbs}
@@ -9092,7 +9283,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Gordura (g)</label>
+                          <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.fat} (g)</label>
                           <input 
                             type="number" 
                             value={newMeal.fat}
@@ -9108,13 +9299,13 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                         onClick={handleManualMealAdd}
                         className="flex-1 py-4 bg-primary text-text-primary rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
                       >
-                        SALVAR REFEIÇÃO
+                        {nutritionTrackerText.saveMeal}
                       </button>
                       <button 
                         onClick={() => setIsAddMealModalOpen(false)}
                         className="flex-1 py-4 bg-white/5 text-text-muted rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all border border-white/10"
                       >
-                        CANCELAR
+                        {nutritionTrackerText.cancel}
                       </button>
                     </div>
                   </div>
@@ -9133,18 +9324,18 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
                 <Utensils size={24} />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Dieta Personalizada</h2>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionTrackerText.customDiet}</h2>
             </div>
             <span className="self-start sm:self-auto px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-primary/20">
-              PLANO ESTRATÉGICO
+              {nutritionTrackerText.strategicPlan}
             </span>
           </div>
 
           <div className="bg-surface rounded-[32px] sm:rounded-[48px] border border-white/5 overflow-visible shadow-2xl relative z-10 h-auto">
             <div className="p-6 sm:p-10 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5">
               <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Sugestão de Cardápio</h3>
-                <p className="text-text-secondary text-sm sm:text-base font-medium">Personalizado para <span className="text-primary font-black">{profile.name.split(' ')[0]}</span> • Meta: <span className="font-bold">{profile.goal || 'Condicionamento'}</span> • <span className="font-bold">{results?.calories} kcal/dia</span></p>
+                <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionTrackerText.menuSuggestion}</h3>
+                <p className="text-text-secondary text-sm sm:text-base font-medium">{nutritionTrackerText.personalizedFor} <span className="text-primary font-black">{profile.name.split(' ')[0]}</span> • {nutritionTrackerText.goal}: <span className="font-bold">{profile.goal || nutritionTrackerText.conditioning}</span> • <span className="font-bold">{results?.calories} {nutritionTrackerText.dailyKcal}</span></p>
               </div>
               <button
                 onClick={() => generateMealPlan(results.calories, results.protein, results.carbs, results.fat)}
@@ -9154,7 +9345,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 <motion.div animate={generatingPlan ? { rotate: 360 } : { rotate: 0 }} transition={{ repeat: generatingPlan ? Infinity : 0, duration: 1, ease: 'linear' }}>
                   <RefreshCw size={18} />
                 </motion.div>
-                {generatingPlan ? 'Gerando...' : 'Gerar Nova Dieta'}
+                {generatingPlan ? nutritionTrackerText.generating : nutritionTrackerText.generateNewDiet}
               </button>
             </div>
             {planError && (
@@ -9168,7 +9359,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}>
                     <RefreshCw size={32} className="text-primary" />
                   </motion.div>
-                  <span className="font-black text-xs uppercase tracking-widest">IA gerando seu cardápio personalizado...</span>
+                  <span className="font-black text-xs uppercase tracking-widest">{nutritionTrackerText.generatingMealPlan}</span>
                 </div>
               ) : mealPlan.length > 0 ? (
                 mealPlan.map((meal, idx) => (

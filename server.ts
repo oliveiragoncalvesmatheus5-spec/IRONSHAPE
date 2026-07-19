@@ -1011,6 +1011,9 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
     const normalizeSearchText = (value: string) =>
       value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
+    const requiresExactWorkoutXMatch = (query: string) =>
+      ["push up", "plank", "crunch", "squat"].includes(normalizeSearchText(query));
+
     const scoreResult = (item: any, searchName: string) => {
       const itemName = normalizeSearchText(String(item?.name || ""));
       const query = normalizeSearchText(searchName);
@@ -1086,7 +1089,10 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
         .map(normalizeMediaResult)
         .map((item: any) => ({ ...item, matchScore: scoreResult(item, searchName) }))
         .sort((a, b) => b.matchScore - a.matchScore);
-      const safeList = list.filter((item: any) => item.matchScore >= 35 && isGifMediaUrl(item.gifUrl));
+      const motionList = list.filter((item: any) => item.matchScore >= 35 && isGifMediaUrl(item.gifUrl));
+      const safeList = requiresExactWorkoutXMatch(searchName)
+        ? motionList.filter((item: any) => normalizeSearchText(String(item.name || "")) === normalizeSearchText(searchName))
+        : motionList;
       console.log(`[workout-gif] WorkoutX status: ${response.status}, Results: ${list.length}, Safe GIFs: ${safeList.length}`);
       if (safeList.length > 0) return { status: response.status, data: safeList.slice(0, 5) };
       return null;

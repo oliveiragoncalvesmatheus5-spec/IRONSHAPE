@@ -1040,6 +1040,13 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       if (!query.includes("decline") && itemContext.includes("decline")) score -= 35;
       if (!query.includes("depth") && itemContext.includes("depth")) score -= 35;
       if (!query.includes("jump") && /(jump|plyometric)/.test(itemContext)) score -= 40;
+      if (query.includes("push up") && equipment.some((equip: string) => equip.includes("body weight"))) score += 35;
+      if (query.includes("push up") && equipment.some((equip: string) => equip && !equip.includes("body weight"))) score -= 90;
+      if (query.includes("push up") && /(bosu|ball|weighted|medicine|stability|suspension)/.test(itemContext)) score -= 70;
+      if (query.includes("dumbbell") && equipment.some((equip: string) => equip.includes("dumbbell"))) score += 30;
+      if (query.includes("dumbbell") && equipment.some((equip: string) => equip && !equip.includes("dumbbell"))) score -= 50;
+      if (query.includes("barbell") && equipment.some((equip: string) => equip.includes("barbell"))) score += 30;
+      if (query.includes("barbell") && equipment.some((equip: string) => equip && !equip.includes("barbell"))) score -= 50;
 
       if (isChestQuery && bodyParts.some((part: string) => part.includes("chest"))) score += 30;
       if (isChestQuery && targetMuscles.some((muscle: string) => muscle.includes("pectoral"))) score += 30;

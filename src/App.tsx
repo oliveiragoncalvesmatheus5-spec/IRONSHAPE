@@ -6543,23 +6543,16 @@ function ExecutionModal({
   const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(true);
-  const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
-  const animationType = getExerciseAnimationType(exercise.name) ?? 'mobility';
   const exerciseDisplay = getExerciseDisplay(exercise, language);
 
   useEffect(() => {
     let cancelled = false;
     setGifUrl(null);
     setApiVideoUrl(null);
-    setCuratedVideoFailed(false);
     setGifLoading(true);
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
-      setGifLoading(false);
-      return () => { cancelled = true; };
-    }
-    if (exercise.videoUrl && !curatedVideoFailed) {
       setGifLoading(false);
       return () => { cancelled = true; };
     }
@@ -6578,7 +6571,7 @@ function ExecutionModal({
       .catch((err: any) => { console.error('[ExerciseModal] GIF fetch error:', err?.message); })
       .finally(() => { if (!cancelled) setGifLoading(false); });
     return () => { cancelled = true; };
-  }, [exercise.name, exercise.videoUrl, animationType, curatedVideoFailed]);
+  }, [exercise.name]);
 
   return (
     <motion.div
@@ -6613,20 +6606,6 @@ function ExecutionModal({
             />
           ) : gifUrl ? (
             <img src={gifUrl} alt={exerciseDisplay.name} onError={() => setGifUrl(null)} className="w-full h-full object-contain" />
-          ) : exercise.videoUrl && !curatedVideoFailed ? (
-            <video
-              src={exercise.videoUrl}
-              autoPlay
-              loop
-              muted
-              playsInline
-              controls
-              onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
-              onError={() => setCuratedVideoFailed(true)}
-              className="w-full h-full object-contain"
-            />
-          ) : animationType ? (
-            <ExerciseAnimation type={animationType} label={exerciseDisplay.name} />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-5 p-8 text-center">
               <div className="w-20 h-20 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
@@ -6742,8 +6721,6 @@ function ExerciseCard({
   const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
-  const [curatedVideoFailed, setCuratedVideoFailed] = useState(false);
-  const animationType = getExerciseAnimationType(exercise.name) ?? 'mobility';
   const exerciseDisplay = getExerciseDisplay(exercise, language);
 
   const fetchApiExerciseMedia = async () => {
@@ -6777,24 +6754,14 @@ function ExerciseCard({
       return;
     }
     setShowDetails(true);
-    setCuratedVideoFailed(false);
     if (gifUrl || apiVideoUrl) return;
     const localMedia = getLocalExerciseMedia(exercise.name);
     if (localMedia) {
       setGifUrl(localMedia);
       return;
     }
-    if (exercise.videoUrl) {
-      return;
-    }
     await fetchApiExerciseMedia();
   };
-
-  useEffect(() => {
-    if (showDetails && curatedVideoFailed) {
-      fetchApiExerciseMedia();
-    }
-  }, [showDetails, curatedVideoFailed]);
 
   return (
     <div className={`bg-surface rounded-[32px] md:rounded-[40px] border transition-all duration-500 overflow-hidden group ${
@@ -6961,20 +6928,6 @@ function ExerciseCard({
                     onError={() => setGifUrl(null)}
                     className="w-full h-full object-contain"
                   />
-                ) : exercise.videoUrl && !curatedVideoFailed ? (
-                  <video
-                    src={exercise.videoUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    controls
-                    onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
-                    onError={() => setCuratedVideoFailed(true)}
-                    className="w-full h-full object-contain"
-                  />
-                ) : animationType ? (
-                  <ExerciseAnimation type={animationType} label={exerciseDisplay.name} />
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-text-muted p-8 text-center">
                     <div className="w-16 h-16 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">

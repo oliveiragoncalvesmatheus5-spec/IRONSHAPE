@@ -1025,14 +1025,21 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       const isLegQuery = query.includes("squat") || query.includes("leg") || query.includes("lunge") || query.includes("deadlift");
       let score = 0;
       if (itemName === query) score += 100;
+      if (itemName.startsWith(`${query} `)) score += 35;
       if (itemName.includes(query)) score += 60;
       for (const word of words) {
         if (itemName.includes(word)) score += 12;
       }
       if (isGifMediaUrl(item?.gifUrl)) score += 15;
+      const extraWords = itemName.split(" ").filter(Boolean).length - words.length;
+      if (extraWords > 0) score -= Math.min(extraWords * 8, 40);
       if (itemContext.includes("neck") && !query.includes("neck")) score -= 35;
       if (itemContext.includes("calf") && !query.includes("calf")) score -= 25;
       if ((itemName.includes("reverse") || itemName.includes("rear") || itemName.includes("bent over")) && !query.includes("reverse") && !query.includes("rear")) score -= 45;
+      if (!query.includes("incline") && itemContext.includes("incline")) score -= 35;
+      if (!query.includes("decline") && itemContext.includes("decline")) score -= 35;
+      if (!query.includes("depth") && itemContext.includes("depth")) score -= 35;
+      if (!query.includes("jump") && /(jump|plyometric)/.test(itemContext)) score -= 40;
 
       if (isChestQuery && bodyParts.some((part: string) => part.includes("chest"))) score += 30;
       if (isChestQuery && targetMuscles.some((muscle: string) => muscle.includes("pectoral"))) score += 30;

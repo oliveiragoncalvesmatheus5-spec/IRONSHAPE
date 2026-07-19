@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
@@ -97,6 +97,8 @@ import {
   Shirt,
   Search,
   Heart,
+  MessageCircle,
+  Bookmark,
   Truck,
   CreditCard,
   Headphones,
@@ -114,6 +116,10 @@ function getEntitledPlan(profile?: Pick<UserProfile, 'plano' | 'subscriptionStat
     return 'Iniciante';
   }
   return plan;
+}
+
+function isPaidCheckoutPlan(plan: string | null): plan is 'Pro' | 'Elite' {
+  return plan === 'Pro' || plan === 'Elite';
 }
 
 function slugifyText(value: string) {
@@ -1507,7 +1513,7 @@ function buildHomeRecoveryWorkouts(
 }
 
 export default function App() {
-  const { user, profile, loading, profileLoading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile } = useAuth();
+  const { user, profile, loading, profileLoading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPricing, setShowPricing] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
@@ -1589,6 +1595,41 @@ export default function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const paidPlan = urlParams.get('plan');
+    if (paymentStatus !== 'success' || !isPaidCheckoutPlan(paidPlan)) return;
+
+    let cancelled = false;
+    const pendingKey = `pending_checkout_plan_${user.id}`;
+
+    const syncPaidPlan = async () => {
+      setShowPricing(false);
+      setCheckoutPlan(null);
+      setActiveTab('dashboard');
+
+      for (let attempt = 0; attempt < 8 && !cancelled; attempt += 1) {
+        const latestProfile = await refreshProfile();
+        if (
+          latestProfile?.plano === paidPlan
+          && latestProfile.subscriptionStatus === 'active'
+        ) {
+          localStorage.removeItem(pendingKey);
+          window.history.replaceState({ ironshapePaymentSynced: true }, document.title, '/');
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    };
+
+    syncPaidPlan();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, refreshProfile]);
 
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
@@ -10777,6 +10818,642 @@ async function createCommunityStory(post: Post) {
   }
 }
 
+type CommunityCategory = 'Treinos' | 'Nutrição' | 'Transformações' | 'Vídeos' | 'Fotos' | 'Desafios';
+type CommunityMediaKind = 'photo' | 'carousel' | 'video';
+
+type CommunityComment = {
+  id: string;
+  name: string;
+  avatar: string;
+  text: string;
+  time: string;
+  likes: number;
+};
+
+type CommunityMockPost = {
+  id: string;
+  user: {
+    name: string;
+    avatar: string;
+    level?: 'Nível Ouro' | 'Nível Prata' | 'Elite';
+  };
+  time: string;
+  activity: string;
+  category: CommunityCategory;
+  format: 'photo' | 'video';
+  caption: string;
+  hashtags: string[];
+  media: {
+    type: CommunityMediaKind;
+    images: string[];
+    ratio: string;
+    duration?: string;
+  };
+  metrics: {
+    likes: number;
+    comments: number;
+    views: number;
+  };
+  comments: CommunityComment[];
+};
+
+const communityMedia = [
+  ALL_WORKOUTS[0]?.exercises[0]?.thumbnail,
+  ALL_WORKOUTS[1]?.exercises[1]?.thumbnail,
+  ALL_WORKOUTS[2]?.exercises[0]?.thumbnail,
+  ALL_WORKOUTS[4]?.exercises[1]?.thumbnail,
+  ALL_WORKOUTS[6]?.exercises[0]?.thumbnail,
+  ALL_WORKOUTS[8]?.exercises[1]?.thumbnail,
+  ALL_WORKOUTS[10]?.exercises[0]?.thumbnail,
+  ALL_WORKOUTS[12]?.exercises[1]?.thumbnail,
+].filter(Boolean) as string[];
+
+const getCommunityMedia = (index: number) => communityMedia[index % communityMedia.length] || 'https://images.pexels.com/photos/3838389/pexels-photo-3838389.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1';
+
+const MOCK_COMMUNITY_POSTS: CommunityMockPost[] = [
+  {
+    id: 'mock-leg-day',
+    user: { name: 'Marina Costa', avatar: 'M', level: 'Nível Ouro' },
+    time: '12 min',
+    activity: 'Treino de pernas',
+    category: 'Treinos',
+    format: 'photo',
+    caption: 'Hoje foi dia de agachar pesado e sair da zona de conforto. A meta era terminar as ultimas series com tecnica limpa, mesmo com a perna tremendo. Disciplina antes da vontade.',
+    hashtags: ['#IronShape', '#TreinoDePernas', '#Foco'],
+    media: { type: 'photo', images: [getCommunityMedia(0)], ratio: 'aspect-[4/5]' },
+    metrics: { likes: 245, comments: 39, views: 1230 },
+    comments: [
+      { id: 'c1', name: 'Leo Martins', avatar: 'L', text: 'Carga subindo e execucao bonita. Inspira demais.', time: '8 min', likes: 7 },
+      { id: 'c2', name: 'Bia Rocha', avatar: 'B', text: 'Esse treino de pernas vai cobrar amanha.', time: '4 min', likes: 3 },
+    ],
+  },
+  {
+    id: 'mock-transform',
+    user: { name: 'Rafael Nunes', avatar: 'R', level: 'Elite' },
+    time: '38 min',
+    activity: 'Transformação',
+    category: 'Transformações',
+    format: 'photo',
+    caption: 'Comparativo de 16 semanas. Nada aconteceu rapido, mas tudo mudou quando parei de negociar com o basico: treino feito, agua em dia e sono respeitado.',
+    hashtags: ['#Evolução', '#IronShape', '#Constancia'],
+    media: { type: 'carousel', images: [getCommunityMedia(1), getCommunityMedia(2), getCommunityMedia(3)], ratio: 'aspect-square' },
+    metrics: { likes: 812, comments: 96, views: 5840 },
+    comments: [
+      { id: 'c3', name: 'Camila Reis', avatar: 'C', text: 'Resultado absurdo. Constancia venceu.', time: '22 min', likes: 12 },
+      { id: 'c4', name: 'Joao Pedro', avatar: 'J', text: 'Da pra ver a diferenca na postura tambem.', time: '10 min', likes: 5 },
+    ],
+  },
+  {
+    id: 'mock-meal',
+    user: { name: 'Aline Torres', avatar: 'A', level: 'Nível Prata' },
+    time: '1 h',
+    activity: 'Nutrição',
+    category: 'Nutrição',
+    format: 'photo',
+    caption: 'Almoco simples, calculado e sem drama: arroz, frango, legumes e azeite. Quando a comida fica previsivel, a performance fica mais facil de repetir.',
+    hashtags: ['#Nutrição', '#Foco', '#IronShape'],
+    media: { type: 'photo', images: [getCommunityMedia(4)], ratio: 'aspect-[16/10]' },
+    metrics: { likes: 178, comments: 21, views: 940 },
+    comments: [
+      { id: 'c5', name: 'Duda Lima', avatar: 'D', text: 'Prato limpo e honesto. Esse e o caminho.', time: '44 min', likes: 4 },
+      { id: 'c6', name: 'Nico Alves', avatar: 'N', text: 'Vou copiar essa combinacao hoje.', time: '31 min', likes: 2 },
+    ],
+  },
+  {
+    id: 'mock-video',
+    user: { name: 'Bruno Sato', avatar: 'B', level: 'Elite' },
+    time: '2 h',
+    activity: 'Execução de exercício',
+    category: 'Vídeos',
+    format: 'video',
+    caption: 'Remada controlada, escapula encaixada e sem roubar no final. Video curto para lembrar que carga so vale quando o musculo certo trabalha.',
+    hashtags: ['#Treino', '#Técnica', '#IronShape'],
+    media: { type: 'video', images: [getCommunityMedia(5)], ratio: 'aspect-[4/5]', duration: '0:28' },
+    metrics: { likes: 391, comments: 44, views: 2710 },
+    comments: [
+      { id: 'c7', name: 'Isa Fontes', avatar: 'I', text: 'Esse controle muda tudo nas costas.', time: '1 h', likes: 9 },
+      { id: 'c8', name: 'Tales Mota', avatar: 'T', text: 'Salvei pra rever antes do treino.', time: '52 min', likes: 6 },
+    ],
+  },
+  {
+    id: 'mock-streak',
+    user: { name: 'Victor Hugo', avatar: 'V', level: 'Nível Ouro' },
+    time: '3 h',
+    activity: 'Sequência de treinos',
+    category: 'Desafios',
+    format: 'photo',
+    caption: '21 dias sem falhar. Nem todos foram treinos perfeitos, mas todos foram votos a favor da pessoa que eu quero construir.',
+    hashtags: ['#Desafio', '#Foco', '#Evolução'],
+    media: { type: 'carousel', images: [getCommunityMedia(6), getCommunityMedia(7)], ratio: 'aspect-[16/10]' },
+    metrics: { likes: 529, comments: 63, views: 3420 },
+    comments: [
+      { id: 'c9', name: 'Pri Gomes', avatar: 'P', text: 'Sequencia forte. Bora pelos 30 dias.', time: '2 h', likes: 11 },
+      { id: 'c10', name: 'Caio Ferraz', avatar: 'C', text: 'Essa frase pegou. Voto a favor todo dia.', time: '1 h', likes: 8 },
+    ],
+  },
+  {
+    id: 'mock-photo',
+    user: { name: 'Sofia Mendes', avatar: 'S', level: 'Nível Prata' },
+    time: '5 h',
+    activity: 'Foto pós-treino',
+    category: 'Fotos',
+    format: 'photo',
+    caption: 'Check de sexta depois do cardio. Suor no rosto, mente limpa e aquela sensacao de ter cumprido o combinado comigo mesma.',
+    hashtags: ['#Fotos', '#IronShape', '#Cardio'],
+    media: { type: 'photo', images: [getCommunityMedia(2)], ratio: 'aspect-square' },
+    metrics: { likes: 302, comments: 28, views: 1880 },
+    comments: [
+      { id: 'c11', name: 'Mari Alves', avatar: 'M', text: 'Energia la em cima.', time: '4 h', likes: 5 },
+      { id: 'c12', name: 'Renan Dias', avatar: 'R', text: 'Cardio pago, mente em paz.', time: '3 h', likes: 4 },
+    ],
+  },
+];
+
+function formatCommunityNumber(value: number) {
+  return value.toLocaleString('pt-BR');
+}
+
+function CommunityAvatar({ value, size = 'h-11 w-11' }: { value: string; size?: string }) {
+  const isImage = value.startsWith('http');
+  return (
+    <span className={`${size} shrink-0 overflow-hidden rounded-full bg-primary text-white flex items-center justify-center font-black`}>
+      {isImage ? <img src={value} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : value}
+    </span>
+  );
+}
+
+function renderCaptionWithHashtags(caption: string, hashtags: string[]) {
+  return (
+    <>
+      {caption}{' '}
+      {hashtags.map(tag => (
+        <span key={tag} className="mr-1 font-bold text-primary">{tag}</span>
+      ))}
+    </>
+  );
+}
+
+function PostHeader({ post }: { post: CommunityMockPost }) {
+  return (
+    <div className="flex items-start gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+      <CommunityAvatar value={post.user.avatar} size="h-11 w-11 sm:h-12 sm:w-12" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="truncate text-sm font-semibold text-white sm:text-[15px]">{post.user.name}</h3>
+          {post.user.level && (
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
+              {post.user.level}
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 text-[11px] font-medium text-text-muted">
+          {post.time} • {post.activity}
+        </p>
+      </div>
+      <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-text-muted transition-all hover:bg-white/5 hover:text-white" aria-label="Mais opções">
+        <MoreHorizontal size={21} />
+      </button>
+    </div>
+  );
+}
+
+function PostMedia({ media }: { media: CommunityMockPost['media'] }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const hasCarousel = media.type === 'carousel' && media.images.length > 1;
+
+  return (
+    <div className="px-4 sm:px-5">
+      <div className={`relative w-full overflow-hidden rounded-[16px] border border-[#232323] bg-black ${media.ratio} max-h-[520px]`}>
+        {hasCarousel ? (
+          <div
+            className="flex h-full snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            onScroll={(event) => {
+              const width = event.currentTarget.clientWidth || 1;
+              setActiveIndex(Math.round(event.currentTarget.scrollLeft / width));
+            }}
+          >
+            {media.images.map((image, index) => (
+              <img key={`${image}-${index}`} src={image} alt="" className="h-full w-full shrink-0 snap-center object-cover" referrerPolicy="no-referrer" />
+            ))}
+          </div>
+        ) : (
+          <img src={media.images[0]} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+        )}
+        {media.type === 'video' && (
+          <>
+            <div className="absolute inset-0 bg-black/18" />
+            <div className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
+              <Play size={28} fill="currentColor" />
+            </div>
+            <span className="absolute bottom-3 right-3 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-black text-white">
+              {media.duration}
+            </span>
+          </>
+        )}
+        {hasCarousel && (
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+            {media.images.map((_, index) => (
+              <span key={index} className={`h-1.5 rounded-full transition-all duration-200 ${index === activeIndex ? 'w-5 bg-primary' : 'w-1.5 bg-white/60'}`} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PostMetrics({ likes, comments, views }: CommunityMockPost['metrics']) {
+  return (
+    <div className="grid grid-cols-3 gap-2 px-4 text-[11px] font-bold text-text-muted sm:px-5 sm:text-xs">
+      <span className="flex items-center gap-1.5"><Heart size={14} /> {formatCommunityNumber(likes)} curtidas</span>
+      <span className="flex items-center justify-center gap-1.5"><MessageCircle size={14} /> {formatCommunityNumber(comments)} comentarios</span>
+      <span className="flex items-center justify-end gap-1.5"><Eye size={14} /> {formatCommunityNumber(views)} visualizacoes</span>
+    </div>
+  );
+}
+
+function PostActions({
+  liked,
+  saved,
+  onLike,
+  onSave,
+  onComment,
+  onShare,
+}: {
+  liked: boolean;
+  saved: boolean;
+  onLike: () => void;
+  onSave: () => void;
+  onComment: () => void;
+  onShare: () => void;
+}) {
+  const actions = [
+    { label: 'Curtir', icon: <Heart size={20} className={liked ? 'fill-current' : ''} />, onClick: onLike, active: liked },
+    { label: 'Comentar', icon: <MessageCircle size={20} />, onClick: onComment, active: false },
+    { label: 'Compartilhar', icon: <Share2 size={19} />, onClick: onShare, active: false },
+    { label: 'Salvar', icon: <Bookmark size={20} className={saved ? 'fill-current' : ''} />, onClick: onSave, active: saved },
+  ];
+  return (
+    <div className="grid grid-cols-4 border-t border-[#232323] px-2 py-1.5 sm:px-3">
+      {actions.map(action => (
+        <button
+          key={action.label}
+          type="button"
+          onClick={action.onClick}
+          className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl px-1 text-[11px] font-black transition-all duration-200 active:scale-95 sm:text-xs ${
+            action.active ? 'text-primary' : 'text-text-muted hover:bg-white/5 hover:text-white'
+          }`}
+        >
+          <motion.span animate={action.label === 'Curtir' && liked ? { scale: [1, 1.22, 1] } : { scale: 1 }} transition={{ duration: 0.22 }}>
+            {action.icon}
+          </motion.span>
+          <span className="hidden xs:inline sm:inline">{action.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CommentPreview({ comment }: { comment: CommunityComment }) {
+  const [liked, setLiked] = useState(false);
+  return (
+    <div className="flex gap-2.5">
+      <CommunityAvatar value={comment.avatar} size="h-8 w-8 text-xs" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs leading-relaxed text-text-secondary">
+          <span className="font-black text-white">{comment.name}</span> {comment.text}
+        </p>
+        <div className="mt-1 flex items-center gap-3 text-[10px] font-bold text-text-muted">
+          <span>{comment.time}</span>
+          <button type="button" onClick={() => setLiked(current => !current)} className={liked ? 'text-primary' : 'hover:text-white'}>
+            Curtir
+          </button>
+          <span>{comment.likes + (liked ? 1 : 0)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShareBottomSheet({ onClose }: { onClose: () => void }) {
+  const options = [
+    { label: 'Copiar link', icon: <Copy size={18} /> },
+    { label: 'Enviar mensagem', icon: <Send size={18} /> },
+    { label: 'Compartilhar externamente', icon: <ExternalLink size={18} /> },
+  ];
+  return (
+    <div className="fixed inset-0 z-[130] flex items-end justify-center">
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-label="Fechar compartilhamento" />
+      <motion.div initial={{ y: 80 }} animate={{ y: 0 }} exit={{ y: 80 }} className="relative w-full max-w-lg rounded-t-[28px] border border-[#232323] bg-[#111111] p-4 shadow-2xl">
+        <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-white/20" />
+        <h3 className="px-1 pb-3 text-sm font-black uppercase tracking-widest">Compartilhar</h3>
+        <div className="space-y-2">
+          {options.map(option => (
+            <button key={option.label} type="button" className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-[#232323] bg-white/[0.03] px-4 text-sm font-bold text-white transition-all hover:border-primary/40">
+              <span className="text-primary">{option.icon}</span>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function CommentsBottomSheet({
+  post,
+  comments,
+  onClose,
+  onAddComment,
+}: {
+  post: CommunityMockPost;
+  comments: CommunityComment[];
+  onClose: () => void;
+  onAddComment: (text: string) => void;
+}) {
+  const [draft, setDraft] = useState('');
+  const submit = () => {
+    if (!draft.trim()) return;
+    onAddComment(draft.trim());
+    setDraft('');
+  };
+
+  return (
+    <div className="fixed inset-0 z-[135] flex items-end justify-center">
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/72 backdrop-blur-sm" aria-label="Fechar comentários" />
+      <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className="relative flex h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-t-[30px] border border-[#232323] bg-[#111111] shadow-2xl">
+        <header className="shrink-0 border-b border-[#232323] px-5 py-4">
+          <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-white/20" />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-black">Comentários</h3>
+              <p className="text-xs text-text-muted">{post.user.name} • {post.activity}</p>
+            </div>
+            <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
+              <X size={19} />
+            </button>
+          </div>
+        </header>
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          {comments.map(comment => <CommentPreview key={comment.id} comment={comment} />)}
+        </div>
+        <div className="shrink-0 border-t border-[#232323] bg-[#111111] p-4">
+          <div className="flex gap-2">
+            <input value={draft} onChange={event => setDraft(event.target.value)} placeholder="Adicione um comentário..." className="min-h-[44px] flex-1 rounded-2xl border border-[#232323] bg-[#090909] px-4 text-sm outline-none focus:border-primary/60" />
+            <button type="button" onClick={submit} disabled={!draft.trim()} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-primary text-white disabled:opacity-40">
+              <Send size={18} />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function CommunityPostCard({ post }: { post: CommunityMockPost }) {
+  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showAllCaption, setShowAllCaption] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [localComments, setLocalComments] = useState<CommunityComment[]>(post.comments);
+  const currentLikes = post.metrics.likes + (liked ? 1 : 0);
+  const currentComments = post.metrics.comments + Math.max(0, localComments.length - post.comments.length);
+
+  return (
+    <motion.article layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden rounded-[20px] border border-[#232323] bg-[#111111] shadow-[0_18px_42px_rgba(0,0,0,0.22)]">
+      <PostHeader post={post} />
+      <div className="px-4 py-3 sm:px-5">
+        <p className={`text-sm leading-relaxed text-text-secondary ${showAllCaption ? '' : 'line-clamp-4'}`}>
+          {renderCaptionWithHashtags(post.caption, post.hashtags)}
+        </p>
+        {post.caption.length > 145 && !showAllCaption && (
+          <button type="button" onClick={() => setShowAllCaption(true)} className="mt-1 text-xs font-bold text-text-muted hover:text-primary">
+            ver mais
+          </button>
+        )}
+      </div>
+      <PostMedia media={post.media} />
+      <div className="space-y-3 py-3">
+        <PostMetrics likes={currentLikes} comments={currentComments} views={post.metrics.views} />
+        <PostActions liked={liked} saved={saved} onLike={() => setLiked(current => !current)} onSave={() => setSaved(current => !current)} onComment={() => setShowComments(true)} onShare={() => setShowShare(true)} />
+        <div className="space-y-3 px-4 sm:px-5">
+          {localComments.slice(0, 2).map(comment => <CommentPreview key={comment.id} comment={comment} />)}
+          <button type="button" onClick={() => setShowComments(true)} className="text-xs font-bold text-text-muted hover:text-primary">
+            Ver todos os comentários
+          </button>
+          <div className="flex items-center gap-2 rounded-2xl border border-[#232323] bg-[#090909] px-3">
+            <CommunityAvatar value="I" size="h-8 w-8 text-xs" />
+            <button type="button" onClick={() => setShowComments(true)} className="min-h-[44px] flex-1 text-left text-sm text-text-muted">
+              Adicione um comentário...
+            </button>
+          </div>
+        </div>
+      </div>
+      <AnimatePresence>
+        {showShare && <ShareBottomSheet onClose={() => setShowShare(false)} />}
+        {showComments && (
+          <CommentsBottomSheet
+            post={post}
+            comments={localComments}
+            onClose={() => setShowComments(false)}
+            onAddComment={(text) => setLocalComments(current => [
+              ...current,
+              { id: `local-${Date.now()}`, name: 'Você', avatar: 'I', text, time: 'agora', likes: 0 },
+            ])}
+          />
+        )}
+      </AnimatePresence>
+    </motion.article>
+  );
+}
+
+function CreatePostComposer({ profile, onOpen }: { profile: UserProfile; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 rounded-[20px] border border-[#232323] bg-[#111111] p-3 text-left transition-all hover:border-primary/40 sm:p-4">
+      <CommunityAvatar value={profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I'} size="h-11 w-11" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-text-muted">Compartilhe sua evolução com a comunidade...</p>
+        <div className="mt-3 flex gap-2">
+          <span className="flex min-h-[34px] items-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><ImageIcon size={14} /> Foto</span>
+          <span className="flex min-h-[34px] items-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Play size={14} /> Vídeo</span>
+          <span className="flex min-h-[34px] items-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Dumbbell size={14} /> Treino</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function CreatePostModal({
+  open,
+  profile,
+  onClose,
+  onPublish,
+}: {
+  open: boolean;
+  profile: UserProfile;
+  onClose: () => void;
+  onPublish: (post: CommunityMockPost) => void;
+}) {
+  const [content, setContent] = useState('');
+  const [category, setCategory] = useState<CommunityCategory>('Treinos');
+  if (!open) return null;
+
+  const publish = () => {
+    const newPost: CommunityMockPost = {
+      id: `local-post-${Date.now()}`,
+      user: { name: profile.name || 'Atleta IronShape', avatar: profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I', level: 'Nível Ouro' },
+      time: 'agora',
+      activity: category,
+      category,
+      format: category === 'Vídeos' ? 'video' : 'photo',
+      caption: content.trim() || 'Publicação temporária criada para simular a experiência da comunidade premium.',
+      hashtags: ['#IronShape', '#Evolução'],
+      media: { type: category === 'Vídeos' ? 'video' : 'photo', images: [getCommunityMedia(3)], ratio: 'aspect-[4/5]', duration: category === 'Vídeos' ? '0:18' : undefined },
+      metrics: { likes: 0, comments: 0, views: 1 },
+      comments: [],
+    };
+    onPublish(newPost);
+    setContent('');
+    setCategory('Treinos');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[125] flex items-end justify-center sm:items-center sm:p-5">
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/75 backdrop-blur-sm" aria-label="Fechar criação" />
+      <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} className="relative w-full max-w-lg rounded-t-[30px] border border-[#232323] bg-[#111111] p-5 shadow-2xl sm:rounded-[30px]">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Mock local</p>
+            <h3 className="text-xl font-black">Criar publicação</h3>
+          </div>
+          <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
+            <X size={19} />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <textarea value={content} onChange={event => setContent(event.target.value)} placeholder="Compartilhe sua evolução com a comunidade..." className="min-h-[130px] w-full resize-none rounded-2xl border border-[#232323] bg-[#090909] p-4 text-sm outline-none focus:border-primary/60" />
+          <div className="flex min-h-[118px] items-center justify-center rounded-2xl border border-dashed border-[#333333] bg-[#090909] text-center text-sm font-bold text-text-muted">
+            <div>
+              <ImageIcon className="mx-auto mb-2 text-primary" size={26} />
+              Área visual para adicionar mídia
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {(['Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'] as CommunityCategory[]).map(option => (
+              <button key={option} type="button" onClick={() => setCategory(option)} className={`min-h-[40px] rounded-xl border px-2 text-[10px] font-black transition-all ${category === option ? 'border-primary bg-primary text-white' : 'border-[#232323] bg-white/5 text-text-muted'}`}>
+                {option}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={publish} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-primary/20">
+            <Send size={18} />
+            Publicar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function CommunityFilterBar({ filters, selected, onSelect }: { filters: string[]; selected: string; onSelect: (filter: string) => void }) {
+  return (
+    <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
+      {filters.map((filter) => (
+        <button
+          key={filter}
+          type="button"
+          onClick={() => onSelect(filter)}
+          className={`h-10 shrink-0 rounded-full border px-4 text-sm font-bold transition-all duration-200 ${
+            selected === filter
+              ? 'border-primary bg-primary text-white shadow-[0_10px_24px_rgba(255,106,0,0.2)]'
+              : 'border-[#232323] bg-[#121212] text-text-secondary hover:border-primary/40 hover:text-white'
+          }`}
+        >
+          {filter}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function PostSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-[20px] border border-[#232323] bg-[#111111] p-4">
+      <div className="flex items-center gap-3">
+        <div className="h-11 w-11 animate-pulse rounded-full bg-white/10" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-32 animate-pulse rounded bg-white/10" />
+          <div className="h-2.5 w-24 animate-pulse rounded bg-white/5" />
+        </div>
+      </div>
+      <div className="mt-4 space-y-2">
+        <div className="h-3 animate-pulse rounded bg-white/10" />
+        <div className="h-3 w-4/5 animate-pulse rounded bg-white/5" />
+      </div>
+      <div className="mt-4 aspect-[4/5] animate-pulse rounded-2xl bg-white/5" />
+    </div>
+  );
+}
+
+function EmptyFeedState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="rounded-[22px] border border-dashed border-[#232323] bg-[#111111] px-5 py-12 text-center">
+      <ImageIcon size={38} className="mx-auto text-text-muted" />
+      <h3 className="mt-4 text-lg font-black">Ainda não há publicações nesta categoria</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm text-text-muted">Troque o filtro ou simule uma nova publicação para ver o feed ganhar vida.</p>
+      <button type="button" onClick={onCreate} className="mt-5 min-h-[44px] rounded-2xl bg-primary px-5 text-sm font-black text-white">
+        Criar publicação
+      </button>
+    </div>
+  );
+}
+
+function CommunityFeed({
+  profile,
+  posts,
+  loading,
+  error,
+  onRetry,
+  onCreate,
+}: {
+  profile: UserProfile;
+  posts: CommunityMockPost[];
+  loading: boolean;
+  error: boolean;
+  onRetry: () => void;
+  onCreate: () => void;
+}) {
+  if (error) {
+    return (
+      <div className="mx-auto max-w-[740px] rounded-[22px] border border-error/20 bg-error/10 px-5 py-10 text-center">
+        <AlertTriangle size={36} className="mx-auto text-error" />
+        <h3 className="mt-4 font-black">Não foi possível carregar o feed agora</h3>
+        <p className="mt-2 text-sm text-text-muted">Estado visual de erro para a próxima integração real.</p>
+        <button type="button" onClick={onRetry} className="mt-5 min-h-[44px] rounded-2xl bg-primary px-5 text-sm font-black text-white">
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <section className="mx-auto w-full max-w-[740px] space-y-4 px-0 sm:space-y-5">
+      <CreatePostComposer profile={profile} onOpen={onCreate} />
+      <AnimatePresence mode="popLayout">
+        {loading ? (
+          [0, 1, 2].map(item => <PostSkeleton key={item} />)
+        ) : posts.length === 0 ? (
+          <EmptyFeedState key="empty" onCreate={onCreate} />
+        ) : (
+          posts.map(post => <CommunityPostCard key={post.id} post={post} />)
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
 function CommunityView({ profile, language }: { profile: UserProfile; language: LanguageCode }) {
   const dateFnsLocale = getDateFnsLocale(language);
   const { updateProfile } = useAuth();
@@ -10808,6 +11485,20 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
   const [editSocialAvatar, setEditSocialAvatar] = useState<File | null>(null);
   const [editSocialAvatarPreview, setEditSocialAvatarPreview] = useState(profile.avatar_url || '');
   const [savingSocialProfile, setSavingSocialProfile] = useState(false);
+  const [selectedCommunityFilter, setSelectedCommunityFilter] = useState('Todos');
+  const [mockFeedPosts, setMockFeedPosts] = useState<CommunityMockPost[]>(MOCK_COMMUNITY_POSTS);
+  const [mockFeedLoading, setMockFeedLoading] = useState(true);
+  const [mockFeedError, setMockFeedError] = useState(false);
+  const [newMockPostCategory, setNewMockPostCategory] = useState<CommunityCategory>('Treinos');
+
+  const filteredMockFeedPosts = useMemo(() => {
+    if (selectedCommunityFilter === 'Todos') return mockFeedPosts;
+    return mockFeedPosts.filter(post => {
+      if (selectedCommunityFilter === 'Fotos') return post.format === 'photo';
+      if (selectedCommunityFilter === 'Vídeos') return post.format === 'video';
+      return post.category === selectedCommunityFilter;
+    });
+  }, [mockFeedPosts, selectedCommunityFilter]);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -10856,18 +11547,9 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
   };
 
   useEffect(() => {
-    fetchPosts();
-
-    // Realtime subscription
-    const channel = supabase
-      .channel('public:posts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-        fetchPosts();
-      })
-      .subscribe();
-
+    const timer = window.setTimeout(() => setMockFeedLoading(false), 520);
     return () => {
-      supabase.removeChannel(channel);
+      window.clearTimeout(timer);
     };
   }, []);
 
@@ -11201,21 +11883,44 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
     }
   };
 
-  const communityStoryProfiles = Array.from(
-    new Map(
-      posts
-        .filter(post => post.user_id)
-        .map(post => [
-          post.user_id,
-          {
-            id: post.user_id,
-            name: postProfiles[post.user_id]?.name || post.user_name || 'Atleta',
-            avatar: postProfiles[post.user_id]?.avatar_url || (post.user_avatar?.startsWith('http') ? post.user_avatar : ''),
-            initial: (postProfiles[post.user_id]?.name || post.user_name || 'I')[0]?.toUpperCase() || 'I',
-          },
-        ])
-    ).values()
-  ).slice(0, 6);
+  const handleCreateMockPost = () => {
+    if (!newPostContent.trim() && !imagePreview) return;
+    const nextPost: CommunityMockPost = {
+      id: `local-post-${Date.now()}`,
+      user: {
+        name: profile.name || 'Atleta IronShape',
+        avatar: profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I',
+        level: 'Nível Ouro',
+      },
+      time: 'agora',
+      activity: newMockPostCategory,
+      category: newMockPostCategory,
+      format: newMockPostCategory === 'Vídeos' ? 'video' : 'photo',
+      caption: newPostContent.trim() || 'Publicação temporária criada para demonstrar o feed premium da comunidade.',
+      hashtags: ['#IronShape', '#Evolução'],
+      media: {
+        type: newMockPostCategory === 'Vídeos' ? 'video' : 'photo',
+        images: [imagePreview || getCommunityMedia(4)],
+        ratio: 'aspect-[4/5]',
+        duration: newMockPostCategory === 'Vídeos' ? '0:21' : undefined,
+      },
+      metrics: { likes: 0, comments: 0, views: 1 },
+      comments: [],
+    };
+    setMockFeedPosts(current => [nextPost, ...current]);
+    setNewPostContent('');
+    setNewPostImage(null);
+    setImagePreview(null);
+    setNewMockPostCategory('Treinos');
+    setShowCreateModal(false);
+  };
+
+  const communityStoryProfiles = mockFeedPosts.map(post => ({
+    id: post.id,
+    name: post.user.name.split(' ')[0],
+    avatar: post.user.avatar.startsWith('http') ? post.user.avatar : '',
+    initial: post.user.avatar.startsWith('http') ? post.user.name[0]?.toUpperCase() || 'I' : post.user.avatar,
+  })).slice(0, 6);
   const visualStoryItems = communityStoryProfiles.length >= 5
     ? communityStoryProfiles
     : [
@@ -11560,21 +12265,7 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
           </div>
         </section>
 
-        <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
-          {communityFilters.map((filter, index) => (
-            <button
-              key={filter}
-              type="button"
-              className={`h-10 shrink-0 rounded-full border px-4 text-sm font-bold transition-all ${
-                index === 0
-                  ? 'border-primary bg-primary text-white shadow-[0_10px_24px_rgba(255,106,0,0.2)]'
-                  : 'border-[#232323] bg-[#121212] text-text-secondary hover:border-primary/40 hover:text-white'
-              }`}
-            >
-              {filter}
-            </button>
-          ))}
-        </nav>
+        <CommunityFilterBar filters={communityFilters} selected={selectedCommunityFilter} onSelect={setSelectedCommunityFilter} />
       </header>
 
       {shareFeedback && (
@@ -11589,119 +12280,18 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
         </div>
       )}
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-          <Loader2 className="animate-spin text-primary" size={40} />
-          <div className="text-center">
-            <p className="text-text-muted font-medium">Carregando feed...</p>
-            <button 
-              onClick={() => {
-                setLoading(true);
-                fetchPosts();
-              }}
-              className="mt-2 text-primary text-sm font-bold hover:underline"
-            >
-              Tentar novamente
-            </button>
-          </div>
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-surface rounded-[40px] border border-white/5">
-          <div className="p-6 rounded-full bg-white/5">
-            <Users size={48} className="text-text-muted" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold">Nenhuma publicação ainda</h3>
-            <p className="text-text-muted">Seja o primeiro a compartilhar sua evolução!</p>
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-primary text-text-primary px-8 py-3 rounded-2xl font-black shadow-lg shadow-primary/20"
-          >
-            Começar Agora
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-6 max-w-2xl mx-auto">
-          {posts.map((post) => (
-            <motion.div 
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              key={post.id} 
-              className="bg-surface rounded-2xl md:rounded-3xl border border-white/5 overflow-hidden"
-            >
-              <div className="p-4 md:p-6 flex items-center gap-4">
-                <button
-                  onClick={() => openSocialProfile(post.user_id, { name: post.user_name, avatar_url: post.user_avatar })}
-                  className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary overflow-hidden flex items-center justify-center font-black text-lg md:text-xl text-text-primary shrink-0 hover:ring-2 hover:ring-primary/40 transition-all"
-                  aria-label={`Abrir perfil de ${post.user_name}`}
-                >
-                  {postProfiles[post.user_id]?.avatar_url || (post.user_avatar?.startsWith('http') ? post.user_avatar : '') ? (
-                    <img src={postProfiles[post.user_id]?.avatar_url || post.user_avatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    post.user_avatar || post.user_name[0]
-                  )}
-                </button>
-                <div>
-                  <button onClick={() => openSocialProfile(post.user_id, { name: post.user_name, avatar_url: post.user_avatar })} className="font-bold text-sm md:text-base hover:text-primary transition-colors text-left">
-                    {postProfiles[post.user_id]?.name || post.user_name}
-                  </button>
-                  <span className="text-[10px] md:text-xs text-text-muted">
-                    {formatDistanceToNow(new Date(post.criado_em), { addSuffix: true, locale: dateFnsLocale })}
-                  </span>
-                </div>
-              </div>
-              <div className="px-4 md:px-6 pb-4">
-                <p className="text-text-secondary text-sm md:text-base leading-relaxed whitespace-pre-wrap">{post.conteudo}</p>
-              </div>
-              {post.imagem_url && (
-                <div className="relative w-full aspect-[4/5] sm:aspect-[4/3] max-h-[640px] overflow-hidden bg-black">
-                  <img
-                    src={post.imagem_url}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-35"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-black/20" />
-                  <img
-                    src={post.imagem_url}
-                    alt="Imagem da publicação"
-                    className="relative z-10 w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              )}
-              <div className="p-4 flex items-center gap-6 border-t border-white/5">
-                <button 
-                  onClick={() => handleLike(post.id, post.likes)}
-                  className="flex items-center gap-2 text-text-muted hover:text-primary transition-colors group min-h-[44px] px-2"
-                >
-                  <Flame size={20} className="group-active:scale-125 transition-transform" />
-                  <span className="text-sm font-bold">{post.likes}</span>
-                </button>
-                <button className="flex items-center gap-2 text-text-muted hover:text-primary transition-colors min-h-[44px] px-2">
-                  <Users size={20} />
-                  <span className="text-sm font-bold">0</span>
-                </button>
-                {post.user_id === profile.id && post.imagem_url && (
-                  <button
-                    onClick={() => handleShareEvolution(post)}
-                    disabled={sharingPostId === post.id}
-                    className="ml-auto flex min-h-[44px] items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 text-primary transition-all hover:bg-primary hover:text-white active:scale-[0.98] disabled:opacity-60"
-                  >
-                    {sharingPostId === post.id ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
-                    <span className="hidden sm:inline text-xs font-black uppercase tracking-wider">
-                      {sharingPostId === post.id ? 'Preparando' : 'Compartilhar evolução'}
-                    </span>
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+      <CommunityFeed
+        profile={profile}
+        posts={filteredMockFeedPosts}
+        loading={mockFeedLoading}
+        error={mockFeedError}
+        onRetry={() => {
+          setMockFeedError(false);
+          setMockFeedLoading(true);
+          window.setTimeout(() => setMockFeedLoading(false), 420);
+        }}
+        onCreate={() => setShowCreateModal(true)}
+      />
 
       {/* Create Post Modal */}
       <AnimatePresence>
@@ -11801,22 +12391,33 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
                   )}
                 </div>
 
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Categoria</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'] as CommunityCategory[]).map(option => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setNewMockPostCategory(option)}
+                        className={`min-h-[40px] rounded-xl border px-2 text-[10px] font-black transition-all ${
+                          newMockPostCategory === option
+                            ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20'
+                            : 'border-[#232323] bg-white/5 text-text-muted hover:border-primary/40 hover:text-white'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button 
-                  onClick={handleCreatePost}
-                  disabled={isPublishing || (!newPostContent.trim() && !newPostImage)}
+                  onClick={handleCreateMockPost}
+                  disabled={!newPostContent.trim() && !imagePreview}
                   className="w-full bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all shadow-xl shadow-primary/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isPublishing ? (
-                    <>
-                      <Loader2 className="animate-spin" size={20} />
-                      {uploadProgress < 100 && newPostImage ? 'Enviando Imagem...' : 'Publicando...'}
-                    </>
-                  ) : (
-                    <>
-                      <Send size={20} />
-                      Publicar no Feed
-                    </>
-                  )}
+                  <Send size={20} />
+                  Publicar no Feed
                 </button>
               </div>
             </motion.div>

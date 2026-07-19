@@ -2203,7 +2203,7 @@ export default function App() {
               initial={{ opacity: 0, y: 34, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 34, scale: 0.98 }}
-              className="relative w-full sm:max-w-md bg-surface border border-white/10 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-7"
+              className="ironshop-font relative w-full sm:max-w-md bg-surface border border-white/10 rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-7"
             >
               <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-5">
                 <Lock size={24} />
@@ -2253,7 +2253,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
 
   if (!access.hasAccess) {
     return (
-      <div className="max-w-3xl mx-auto min-h-[70vh] flex items-center justify-center">
+      <div className="ironshop-font max-w-3xl mx-auto min-h-[70vh] flex items-center justify-center">
         <section className="w-full bg-[#111111] border border-[#232323] rounded-[32px] p-8 sm:p-10 text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mx-auto mb-6">
             <Lock size={28} />
@@ -2363,7 +2363,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
   }
 
   return (
-    <div id="ironshop-full-catalog" className="bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-14 sm:space-y-16 pb-10">
+    <div id="ironshop-full-catalog" className="ironshop-font bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-14 sm:space-y-16 pb-10">
       <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
           <h1 className="text-[42px] sm:text-5xl font-black leading-[0.95] tracking-normal"><span className="text-primary">Loja</span> IronShape</h1>
@@ -2562,7 +2562,7 @@ function IronShopProductPage({
   }, [product.id]);
 
   return (
-    <div className="bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 pb-28 lg:pb-12">
+    <div className="ironshop-font bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 pb-28 lg:pb-12">
       <ProductHeader onBack={onBack} />
       <div className="grid lg:grid-cols-[52%_48%] gap-8 lg:gap-12 mt-5">
         <ProductGallery productName={product.name} images={galleryImages} selectedImage={selectedImage} onSelectImage={setSelectedImage} />

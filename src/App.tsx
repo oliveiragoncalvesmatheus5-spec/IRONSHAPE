@@ -12160,7 +12160,7 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
   }
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <div className="community-light-scope space-y-6 md:space-y-8">
       <header className="space-y-5 rounded-[24px] md:rounded-[28px] border border-[#232323] bg-[#090909] px-4 py-5 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:px-5 md:px-6">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.78fr)] lg:items-start">
           <div className="min-w-0">

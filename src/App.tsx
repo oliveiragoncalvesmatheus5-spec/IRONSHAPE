@@ -2750,7 +2750,7 @@ function BottomActionBar({ price }: { price: string }) {
           <p className="text-[10px] font-black uppercase tracking-widest text-[#6F6F6F]">Total</p>
           <p className="text-lg font-black text-primary">{price}</p>
         </div>
-        <button className="flex-1 min-h-[48px] rounded-2xl border border-primary/35 bg-primary/15 text-primary text-[11px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Adicionar</button>
+        <button className="flex-1 min-h-[48px] rounded-2xl border border-primary/35 bg-primary/15 text-primary text-[10px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Adicionar ao Carrinho</button>
         <button className="flex-1 min-h-[48px] rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Comprar Agora</button>
       </div>
     </div>

@@ -100,6 +100,7 @@ import {
   Truck,
   CreditCard,
   Headphones,
+  Minus,
   ShieldAlert
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
@@ -123,6 +124,16 @@ function slugifyText(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 }
+
+type IronShopDisplayProduct = {
+  id: string;
+  name: string;
+  category: IronShopProduct['category'];
+  price: number;
+  image: string;
+  oldPrice?: number;
+  badge?: string;
+};
 
 const AUTH_NAVIGATION_KEYS = [
   'code',
@@ -2179,6 +2190,10 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
   const [products, setProducts] = useState<IronShopProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(access.hasAccess);
   const [shopError, setShopError] = useState('');
+  const [selectedProductSlug, setSelectedProductSlug] = useState(() => {
+    const match = window.location.pathname.match(/^\/produto\/([^/]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  });
 
   useEffect(() => {
     if (!access.hasAccess) {
@@ -2242,37 +2257,69 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
       name: 'Whey Protein IronShape',
       category: 'supplement' as IronShopProduct['category'],
       price: wheyProduct?.price || 129.9,
-      image: wheyProduct?.image || firstProductImage
+      image: wheyProduct?.image || firstProductImage,
+      oldPrice: 159.9,
+      badge: 'Mais vendido'
     },
     {
       id: 'best-camiseta-dry-fit',
       name: 'Camiseta Dry Fit IronShape',
       category: 'apparel' as IronShopProduct['category'],
       price: apparelProduct?.price || 89.9,
-      image: apparelProduct?.image || secondProductImage
+      image: apparelProduct?.image || secondProductImage,
+      badge: 'Novo'
     },
     {
       id: 'best-shaker-steel',
       name: 'Shaker Steel 700ml',
       category: 'accessory' as IronShopProduct['category'],
       price: shakerProduct?.price || 59.9,
-      image: shakerProduct?.image || thirdProductImage
+      image: shakerProduct?.image || thirdProductImage,
+      badge: 'Frete grátis'
     },
     {
       id: 'best-creatina',
       name: 'Creatina Monohidratada IronShape',
       category: 'supplement' as IronShopProduct['category'],
       price: 89.9,
-      image: firstProductImage || thirdProductImage
+      image: firstProductImage || thirdProductImage,
+      oldPrice: 109.9,
+      badge: 'Últimas unidades'
     },
     {
       id: 'best-pre-treino',
       name: 'Pré-Treino IronShape',
       category: 'supplement' as IronShopProduct['category'],
       price: 119.9,
-      image: thirdProductImage || firstProductImage
+      image: thirdProductImage || firstProductImage,
+      badge: 'Performance'
     }
-  ];
+  ] satisfies IronShopDisplayProduct[];
+  const selectedProduct = bestSellingProducts.find(product => slugifyText(product.name) === selectedProductSlug) || bestSellingProducts[0];
+  const openProduct = (product: IronShopDisplayProduct) => {
+    const slug = slugifyText(product.name);
+    setSelectedProductSlug(slug);
+    window.history.pushState({ ironshopProduct: slug }, document.title, `/produto/${slug}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const closeProduct = () => {
+    setSelectedProductSlug('');
+    window.history.pushState({ ironshopScreen: 'shop' }, document.title, '/');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  if (selectedProductSlug && !loadingProducts) {
+    return (
+      <IronShopProductPage
+        product={selectedProduct}
+        locale={locale}
+        relatedProducts={bestSellingProducts.filter(product => product.id !== selectedProduct.id)}
+        onBack={closeProduct}
+        onOpenProduct={openProduct}
+        categoryLabel={productCategoryLabel}
+      />
+    );
+  }
 
   return (
     <div id="ironshop-full-catalog" className="bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-14 sm:space-y-16 pb-10">
@@ -2369,7 +2416,16 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
             <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scroll-smooth touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex gap-3 sm:gap-4 pb-2 will-change-transform">
                 {bestSellingProducts.map(product => (
-                  <article key={product.id} className="group snap-center shrink-0 w-[172px] min-[390px]:w-[185px] sm:w-[220px] lg:w-[280px] h-[300px] sm:h-[340px] lg:h-[420px] rounded-[20px] border border-[#232323] bg-[#0D0D0D]/95 overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:border-primary lg:hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] lg:hover:-translate-y-1 transition-all duration-[250ms]">
+                  <article
+                    key={product.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openProduct(product)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') openProduct(product);
+                    }}
+                    className="group snap-center shrink-0 w-[172px] min-[390px]:w-[185px] sm:w-[220px] lg:w-[280px] h-[300px] sm:h-[340px] lg:h-[420px] rounded-[20px] border border-[#232323] bg-[#0D0D0D]/95 overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:border-primary lg:hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] lg:hover:-translate-y-1 transition-all duration-[250ms] cursor-pointer focus:outline-none focus:border-primary"
+                  >
                     <div className="relative h-[65%] bg-[#090909] overflow-hidden">
                       {product.image && (
                         <img
@@ -2381,7 +2437,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
                         />
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-[#090909]/55 via-transparent to-transparent" />
-                      <button className="absolute top-3 right-3 w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-[#090909]/70 backdrop-blur-md border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Favoritar">
+                      <button onClick={(event) => event.stopPropagation()} className="absolute top-3 right-3 w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-[#090909]/70 backdrop-blur-md border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Favoritar">
                         <Heart size={17} />
                       </button>
                     </div>
@@ -2392,7 +2448,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
                       </div>
                       <div className="flex items-end justify-between gap-2">
                         <span className="text-xl sm:text-2xl lg:text-[38px] font-black text-primary leading-none">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
-                        <button className="w-9 h-9 lg:w-12 lg:h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white active:scale-95 lg:hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
+                        <button onClick={(event) => event.stopPropagation()} className="w-9 h-9 lg:w-12 lg:h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white active:scale-95 lg:hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
                           <Plus size={18} />
                         </button>
                       </div>
@@ -2438,6 +2494,271 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
       )}
     </div>
   );
+}
+
+function IronShopProductPage({
+  product,
+  locale,
+  relatedProducts,
+  onBack,
+  onOpenProduct,
+  categoryLabel
+}: {
+  product: IronShopDisplayProduct;
+  locale: string;
+  relatedProducts: IronShopDisplayProduct[];
+  onBack: () => void;
+  onOpenProduct: (product: IronShopDisplayProduct) => void;
+  categoryLabel: (category: IronShopProduct['category']) => string;
+}) {
+  const galleryImages = [product.image, product.image, product.image].filter(Boolean);
+  const [selectedImage, setSelectedImage] = useState(galleryImages[0] || product.image);
+  const price = product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' });
+  const installment = (product.price / 12).toLocaleString(locale, { style: 'currency', currency: 'BRL' });
+
+  useEffect(() => {
+    setSelectedImage(galleryImages[0] || product.image);
+  }, [product.id]);
+
+  return (
+    <div className="bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 pb-28 lg:pb-12">
+      <ProductHeader onBack={onBack} />
+      <div className="grid lg:grid-cols-[52%_48%] gap-8 lg:gap-12 mt-5">
+        <ProductGallery productName={product.name} images={galleryImages} selectedImage={selectedImage} onSelectImage={setSelectedImage} />
+        <section className="space-y-6 lg:sticky lg:top-8 lg:self-start">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-[#6F6F6F]">{categoryLabel(product.category)}</span>
+              {product.badge && <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">{product.badge}</span>}
+            </div>
+            <h1 className="text-[34px] sm:text-[44px] lg:text-[52px] font-black leading-[0.98] tracking-normal line-clamp-2">{product.name}</h1>
+            <div className="mt-4 flex items-center gap-2 text-sm font-bold text-[#AFAFAF]">
+              <span className="text-primary tracking-[0.12em]">★★★★★</span>
+              <span className="text-white">4.9</span>
+              <span>(128 avaliações)</span>
+            </div>
+          </div>
+          <PriceSection price={price} oldPrice={product.oldPrice?.toLocaleString(locale, { style: 'currency', currency: 'BRL' })} installment={installment} />
+          <BenefitsList />
+          <QuantitySelector />
+        </section>
+      </div>
+      <div className="mt-10 grid lg:grid-cols-[58%_42%] gap-6">
+        <DescriptionCard productName={product.name} />
+        <SpecificationTable category={categoryLabel(product.category)} />
+      </div>
+      <CustomerReviews />
+      <RelatedProducts products={relatedProducts} locale={locale} categoryLabel={categoryLabel} onOpenProduct={onOpenProduct} />
+      <BottomActionBar price={price} />
+    </div>
+  );
+}
+
+function ProductHeader({ onBack }: { onBack: () => void }) {
+  return (
+    <header className="flex items-center justify-between gap-4">
+      <button onClick={onBack} className="w-12 h-12 rounded-full bg-[#111111] border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Voltar">
+        <ChevronLeft size={23} />
+      </button>
+      <div className="flex items-center gap-3">
+        <ShareButton />
+        <FavoriteButton />
+      </div>
+    </header>
+  );
+}
+
+function FavoriteButton() {
+  return (
+    <button className="w-12 h-12 rounded-full bg-[#111111] border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Favoritar">
+      <Heart size={21} />
+    </button>
+  );
+}
+
+function ShareButton() {
+  return (
+    <button className="w-12 h-12 rounded-full bg-[#111111] border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Compartilhar">
+      <Share2 size={21} />
+    </button>
+  );
+}
+
+function ProductGallery({ productName, images, selectedImage, onSelectImage }: { productName: string; images: string[]; selectedImage: string; onSelectImage: (image: string) => void }) {
+  return (
+    <section className="space-y-4">
+      <div className="relative h-[45vh] min-h-[320px] lg:h-[680px] rounded-[22px] border border-[#232323] bg-[#111111] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+        {selectedImage ? (
+          <motion.img key={selectedImage} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} src={selectedImage} alt={productName} className="w-full h-full object-cover" loading="eager" />
+        ) : (
+          <ProductSkeleton className="h-full w-full" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#090909]/55 via-transparent to-transparent" />
+      </div>
+      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {images.map((image, index) => (
+          <button key={`${image}-${index}`} onClick={() => onSelectImage(image)} className={`snap-start shrink-0 w-20 h-20 rounded-2xl border bg-[#111111] overflow-hidden active:scale-95 transition-all duration-200 ${selectedImage === image && index === images.indexOf(selectedImage) ? 'border-primary' : 'border-[#232323]'}`} aria-label={`Imagem ${index + 1}`}>
+            <img src={image} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PriceSection({ price, oldPrice, installment }: { price: string; oldPrice?: string; installment: string }) {
+  return (
+    <section className="rounded-3xl border border-[#232323] bg-[#111111]/90 p-5 sm:p-6 backdrop-blur-md shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+      {oldPrice && <p className="text-sm font-bold text-[#6F6F6F] line-through mb-2">{oldPrice}</p>}
+      <p className="text-[42px] sm:text-[52px] font-black leading-none text-primary">{price}</p>
+      <p className="mt-3 text-sm sm:text-base font-semibold text-[#AFAFAF]">ou até 12x de {installment} sem juros</p>
+    </section>
+  );
+}
+
+function BenefitsList() {
+  const benefits = ['Produto Original', 'Envio Rápido', 'Compra Segura', 'Garantia IronShape'];
+  return (
+    <section className="grid grid-cols-2 gap-3">
+      {benefits.map(benefit => (
+        <div key={benefit} className="min-h-[58px] rounded-2xl border border-[#232323] bg-[#111111] px-4 flex items-center gap-3">
+          <CheckCircle2 size={18} className="text-primary shrink-0" />
+          <span className="text-sm font-black">{benefit}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function QuantitySelector() {
+  return (
+    <section className="rounded-3xl border border-[#232323] bg-[#111111] p-4 flex items-center justify-between">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6F6F6F]">Quantidade</p>
+        <p className="text-sm font-semibold text-[#AFAFAF] mt-1">Seleção visual para próxima fase</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="w-11 h-11 rounded-2xl border border-[#232323] bg-[#090909] text-white flex items-center justify-center active:scale-95 hover:text-primary transition-all duration-200" aria-label="Diminuir quantidade">
+          <Minus size={18} />
+        </button>
+        <span className="w-10 text-center text-xl font-black">1</span>
+        <button className="w-11 h-11 rounded-2xl border border-primary/30 bg-primary/20 text-primary flex items-center justify-center active:scale-95 hover:bg-primary hover:text-white transition-all duration-200" aria-label="Aumentar quantidade">
+          <Plus size={18} />
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function DescriptionCard({ productName }: { productName: string }) {
+  return (
+    <section className="rounded-3xl border border-[#232323] bg-[#111111] p-6 sm:p-8 shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+      <h2 className="text-2xl sm:text-[32px] font-black">Descrição</h2>
+      <p className="mt-4 text-sm sm:text-base leading-relaxed text-[#AFAFAF]">
+        O {productName} foi selecionado para atletas e alunos que buscam performance, praticidade e confiança na rotina. A proposta da IronShape é entregar uma experiência premium desde a escolha do produto até o uso diário, com visual sofisticado e informações claras para decisões rápidas.
+      </p>
+      <p className="mt-4 text-sm sm:text-base leading-relaxed text-[#AFAFAF]">
+        Ideal para acompanhar treinos intensos, recuperação e evolução constante, este produto combina qualidade percebida, acabamento moderno e posicionamento fitness de alto padrão. Esta página usa dados simulados e está pronta para receber integrações reais nas próximas fases.
+      </p>
+    </section>
+  );
+}
+
+function SpecificationTable({ category }: { category: string }) {
+  const specs = [
+    ['Marca', 'IronShape'],
+    ['Peso', category === 'Roupa' ? 'Leve' : '900g'],
+    ['Categoria', category],
+    ['Sabor', category === 'Suplemento' ? 'Chocolate' : 'Iron Black'],
+    ['Validade', '12 meses']
+  ];
+  return (
+    <section className="rounded-3xl border border-[#232323] bg-[#111111] p-6 sm:p-8 shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+      <h2 className="text-2xl sm:text-[32px] font-black">Especificações</h2>
+      <div className="mt-5 divide-y divide-[#232323]">
+        {specs.map(([label, value]) => (
+          <div key={label} className="grid grid-cols-2 gap-4 py-4 text-sm">
+            <span className="font-black text-[#6F6F6F] uppercase tracking-widest">{label}</span>
+            <span className="font-bold text-white text-right">{value}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CustomerReviews() {
+  const reviews = [
+    { name: 'Matheus A.', comment: 'Produto com aparência premium e entrega rápida. A experiência parece de app grande.' },
+    { name: 'Carol M.', comment: 'Gostei da clareza das informações e do visual. Passa muita confiança.' }
+  ];
+  return (
+    <section className="mt-10 space-y-5">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-[28px] sm:text-[38px] font-black">Avaliações dos Clientes</h2>
+        <button className="text-sm font-black text-primary flex items-center gap-2 hover:text-[#FF7E1F] transition-colors duration-200">Ver todas avaliações <ArrowRight size={17} /></button>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        {reviews.map(review => (
+          <article key={review.name} className="rounded-3xl border border-[#232323] bg-[#111111] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#090909] border border-[#232323] flex items-center justify-center font-black text-primary">{review.name.charAt(0)}</div>
+              <div>
+                <h3 className="font-black">{review.name}</h3>
+                <p className="text-primary text-sm tracking-[0.12em]">★★★★★</p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-[#AFAFAF]">{review.comment}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RelatedProducts({ products, locale, categoryLabel, onOpenProduct }: { products: IronShopDisplayProduct[]; locale: string; categoryLabel: (category: IronShopProduct['category']) => string; onOpenProduct: (product: IronShopDisplayProduct) => void }) {
+  return (
+    <section className="mt-10 space-y-5">
+      <h2 className="text-[28px] sm:text-[38px] font-black">Você também pode gostar</h2>
+      <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-3 sm:gap-4 pb-2">
+          {products.slice(0, 6).map(product => (
+            <article key={product.id} role="button" tabIndex={0} onClick={() => onOpenProduct(product)} className="snap-center shrink-0 w-[172px] sm:w-[220px] lg:w-[260px] h-[300px] sm:h-[340px] rounded-[20px] border border-[#232323] bg-[#0D0D0D] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:-translate-y-1 lg:hover:border-primary transition-all duration-200 cursor-pointer">
+              <div className="h-[65%] bg-[#090909] overflow-hidden">
+                {product.image && <img src={product.image} alt={product.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+              </div>
+              <div className="h-[35%] p-4 flex flex-col justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#6F6F6F]">{categoryLabel(product.category)}</p>
+                  <h3 className="mt-1.5 text-base font-black leading-tight line-clamp-2">{product.name}</h3>
+                </div>
+                <p className="text-2xl font-black text-primary">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BottomActionBar({ price }: { price: string }) {
+  return (
+    <div className="fixed left-0 right-0 bottom-0 z-[90] border-t border-[#232323] bg-[#090909]/95 backdrop-blur-xl px-4 py-3 lg:hidden">
+      <div className="max-w-[1600px] mx-auto flex items-center gap-3">
+        <div className="min-w-[92px]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#6F6F6F]">Total</p>
+          <p className="text-lg font-black text-primary">{price}</p>
+        </div>
+        <button className="flex-1 min-h-[48px] rounded-2xl border border-primary/35 bg-primary/15 text-primary text-[11px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Adicionar</button>
+        <button className="flex-1 min-h-[48px] rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Comprar Agora</button>
+      </div>
+    </div>
+  );
+}
+
+function ProductSkeleton({ className }: { className: string }) {
+  return <div className={`animate-pulse rounded-3xl bg-[#111111] border border-[#232323] ${className}`} />;
 }
 
 function AffiliateView({ profile, language: _language }: { profile: UserProfile | null; language: LanguageCode }) {

@@ -2235,6 +2235,10 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
     const match = window.location.pathname.match(/^\/produto\/([^/]+)/);
     return match ? decodeURIComponent(match[1]) : '';
   });
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState(() => {
+    const match = window.location.pathname.match(/^\/categoria\/([^/]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  });
 
   useEffect(() => {
     if (!access.hasAccess) {
@@ -2274,10 +2278,10 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
   const thirdProductImage = featuredProducts[2]?.image || firstProductImage;
   const fourthProductImage = featuredProducts[3]?.image || secondProductImage;
   const categoryCards = [
-    { name: 'Suplementos', image: firstProductImage, icon: <ShoppingBag size={22} /> },
-    { name: 'Roupas', image: secondProductImage, icon: <Shirt size={22} /> },
-    { name: 'Acessórios', image: thirdProductImage, icon: <Package size={22} /> },
-    { name: 'Kits', image: fourthProductImage, icon: <Star size={22} /> }
+    { name: 'Suplementos', slug: 'suplementos', image: firstProductImage, icon: <ShoppingBag size={22} /> },
+    { name: 'Roupas', slug: 'roupas', image: secondProductImage, icon: <Shirt size={22} /> },
+    { name: 'Acessórios', slug: 'acessorios', image: thirdProductImage, icon: <Package size={22} /> },
+    { name: 'Kits', slug: 'kits', image: fourthProductImage, icon: <Star size={22} /> }
   ];
   const benefits = [
     { label: 'Frete grátis', icon: <Truck size={22} /> },
@@ -2336,15 +2340,79 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
       badge: 'Performance'
     }
   ] satisfies IronShopDisplayProduct[];
-  const selectedProduct = bestSellingProducts.find(product => slugifyText(product.name) === selectedProductSlug) || bestSellingProducts[0];
+  const categoryProducts: Record<string, { title: string; description: string; products: IronShopDisplayProduct[] }> = {
+    suplementos: {
+      title: 'Suplementos',
+      description: 'Proteínas, creatinas e pré-treinos selecionados para performance, recuperação e evolução diária.',
+      products: [
+        bestSellingProducts[0],
+        bestSellingProducts[3],
+        bestSellingProducts[4],
+        { id: 'iso-whey-black', name: 'Iso Whey Black IronShape', category: 'supplement', price: 179.9, image: firstProductImage, oldPrice: 209.9, badge: 'Premium' },
+        { id: 'bcaa-performance', name: 'BCAA Performance IronShape', category: 'supplement', price: 79.9, image: thirdProductImage || firstProductImage, badge: 'Novo' },
+        { id: 'glutamina-recovery', name: 'Glutamina Recovery IronShape', category: 'supplement', price: 69.9, image: firstProductImage || thirdProductImage, badge: 'Recuperação' }
+      ]
+    },
+    roupas: {
+      title: 'Roupas',
+      description: 'Peças dry fit e lifestyle com visual premium para treinar, trabalhar e viver a rotina IronShape.',
+      products: [
+        bestSellingProducts[1],
+        { id: 'regata-performance', name: 'Regata Performance IronShape', category: 'apparel', price: 74.9, image: secondProductImage, badge: 'Treino' },
+        { id: 'shorts-training', name: 'Shorts Training IronShape', category: 'apparel', price: 99.9, image: secondProductImage, oldPrice: 119.9, badge: 'Novo' },
+        { id: 'hoodie-black', name: 'Hoodie Black IronShape', category: 'apparel', price: 189.9, image: secondProductImage, badge: 'Lifestyle' },
+        { id: 'calca-tech', name: 'Calça Tech IronShape', category: 'apparel', price: 159.9, image: secondProductImage, badge: 'Premium' }
+      ]
+    },
+    acessorios: {
+      title: 'Acessórios',
+      description: 'Itens essenciais para deixar sua rotina mais prática, organizada e com identidade premium.',
+      products: [
+        bestSellingProducts[2],
+        { id: 'gym-bag-pro', name: 'Gym Bag Pro IronShape', category: 'accessory', price: 149.9, image: thirdProductImage, badge: 'Mais vendido' },
+        { id: 'strap-training', name: 'Strap Training IronShape', category: 'accessory', price: 49.9, image: thirdProductImage, badge: 'Força' },
+        { id: 'munhequeira-pro', name: 'Munhequeira Pro IronShape', category: 'accessory', price: 39.9, image: thirdProductImage, badge: 'Suporte' },
+        { id: 'garrafa-steel', name: 'Garrafa Steel 1L IronShape', category: 'accessory', price: 69.9, image: thirdProductImage, oldPrice: 89.9, badge: 'Frete grátis' }
+      ]
+    },
+    kits: {
+      title: 'Kits',
+      description: 'Combinações inteligentes para quem quer praticidade, economia e uma rotina fitness completa.',
+      products: [
+        { id: 'kit-performance', name: 'Kit Performance IronShape', category: 'supplement', price: 249.9, image: fourthProductImage || firstProductImage, oldPrice: 299.9, badge: 'Oferta' },
+        { id: 'kit-whey-creatina', name: 'Kit Whey + Creatina IronShape', category: 'supplement', price: 209.9, image: firstProductImage || fourthProductImage, badge: 'Mais vendido' },
+        { id: 'kit-treino-total', name: 'Kit Treino Total IronShape', category: 'accessory', price: 189.9, image: thirdProductImage || fourthProductImage, badge: 'Completo' },
+        { id: 'kit-dry-fit-shaker', name: 'Kit Dry Fit + Shaker IronShape', category: 'apparel', price: 139.9, image: secondProductImage || thirdProductImage, badge: 'Novo' },
+        { id: 'kit-start', name: 'Kit Start IronShape', category: 'supplement', price: 159.9, image: fourthProductImage || firstProductImage, badge: 'Iniciante' }
+      ]
+    }
+  };
+  const allDisplayProducts = [
+    ...bestSellingProducts,
+    ...Object.values(categoryProducts).flatMap(category => category.products)
+  ];
+  const selectedProduct = allDisplayProducts.find(product => slugifyText(product.name) === selectedProductSlug) || bestSellingProducts[0];
+  const selectedCategory = selectedCategorySlug ? categoryProducts[selectedCategorySlug] : null;
   const openProduct = (product: IronShopDisplayProduct) => {
     const slug = slugifyText(product.name);
     setSelectedProductSlug(slug);
+    setSelectedCategorySlug('');
     window.history.pushState({ ironshopProduct: slug }, document.title, `/produto/${slug}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const openCategory = (slug: string) => {
+    setSelectedProductSlug('');
+    setSelectedCategorySlug(slug);
+    window.history.pushState({ ironshopCategory: slug }, document.title, `/categoria/${slug}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const closeProduct = () => {
     setSelectedProductSlug('');
+    window.history.pushState({ ironshopScreen: 'shop' }, document.title, '/');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const closeCategory = () => {
+    setSelectedCategorySlug('');
     window.history.pushState({ ironshopScreen: 'shop' }, document.title, '/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -2354,8 +2422,20 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
       <IronShopProductPage
         product={selectedProduct}
         locale={locale}
-        relatedProducts={bestSellingProducts.filter(product => product.id !== selectedProduct.id)}
+        relatedProducts={allDisplayProducts.filter(product => product.id !== selectedProduct.id)}
         onBack={closeProduct}
+        onOpenProduct={openProduct}
+        categoryLabel={productCategoryLabel}
+      />
+    );
+  }
+
+  if (selectedCategory && !loadingProducts) {
+    return (
+      <IronShopCategoryPage
+        category={selectedCategory}
+        locale={locale}
+        onBack={closeCategory}
         onOpenProduct={openProduct}
         categoryLabel={productCategoryLabel}
       />
@@ -2440,7 +2520,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
                       <span className="w-10 h-10 rounded-full bg-[#090909] border border-[#232323] text-primary flex items-center justify-center">{category.icon}</span>
                       <h3 className="text-base sm:text-lg font-black uppercase">{category.name}</h3>
                     </div>
-                    <button className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 hover:text-[#FF7E1F] transition-colors duration-200">
+                    <button onClick={() => openCategory(category.slug)} className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 hover:text-[#FF7E1F] active:scale-[0.98] transition-all duration-200">
                       Ver produtos <ArrowRight size={16} />
                     </button>
                   </div>
@@ -2591,6 +2671,96 @@ function IronShopProductPage({
       <CustomerReviews />
       <RelatedProducts products={relatedProducts} locale={locale} categoryLabel={categoryLabel} onOpenProduct={onOpenProduct} />
       <BottomActionBar price={price} />
+    </div>
+  );
+}
+
+function IronShopCategoryPage({
+  category,
+  locale,
+  onBack,
+  onOpenProduct,
+  categoryLabel
+}: {
+  category: { title: string; description: string; products: IronShopDisplayProduct[] };
+  locale: string;
+  onBack: () => void;
+  onOpenProduct: (product: IronShopDisplayProduct) => void;
+  categoryLabel: (category: IronShopProduct['category']) => string;
+}) {
+  return (
+    <div className="ironshop-font bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 pb-12">
+      <header className="flex items-center justify-between gap-4">
+        <button onClick={onBack} className="w-12 h-12 rounded-full bg-[#111111] border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Voltar para loja">
+          <ChevronLeft size={23} />
+        </button>
+        <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary">
+          Categoria
+        </span>
+      </header>
+
+      <section className="mt-6 rounded-[28px] border border-[#232323] bg-[#111111] p-6 sm:p-8 lg:p-10 shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-primary">IronShop</p>
+        <h1 className="mt-3 text-[36px] sm:text-[48px] font-black leading-none tracking-normal">{category.title}</h1>
+        <p className="mt-4 max-w-2xl text-sm sm:text-base leading-relaxed text-[#AFAFAF]">{category.description}</p>
+      </section>
+
+      <section className="mt-8">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="text-[28px] sm:text-[38px] font-black tracking-normal">Produtos de {category.title}</h2>
+          <span className="text-xs font-black uppercase tracking-widest text-[#6F6F6F]">{category.products.length} itens</span>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
+          {category.products.map(product => (
+            <article
+              key={product.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenProduct(product)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') onOpenProduct(product);
+              }}
+              className="group h-[310px] sm:h-[360px] lg:h-[420px] rounded-[22px] border border-[#232323] bg-[#0D0D0D] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:-translate-y-1 lg:hover:border-primary transition-all duration-200 cursor-pointer focus:outline-none focus:border-primary"
+            >
+              <div className="relative h-[64%] bg-[#090909] overflow-hidden">
+                {product.image && (
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover lg:group-hover:scale-[1.03] transition-transform duration-200"
+                  />
+                )}
+                {product.badge && (
+                  <span className="absolute left-3 top-3 rounded-full bg-[#090909]/75 border border-[#232323] px-3 py-1 text-[9px] font-black uppercase tracking-widest text-primary backdrop-blur-md">
+                    {product.badge}
+                  </span>
+                )}
+                <button onClick={(event) => event.stopPropagation()} className="absolute right-3 top-3 w-9 h-9 rounded-full bg-[#090909]/75 border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200 backdrop-blur-md" aria-label="Favoritar">
+                  <Heart size={16} />
+                </button>
+              </div>
+
+              <div className="h-[36%] p-4 flex flex-col justify-between">
+                <div>
+                  <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.16em] text-[#6F6F6F]">{categoryLabel(product.category)}</p>
+                  <h3 className="mt-1.5 text-base sm:text-lg lg:text-xl font-black leading-tight line-clamp-2">{product.name}</h3>
+                </div>
+                <div className="flex items-end justify-between gap-2">
+                  <span className="text-2xl lg:text-[32px] font-black text-primary leading-none">
+                    {product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}
+                  </span>
+                  <button onClick={(event) => event.stopPropagation()} className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white active:scale-95 transition-all duration-200" aria-label="Adicionar">
+                    <Plus size={18} />
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useMemo, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
@@ -1861,8 +1861,9 @@ export default function App() {
           onPlanChange={setSimulatedPlan}
         />
       )}
+      {activeTab !== 'community' && (
       <div
-        className="md:hidden fixed right-4 z-[55] flex items-center"
+        className="md:hidden absolute right-4 z-[55] flex items-center gap-1"
         style={{ top: 'calc(12px + env(safe-area-inset-top))' }}
       >
         <button
@@ -1879,7 +1880,6 @@ export default function App() {
             </span>
           </span>
         </button>
-        <span className="px-1 text-sm font-black text-text-muted select-none" aria-hidden="true">/</span>
         <button
           type="button"
           aria-label={themeMode === 'dark' ? text.actions.enableLight : text.actions.enableDark}
@@ -1918,6 +1918,7 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+      )}
 
       {/* Sidebar / Navigation */}
       <nav
@@ -2192,7 +2193,17 @@ export default function App() {
               />
             )}
             {activeTab === 'progress' && <BodyProgressView userId={profile.id} language={language} />}
-            {activeTab === 'community' && isAdmin && <CommunityView profile={profile} language={language} />}
+            {activeTab === 'community' && isAdmin && (
+              <CommunityView
+                profile={profile}
+                language={language}
+                setLanguage={setLanguage}
+                themeMode={themeMode}
+                setThemeMode={setThemeMode}
+                languageMenuOpen={languageMenuOpen}
+                setLanguageMenuOpen={setLanguageMenuOpen}
+              />
+            )}
             {activeTab === 'shop' && <IronShopView access={ironShopAccess} language={language} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} language={language} />}
             {activeTab === 'settings' && <SettingsView profile={profile} language={language} logout={logout} onUpgrade={() => openPricing('settings')} />}
@@ -11760,7 +11771,23 @@ function CommunitySidebar() {
   );
 }
 
-function CommunityView({ profile, language }: { profile: UserProfile; language: LanguageCode }) {
+function CommunityView({
+  profile,
+  language,
+  setLanguage,
+  themeMode,
+  setThemeMode,
+  languageMenuOpen,
+  setLanguageMenuOpen,
+}: {
+  profile: UserProfile;
+  language: LanguageCode;
+  setLanguage: Dispatch<SetStateAction<LanguageCode>>;
+  themeMode: ThemeMode;
+  setThemeMode: Dispatch<SetStateAction<ThemeMode>>;
+  languageMenuOpen: boolean;
+  setLanguageMenuOpen: Dispatch<SetStateAction<boolean>>;
+}) {
   const dateFnsLocale = getDateFnsLocale(language);
   const { updateProfile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -12469,9 +12496,90 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
   return (
     <div className="community-light-scope space-y-6 pb-40 md:space-y-6 lg:pb-0">
       <header className="space-y-4 rounded-[20px] border border-[#232323] bg-[#090909] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:p-5">
-        <div className="min-w-0 pr-[104px] sm:pr-0">
-          <h1 className="text-[23px] font-black leading-[1.05] tracking-normal text-white min-[380px]:text-[25px] sm:text-[30px]">
-              Comunidade <span className="text-primary">IronShape</span>
+        <div className="flex justify-end">
+          <div className="relative flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Idioma"
+              aria-expanded={languageMenuOpen}
+              onClick={() => setLanguageMenuOpen(open => !open)}
+              className="flex h-9 w-8 items-center justify-center text-text-primary transition-all active:scale-95"
+            >
+              <span className="relative flex items-center justify-center">
+                <Languages size={18} className="text-primary" />
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[7px] font-black leading-none text-primary">
+                  {LANGUAGE_OPTIONS.find(option => option.code === language)?.short}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-label={themeMode === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              aria-pressed={themeMode === 'light'}
+              onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
+              className="flex h-9 w-8 items-center justify-center text-text-primary transition-all active:scale-95"
+            >
+              {themeMode === 'dark' ? <Sun size={18} className="text-primary" /> : <Moon size={18} className="text-primary" />}
+            </button>
+            <button
+              type="button"
+              className="relative flex h-9 w-8 items-center justify-center text-text-secondary transition-all hover:text-white active:scale-95"
+              aria-label="Notificações"
+            >
+              <BellRing size={18} />
+              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black text-white ring-2 ring-[#090909]">3</span>
+            </button>
+            <button
+              type="button"
+              className="relative flex h-9 w-8 items-center justify-center text-text-secondary transition-all hover:text-white active:scale-95"
+              aria-label="Mensagens"
+            >
+              <Send size={17} />
+              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[9px] font-black text-white ring-2 ring-[#090909]">2</span>
+            </button>
+            <button
+              onClick={() => openSocialProfile(profile.id, profile)}
+              className="flex h-9 w-8 items-center justify-center overflow-hidden text-sm font-black text-primary transition-all active:scale-95"
+              aria-label="Abrir meu perfil social"
+            >
+              <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary text-xs text-white">
+                {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
+              </span>
+            </button>
+            <AnimatePresence>
+              {languageMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                  transition={{ duration: 0.16 }}
+                  className="absolute right-0 top-full z-20 mt-2 w-40 overflow-hidden rounded-2xl border border-white/10 bg-surface/95 p-1 shadow-2xl shadow-black/20 backdrop-blur-xl"
+                >
+                  {LANGUAGE_OPTIONS.map(option => (
+                    <button
+                      key={option.code}
+                      type="button"
+                      onClick={() => {
+                        setLanguage(option.code);
+                        setLanguageMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
+                        language === option.code ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                      }`}
+                    >
+                      <span className="text-xs font-black">{option.short}</span>
+                      <span className="truncate text-xs font-bold">{option.label}</span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <h1 className="text-[24px] font-black leading-[1.05] tracking-normal text-white min-[380px]:text-[26px] sm:text-[30px]">
+            Comunidade <span className="text-primary">IronShape</span>
           </h1>
           <p className="mt-2 text-xs font-medium leading-relaxed text-text-muted sm:text-sm">
             Evolução, disciplina e comunidade em tempo real.
@@ -12487,32 +12595,6 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
             className="h-12 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50 sm:h-[52px]"
             aria-label="Pesquisar usuários, posts e hashtags"
           />
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <button
-            type="button"
-            className="relative flex h-12 min-h-[44px] items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
-            aria-label="Notificações"
-          >
-            <BellRing size={19} />
-            <span className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">3</span>
-          </button>
-          <button
-            type="button"
-            className="relative flex h-12 min-h-[44px] items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
-            aria-label="Mensagens"
-          >
-            <Send size={18} />
-            <span className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">2</span>
-          </button>
-          <button
-            onClick={() => openSocialProfile(profile.id, profile)}
-            className="flex h-12 min-h-[44px] items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818]"
-            aria-label="Abrir meu perfil social"
-          >
-            {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
-          </button>
         </div>
 
         <button

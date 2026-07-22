@@ -11027,6 +11027,8 @@ type CommunityComment = {
 
 type CommunityMockPost = {
   id: string;
+  sourcePostId?: string;
+  sourcePost?: Post;
   user: {
     name: string;
     avatar: string;
@@ -11064,6 +11066,84 @@ const communityMedia = [
 ].filter(Boolean) as string[];
 
 const getCommunityMedia = (index: number) => communityMedia[index % communityMedia.length] || 'https://images.pexels.com/photos/3838389/pexels-photo-3838389.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1';
+
+const COMMUNITY_CATEGORY_HASHTAGS: Record<CommunityCategory, string> = {
+  Treinos: '#Treinos',
+  Nutrição: '#Nutrição',
+  Transformações: '#Transformações',
+  Vídeos: '#Vídeos',
+  Fotos: '#Fotos',
+  Desafios: '#Desafios',
+};
+
+function extractCommunityHashtags(content: string) {
+  return Array.from(new Set((content.match(/#[\p{L}\p{N}_-]+/gu) || []).slice(0, 6)));
+}
+
+function normalizeCommunityText(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function inferCommunityCategory(post: Post): CommunityCategory {
+  const content = normalizeCommunityText(post.conteudo || '');
+  if (content.includes('#videos') || content.includes('#video')) return 'Vídeos';
+  if (content.includes('#nutricao') || content.includes('nutricao') || content.includes('dieta')) return 'Nutrição';
+  if (content.includes('#transformacoes') || content.includes('#transformacao') || content.includes('evolucao')) return 'Transformações';
+  if (content.includes('#desafios') || content.includes('#desafio')) return 'Desafios';
+  if (content.includes('#fotos') || content.includes('#foto')) return 'Fotos';
+  return post.imagem_url ? 'Fotos' : 'Treinos';
+}
+
+function getCommunityLevelLabel(plan?: Plan): CommunityMockPost['user']['level'] {
+  if (plan === 'Elite' || plan === 'Admin') return 'Elite';
+  if (plan === 'Pro') return 'Nível Ouro';
+  return 'Nível Prata';
+}
+
+function mapPostToCommunityFeedPost(
+  post: Post,
+  socialProfile: SocialProfile | undefined,
+  index: number,
+  dateFnsLocale: ReturnType<typeof getDateFnsLocale>,
+): CommunityMockPost {
+  const category = inferCommunityCategory(post);
+  const hashtags = extractCommunityHashtags(post.conteudo || '');
+  const caption = (post.conteudo || '').replace(/#[\p{L}\p{N}_-]+/gu, '').trim() || 'Compartilhou uma atualização na comunidade IronShape.';
+  const createdAt = new Date(post.criado_em);
+  const time = isValid(createdAt) ? formatDistanceToNow(createdAt, { addSuffix: true, locale: dateFnsLocale }) : 'agora';
+  const avatar = socialProfile?.avatar_url || post.user_avatar || post.user_name?.[0]?.toUpperCase() || 'I';
+  const image = post.imagem_url || getCommunityMedia(index);
+  const hasImage = Boolean(post.imagem_url);
+
+  return {
+    id: post.id,
+    sourcePostId: post.id,
+    sourcePost: post,
+    user: {
+      name: socialProfile?.name || post.user_name || 'Atleta IronShape',
+      avatar,
+      level: getCommunityLevelLabel(socialProfile?.plano),
+    },
+    time,
+    activity: category,
+    category,
+    format: category === 'Vídeos' ? 'video' : 'photo',
+    caption,
+    hashtags: hashtags.length ? hashtags : ['#IronShape'],
+    media: {
+      type: category === 'Vídeos' ? 'video' : 'photo',
+      images: [image],
+      ratio: hasImage ? 'aspect-[4/5]' : 'aspect-[16/10]',
+      duration: category === 'Vídeos' ? '0:21' : undefined,
+    },
+    metrics: {
+      likes: post.likes || 0,
+      comments: 0,
+      views: Math.max(1, (post.likes || 0) * 8 + 1),
+    },
+    comments: [],
+  };
+}
 
 const MOCK_COMMUNITY_POSTS: CommunityMockPost[] = [
   {
@@ -11188,19 +11268,21 @@ function renderCaptionWithHashtags(caption: string, hashtags: string[]) {
   );
 }
 
-function PostHeader({ post }: { post: CommunityMockPost }) {
+function PostHeader({ post, onOpenProfile }: { post: CommunityMockPost; onOpenProfile?: () => void }) {
   return (
     <div className="flex items-start gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-      <CommunityAvatar value={post.user.avatar} size="h-11 w-11 sm:h-12 sm:w-12" />
+      <button type="button" onClick={onOpenProfile} className="shrink-0 active:scale-95" aria-label={`Abrir perfil de ${post.user.name}`}>
+        <CommunityAvatar value={post.user.avatar} size="h-11 w-11 sm:h-12 sm:w-12" />
+      </button>
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
+        <button type="button" onClick={onOpenProfile} className="flex min-w-0 items-center gap-2 text-left">
           <h3 className="min-w-0 truncate text-sm font-semibold text-white sm:text-[15px]">{post.user.name}</h3>
           {post.user.level && (
             <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
               {post.user.level}
             </span>
           )}
-        </div>
+        </button>
         <p className="mt-0.5 text-[11px] font-medium text-text-muted">
           {post.time} • {post.activity}
         </p>
@@ -11405,7 +11487,17 @@ function CommentsBottomSheet({
   );
 }
 
-function CommunityPostCard({ post }: { post: CommunityMockPost }) {
+function CommunityPostCard({
+  post,
+  profile,
+  onLike,
+  onOpenProfile,
+}: {
+  post: CommunityMockPost;
+  profile: UserProfile;
+  onLike?: (postId: string, nextLikes: number) => Promise<void> | void;
+  onOpenProfile?: (post: CommunityMockPost) => void;
+}) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showAllCaption, setShowAllCaption] = useState(false);
@@ -11414,10 +11506,19 @@ function CommunityPostCard({ post }: { post: CommunityMockPost }) {
   const [localComments, setLocalComments] = useState<CommunityComment[]>(post.comments);
   const currentLikes = post.metrics.likes + (liked ? 1 : 0);
   const currentComments = post.metrics.comments + Math.max(0, localComments.length - post.comments.length);
+  const commentAvatar = profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I';
+
+  const toggleLike = () => {
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    if (post.sourcePostId) {
+      onLike?.(post.sourcePostId, Math.max(0, post.metrics.likes + (nextLiked ? 1 : 0)));
+    }
+  };
 
   return (
     <motion.article layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden rounded-[20px] border border-[#232323] bg-[#111111] shadow-[0_18px_42px_rgba(0,0,0,0.22)]">
-      <PostHeader post={post} />
+      <PostHeader post={post} onOpenProfile={() => onOpenProfile?.(post)} />
       <div className="px-4 py-4 sm:px-5">
         <p className={`text-sm leading-relaxed text-text-secondary ${showAllCaption ? '' : 'line-clamp-4'}`}>
           {renderCaptionWithHashtags(post.caption, post.hashtags)}
@@ -11431,14 +11532,14 @@ function CommunityPostCard({ post }: { post: CommunityMockPost }) {
       <PostMedia media={post.media} />
       <div className="space-y-4 py-4">
         <PostMetrics likes={currentLikes} comments={currentComments} views={post.metrics.views} />
-        <PostActions liked={liked} saved={saved} onLike={() => setLiked(current => !current)} onSave={() => setSaved(current => !current)} onComment={() => setShowComments(true)} onShare={() => setShowShare(true)} />
+        <PostActions liked={liked} saved={saved} onLike={toggleLike} onSave={() => setSaved(current => !current)} onComment={() => setShowComments(true)} onShare={() => setShowShare(true)} />
         <div className="space-y-3 px-4 sm:px-5">
           {localComments.slice(0, 2).map(comment => <CommentPreview key={comment.id} comment={comment} />)}
           <button type="button" onClick={() => setShowComments(true)} className="text-xs font-bold text-text-muted hover:text-primary">
             Ver todos os comentários
           </button>
           <div className="flex items-center gap-2 rounded-2xl border border-[#232323] bg-[#090909] px-3">
-            <CommunityAvatar value="I" size="h-8 w-8 text-xs" />
+            <CommunityAvatar value={commentAvatar} size="h-8 w-8 text-xs" />
             <button type="button" onClick={() => setShowComments(true)} className="min-h-[44px] flex-1 text-left text-sm text-text-muted">
               Adicione um comentário...
             </button>
@@ -11454,7 +11555,7 @@ function CommunityPostCard({ post }: { post: CommunityMockPost }) {
             onClose={() => setShowComments(false)}
             onAddComment={(text) => setLocalComments(current => [
               ...current,
-              { id: `local-${Date.now()}`, name: 'Você', avatar: 'I', text, time: 'agora', likes: 0 },
+              { id: `local-${Date.now()}`, name: profile.name || 'Você', avatar: commentAvatar, text, time: 'agora', likes: 0 },
             ])}
           />
         )}
@@ -11597,7 +11698,7 @@ function EmptyFeedState({ onCreate }: { onCreate: () => void }) {
     <div className="rounded-[22px] border border-dashed border-[#232323] bg-[#111111] px-5 py-12 text-center">
       <ImageIcon size={38} className="mx-auto text-text-muted" />
       <h3 className="mt-4 text-lg font-black">Ainda não há publicações nesta categoria</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm text-text-muted">Troque o filtro ou simule uma nova publicação para ver o feed ganhar vida.</p>
+      <p className="mx-auto mt-2 max-w-sm text-sm text-text-muted">Troque o filtro ou crie a primeira publicação real da comunidade.</p>
       <button type="button" onClick={onCreate} className="mt-5 min-h-[44px] rounded-2xl bg-primary px-5 text-sm font-black text-white">
         Criar publicação
       </button>
@@ -11612,6 +11713,8 @@ function CommunityFeed({
   error,
   onRetry,
   onCreate,
+  onLike,
+  onOpenProfile,
 }: {
   profile: UserProfile;
   posts: CommunityMockPost[];
@@ -11619,13 +11722,15 @@ function CommunityFeed({
   error: boolean;
   onRetry: () => void;
   onCreate: () => void;
+  onLike: (postId: string, nextLikes: number) => Promise<void> | void;
+  onOpenProfile: (post: CommunityMockPost) => void;
 }) {
   if (error) {
     return (
       <div className="mx-auto max-w-[740px] rounded-[22px] border border-error/20 bg-error/10 px-5 py-10 text-center">
         <AlertTriangle size={36} className="mx-auto text-error" />
         <h3 className="mt-4 font-black">Não foi possível carregar o feed agora</h3>
-        <p className="mt-2 text-sm text-text-muted">Estado visual de erro para a próxima integração real.</p>
+        <p className="mt-2 text-sm text-text-muted">Verifique sua conexão e tente carregar as publicações novamente.</p>
         <button type="button" onClick={onRetry} className="mt-5 min-h-[44px] rounded-2xl bg-primary px-5 text-sm font-black text-white">
           Tentar novamente
         </button>
@@ -11642,7 +11747,15 @@ function CommunityFeed({
         ) : posts.length === 0 ? (
           <EmptyFeedState key="empty" onCreate={onCreate} />
         ) : (
-          posts.map(post => <CommunityPostCard key={post.id} post={post} />)
+          posts.map(post => (
+            <CommunityPostCard
+              key={post.id}
+              post={post}
+              profile={profile}
+              onLike={onLike}
+              onOpenProfile={onOpenProfile}
+            />
+          ))
         )}
       </AnimatePresence>
     </section>
@@ -11819,23 +11932,38 @@ function CommunityView({
   const [editSocialAvatarPreview, setEditSocialAvatarPreview] = useState(profile.avatar_url || '');
   const [savingSocialProfile, setSavingSocialProfile] = useState(false);
   const [selectedCommunityFilter, setSelectedCommunityFilter] = useState('Todos');
-  const [mockFeedPosts, setMockFeedPosts] = useState<CommunityMockPost[]>(MOCK_COMMUNITY_POSTS);
-  const [mockFeedLoading, setMockFeedLoading] = useState(true);
-  const [mockFeedError, setMockFeedError] = useState(false);
+  const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+  const [feedError, setFeedError] = useState(false);
   const [newMockPostCategory, setNewMockPostCategory] = useState<CommunityCategory>('Treinos');
 
-  const filteredMockFeedPosts = useMemo(() => {
-    if (selectedCommunityFilter === 'Todos') return mockFeedPosts;
-    return mockFeedPosts.filter(post => {
-      if (selectedCommunityFilter === 'Fotos') return post.format === 'photo';
-      if (selectedCommunityFilter === 'Vídeos') return post.format === 'video';
-      return post.category === selectedCommunityFilter;
+  const communityFeedPosts = useMemo(
+    () => posts.map((post, index) => mapPostToCommunityFeedPost(post, postProfiles[post.user_id], index, dateFnsLocale)),
+    [dateFnsLocale, postProfiles, posts]
+  );
+
+  const filteredCommunityFeedPosts = useMemo(() => {
+    const normalizedQuery = normalizeCommunityText(communitySearchQuery.trim());
+    return communityFeedPosts.filter(post => {
+      const matchesFilter = selectedCommunityFilter === 'Todos'
+        || (selectedCommunityFilter === 'Fotos' && post.format === 'photo')
+        || (selectedCommunityFilter === 'Vídeos' && post.format === 'video')
+        || post.category === selectedCommunityFilter;
+      if (!matchesFilter) return false;
+      if (!normalizedQuery) return true;
+      return normalizeCommunityText([
+        post.user.name,
+        post.caption,
+        post.activity,
+        post.category,
+        ...post.hashtags,
+      ].join(' ')).includes(normalizedQuery);
     });
-  }, [mockFeedPosts, selectedCommunityFilter]);
+  }, [communityFeedPosts, communitySearchQuery, selectedCommunityFilter]);
 
   const fetchPosts = async () => {
     setLoading(true);
-    
+    setFeedError(false);
+
     // Create a safety timeout to force loading to false after 5 seconds
     const safetyTimeout = setTimeout(() => {
       setLoading(currentLoading => {
@@ -11873,6 +12001,7 @@ function CommunityView({
       }
     } catch (error) {
       console.error('Error fetching posts:', error);
+      setFeedError(true);
     } finally {
       clearTimeout(safetyTimeout);
       setLoading(false);
@@ -11880,10 +12009,7 @@ function CommunityView({
   };
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setMockFeedLoading(false), 520);
-    return () => {
-      window.clearTimeout(timer);
-    };
+    fetchPosts();
   }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -11961,12 +12087,19 @@ function CommunityView({
       }
 
       try {
+        const categoryTag = COMMUNITY_CATEGORY_HASHTAGS[newMockPostCategory];
+        const baseContent = newPostContent.trim();
+        const normalizedContent = normalizeCommunityText(baseContent);
+        const contentWithCategory = normalizedContent.includes(normalizeCommunityText(categoryTag))
+          ? baseContent
+          : `${baseContent}${baseContent ? '\n\n' : ''}${categoryTag} #IronShape`;
+
         const { error } = await withTimeout(
           () => supabase.from('posts').insert({
             user_id: profile.id,
-            user_name: profile.name,
-            user_avatar: profile.name[0],
-            conteudo: newPostContent,
+            user_name: profile.name || 'Atleta IronShape',
+            user_avatar: profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I',
+            conteudo: contentWithCategory,
             imagem_url: imageUrl,
             likes: 0
           }),
@@ -11982,6 +12115,7 @@ function CommunityView({
         setNewPostContent('');
         setNewPostImage(null);
         setImagePreview(null);
+        setNewMockPostCategory('Treinos');
         setShowCreateModal(false);
         setUploadProgress(0);
       } catch (insertError: any) {
@@ -11996,16 +12130,19 @@ function CommunityView({
     }
   };
 
-  const handleLike = async (postId: string, currentLikes: number) => {
+  const handleLike = async (postId: string, nextLikes: number) => {
+    const previousPosts = posts;
+    setPosts(current => current.map(post => post.id === postId ? { ...post, likes: nextLikes } : post));
     try {
       const { error } = await supabase
         .from('posts')
-        .update({ likes: currentLikes + 1 })
+        .update({ likes: nextLikes })
         .eq('id', postId);
-      
+
       if (error) throw error;
     } catch (error) {
       console.error('Error liking post:', error);
+      setPosts(previousPosts);
     }
   };
 
@@ -12216,39 +12353,16 @@ function CommunityView({
     }
   };
 
-  const handleCreateMockPost = () => {
-    if (!newPostContent.trim() && !imagePreview) return;
-    const nextPost: CommunityMockPost = {
-      id: `local-post-${Date.now()}`,
-      user: {
-        name: profile.name || 'Atleta IronShape',
-        avatar: profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I',
-        level: 'Nível Ouro',
-      },
-      time: 'agora',
-      activity: newMockPostCategory,
-      category: newMockPostCategory,
-      format: newMockPostCategory === 'Vídeos' ? 'video' : 'photo',
-      caption: newPostContent.trim() || 'Publicação temporária criada para demonstrar o feed premium da comunidade.',
-      hashtags: ['#IronShape', '#Evolução'],
-      media: {
-        type: newMockPostCategory === 'Vídeos' ? 'video' : 'photo',
-        images: [imagePreview || getCommunityMedia(4)],
-        ratio: 'aspect-[4/5]',
-        duration: newMockPostCategory === 'Vídeos' ? '0:21' : undefined,
-      },
-      metrics: { likes: 0, comments: 0, views: 1 },
-      comments: [],
-    };
-    setMockFeedPosts(current => [nextPost, ...current]);
-    setNewPostContent('');
-    setNewPostImage(null);
-    setImagePreview(null);
-    setNewMockPostCategory('Treinos');
-    setShowCreateModal(false);
+  const openPostSocialProfile = (post: CommunityMockPost) => {
+    if (post.sourcePost) {
+      openSocialProfile(post.sourcePost.user_id, {
+        name: post.user.name,
+        avatar_url: post.user.avatar.startsWith('http') ? post.user.avatar : '',
+      });
+    }
   };
 
-  const communityStoryProfiles = mockFeedPosts.map(post => ({
+  const communityStoryProfiles = communityFeedPosts.map(post => ({
     id: post.id,
     name: post.user.name.split(' ')[0],
     avatar: post.user.avatar.startsWith('http') ? post.user.avatar : '',
@@ -12589,8 +12703,8 @@ function CommunityView({
         <div className="relative">
           <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
-            readOnly
-            value=""
+            value={communitySearchQuery}
+            onChange={(event) => setCommunitySearchQuery(event.target.value)}
             placeholder="Pesquisar posts, usuários, hashtags..."
             className="h-12 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50 sm:h-[52px]"
             aria-label="Pesquisar usuários, posts e hashtags"
@@ -12653,15 +12767,13 @@ function CommunityView({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.7fr)_minmax(300px,0.3fr)] lg:items-start xl:gap-6">
         <CommunityFeed
           profile={profile}
-          posts={filteredMockFeedPosts}
-          loading={mockFeedLoading}
-          error={mockFeedError}
-          onRetry={() => {
-            setMockFeedError(false);
-            setMockFeedLoading(true);
-            window.setTimeout(() => setMockFeedLoading(false), 420);
-          }}
+          posts={filteredCommunityFeedPosts}
+          loading={loading}
+          error={feedError}
+          onRetry={fetchPosts}
           onCreate={() => setShowCreateModal(true)}
+          onLike={handleLike}
+          onOpenProfile={openPostSocialProfile}
         />
         <CommunitySidebar />
       </div>
@@ -12795,12 +12907,12 @@ function CommunityView({
                 </div>
 
                 <button 
-                  onClick={handleCreateMockPost}
-                  disabled={!newPostContent.trim() && !imagePreview}
+                  onClick={handleCreatePost}
+                  disabled={isPublishing || (!newPostContent.trim() && !imagePreview)}
                   className="w-full bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all shadow-xl shadow-primary/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <Send size={20} />
-                  Publicar no Feed
+                  {isPublishing ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                  {isPublishing ? 'Publicando...' : 'Publicar no Feed'}
                 </button>
               </div>
             </motion.div>

@@ -1861,18 +1861,8 @@ export default function App() {
           onPlanChange={setSimulatedPlan}
         />
       )}
-      <button
-        type="button"
-        aria-label={themeMode === 'dark' ? text.actions.enableLight : text.actions.enableDark}
-        aria-pressed={themeMode === 'light'}
-        onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
-        className="md:hidden fixed right-4 z-[55] w-11 h-11 rounded-2xl border border-white/10 bg-surface/90 text-text-primary shadow-xl shadow-black/10 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-all"
-        style={{ top: 'calc(12px + env(safe-area-inset-top))' }}
-      >
-        {themeMode === 'dark' ? <Sun size={20} className="text-primary" /> : <Moon size={20} className="text-primary" />}
-      </button>
       <div
-        className="md:hidden fixed right-[68px] z-[55]"
+        className="md:hidden fixed right-4 z-[55] flex items-center"
         style={{ top: 'calc(12px + env(safe-area-inset-top))' }}
       >
         <button
@@ -1880,7 +1870,7 @@ export default function App() {
           aria-label={text.actions.language}
           aria-expanded={languageMenuOpen}
           onClick={() => setLanguageMenuOpen(open => !open)}
-          className="w-11 h-11 rounded-2xl border border-white/10 bg-surface/90 text-text-primary shadow-xl shadow-black/10 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-all"
+          className="flex h-11 w-9 items-center justify-center text-text-primary active:scale-95 transition-all"
         >
           <span className="relative flex items-center justify-center">
             <Languages size={20} className="text-primary" />
@@ -1889,6 +1879,16 @@ export default function App() {
             </span>
           </span>
         </button>
+        <span className="px-1 text-sm font-black text-text-muted select-none" aria-hidden="true">/</span>
+        <button
+          type="button"
+          aria-label={themeMode === 'dark' ? text.actions.enableLight : text.actions.enableDark}
+          aria-pressed={themeMode === 'light'}
+          onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
+          className="flex h-11 w-9 items-center justify-center text-text-primary active:scale-95 transition-all"
+        >
+          {themeMode === 'dark' ? <Sun size={20} className="text-primary" /> : <Moon size={20} className="text-primary" />}
+        </button>
         <AnimatePresence>
           {languageMenuOpen && (
             <motion.div
@@ -1896,7 +1896,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.96 }}
               transition={{ duration: 0.16 }}
-              className="absolute right-0 mt-2 w-40 rounded-2xl border border-white/10 bg-surface/95 shadow-2xl shadow-black/20 backdrop-blur-xl overflow-hidden p-1"
+              className="absolute right-10 top-full mt-2 w-40 rounded-2xl border border-white/10 bg-surface/95 shadow-2xl shadow-black/20 backdrop-blur-xl overflow-hidden p-1"
             >
               {LANGUAGE_OPTIONS.map(option => (
                 <button

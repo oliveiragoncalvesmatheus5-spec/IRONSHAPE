@@ -2016,7 +2016,7 @@ export default function App() {
         <div
           className="md:hidden flex items-center w-full"
           style={{
-            height: 'calc(76px + env(safe-area-inset-bottom))',
+            height: 'calc(82px + env(safe-area-inset-bottom))',
             paddingBottom: 'env(safe-area-inset-bottom)',
             background: themeMode === 'light' ? 'rgba(255,255,255,0.94)' : 'rgba(13,13,15,0.96)',
             backdropFilter: 'blur(14px)',
@@ -2031,7 +2031,8 @@ export default function App() {
           {/* "Mais" slot */}
           <button
             onClick={() => setDrawerOpen(v => !v)}
-            className="flex-1 flex flex-col items-center justify-center gap-[5px] relative h-full"
+            className="flex-1 flex flex-col items-center justify-center gap-1.5 relative h-full px-1"
+            style={{ minHeight: 56 }}
             aria-label={drawerOpen ? text.nav.close : text.drawer.title}
           >
             {drawerOpen && (
@@ -2041,7 +2042,7 @@ export default function App() {
               />
             )}
             <span
-              className="transition-transform duration-300"
+              className="flex h-6 items-center justify-center transition-transform duration-300"
               style={{
                 display: 'flex',
                 color: drawerOpen ? 'var(--color-primary)' : 'var(--color-text-muted)',
@@ -2051,7 +2052,7 @@ export default function App() {
               {drawerOpen ? <X size={23} /> : <MoreHorizontal size={23} />}
             </span>
             <span
-              className="text-[11px] font-bold leading-none"
+              className="w-full truncate text-center text-[10px] font-bold leading-none sm:text-[11px]"
               style={{ color: drawerOpen ? 'var(--color-primary)' : 'var(--color-text-muted)', fontWeight: drawerOpen ? 700 : 500 }}
             >
               {drawerOpen ? text.nav.close : text.nav.more}
@@ -2064,7 +2065,7 @@ export default function App() {
       <div
         className="md:hidden fixed inset-0 z-40 pointer-events-none"
         style={{
-          bottom: 'calc(76px + env(safe-area-inset-bottom))',
+            bottom: 'calc(82px + env(safe-area-inset-bottom))',
           background: themeMode === 'light' ? 'rgba(17,24,39,0.22)' : 'rgba(0,0,0,0.45)',
           backdropFilter: drawerOpen ? 'blur(4px)' : 'none',
           WebkitBackdropFilter: drawerOpen ? 'blur(4px)' : 'none',
@@ -2083,7 +2084,7 @@ export default function App() {
         aria-label={text.drawer.title}
         className="md:hidden fixed left-0 right-0 z-40"
         style={{
-          bottom: 'calc(76px + env(safe-area-inset-bottom))',
+          bottom: 'calc(82px + env(safe-area-inset-bottom))',
           background: 'var(--color-surface)',
           borderRadius: '24px 24px 0 0',
           boxShadow: themeMode === 'light' ? '0 -18px 44px -18px rgba(17,24,39,0.28)' : '0 -20px 40px -10px rgba(0,0,0,0.5)',
@@ -2151,7 +2152,7 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <main className="md:pl-24 md:pb-0 min-h-screen overflow-x-hidden" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
+      <main className="md:pl-24 md:pb-0 min-h-screen overflow-x-hidden" style={{ paddingBottom: 'calc(112px + env(safe-area-inset-bottom))' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -11181,10 +11182,10 @@ function PostHeader({ post }: { post: CommunityMockPost }) {
     <div className="flex items-start gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
       <CommunityAvatar value={post.user.avatar} size="h-11 w-11 sm:h-12 sm:w-12" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="truncate text-sm font-semibold text-white sm:text-[15px]">{post.user.name}</h3>
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="min-w-0 truncate text-sm font-semibold text-white sm:text-[15px]">{post.user.name}</h3>
           {post.user.level && (
-            <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
+            <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
               {post.user.level}
             </span>
           )}
@@ -11247,10 +11248,10 @@ function PostMedia({ media }: { media: CommunityMockPost['media'] }) {
 
 function PostMetrics({ likes, comments, views }: CommunityMockPost['metrics']) {
   return (
-    <div className="grid grid-cols-3 gap-2 px-4 text-[11px] font-bold text-text-muted sm:px-5 sm:text-xs">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 text-[11px] font-bold text-text-muted sm:px-5 sm:text-xs">
       <span className="flex items-center gap-1.5"><Heart size={14} /> {formatCommunityNumber(likes)} curtidas</span>
-      <span className="flex items-center justify-center gap-1.5"><MessageCircle size={14} /> {formatCommunityNumber(comments)} comentarios</span>
-      <span className="flex items-center justify-end gap-1.5"><Eye size={14} /> {formatCommunityNumber(views)} visualizacoes</span>
+      <span className="flex items-center gap-1.5"><MessageCircle size={14} /> {formatCommunityNumber(comments)} comentários</span>
+      <span className="flex items-center gap-1.5"><Eye size={14} /> {formatCommunityNumber(views)} visualizações</span>
     </div>
   );
 }
@@ -11277,13 +11278,13 @@ function PostActions({
     { label: 'Salvar', icon: <Bookmark size={20} className={saved ? 'fill-current' : ''} />, onClick: onSave, active: saved },
   ];
   return (
-    <div className="grid grid-cols-4 border-t border-[#232323] px-2 py-1.5 sm:px-3">
+    <div className="grid grid-cols-4 gap-1 border-t border-[#232323] px-2 py-2 sm:px-3">
       {actions.map(action => (
         <button
           key={action.label}
           type="button"
           onClick={action.onClick}
-          className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl px-1 text-[11px] font-black transition-all duration-200 active:scale-95 sm:text-xs ${
+          className={`flex min-h-[46px] items-center justify-center gap-1.5 rounded-xl px-1 text-[11px] font-black transition-all duration-200 active:scale-95 sm:text-xs ${
             action.active ? 'text-primary' : 'text-text-muted hover:bg-white/5 hover:text-white'
           }`}
         >
@@ -11406,7 +11407,7 @@ function CommunityPostCard({ post }: { post: CommunityMockPost }) {
   return (
     <motion.article layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden rounded-[20px] border border-[#232323] bg-[#111111] shadow-[0_18px_42px_rgba(0,0,0,0.22)]">
       <PostHeader post={post} />
-      <div className="px-4 py-3 sm:px-5">
+      <div className="px-4 py-4 sm:px-5">
         <p className={`text-sm leading-relaxed text-text-secondary ${showAllCaption ? '' : 'line-clamp-4'}`}>
           {renderCaptionWithHashtags(post.caption, post.hashtags)}
         </p>
@@ -11417,7 +11418,7 @@ function CommunityPostCard({ post }: { post: CommunityMockPost }) {
         )}
       </div>
       <PostMedia media={post.media} />
-      <div className="space-y-3 py-3">
+      <div className="space-y-4 py-4">
         <PostMetrics likes={currentLikes} comments={currentComments} views={post.metrics.views} />
         <PostActions liked={liked} saved={saved} onLike={() => setLiked(current => !current)} onSave={() => setSaved(current => !current)} onComment={() => setShowComments(true)} onShare={() => setShowShare(true)} />
         <div className="space-y-3 px-4 sm:px-5">
@@ -11453,14 +11454,14 @@ function CommunityPostCard({ post }: { post: CommunityMockPost }) {
 
 function CreatePostComposer({ profile, onOpen }: { profile: UserProfile; onOpen: () => void }) {
   return (
-    <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 rounded-[20px] border border-[#232323] bg-[#111111] p-3 text-left transition-all hover:border-primary/40 sm:p-4">
+    <button type="button" onClick={onOpen} className="flex w-full items-start gap-3 rounded-[20px] border border-[#232323] bg-[#111111] p-4 text-left transition-all hover:border-primary/40 sm:p-5">
       <CommunityAvatar value={profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I'} size="h-11 w-11" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-text-muted">Compartilhe sua evolução com a comunidade...</p>
-        <div className="mt-3 flex gap-2">
-          <span className="flex min-h-[34px] items-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><ImageIcon size={14} /> Foto</span>
-          <span className="flex min-h-[34px] items-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Play size={14} /> Vídeo</span>
-          <span className="flex min-h-[34px] items-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Dumbbell size={14} /> Treino</span>
+      <div className="min-w-0 flex-1 space-y-3">
+        <p className="pt-1 text-sm font-medium leading-relaxed text-text-muted">Compartilhe sua evolução...</p>
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <span className="flex min-h-[40px] min-w-[86px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><ImageIcon size={14} /> Foto</span>
+          <span className="flex min-h-[40px] min-w-[86px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Play size={14} /> Vídeo</span>
+          <span className="flex min-h-[40px] min-w-[86px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Dumbbell size={14} /> Treino</span>
         </div>
       </div>
     </button>
@@ -11542,13 +11543,13 @@ function CreatePostModal({
 
 function CommunityFilterBar({ filters, selected, onSelect }: { filters: string[]; selected: string; onSelect: (filter: string) => void }) {
   return (
-    <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
+    <nav className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
       {filters.map((filter) => (
         <button
           key={filter}
           type="button"
           onClick={() => onSelect(filter)}
-          className={`h-10 shrink-0 rounded-full border px-4 text-sm font-bold transition-all duration-200 ${
+          className={`h-[42px] shrink-0 rounded-full border px-4 text-sm font-bold transition-all duration-200 ${
             selected === filter
               ? 'border-primary bg-primary text-white shadow-[0_10px_24px_rgba(255,106,0,0.2)]'
               : 'border-[#232323] bg-[#121212] text-text-secondary hover:border-primary/40 hover:text-white'
@@ -12466,61 +12467,61 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
   }
 
   return (
-    <div className="community-light-scope -mx-2 space-y-5 px-2 pb-24 sm:mx-0 sm:px-0 md:space-y-6 lg:pb-0">
-      <header className="rounded-[20px] border border-[#232323] bg-[#090909] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:p-5">
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[24px] font-black leading-none tracking-normal text-white sm:text-[30px]">
+    <div className="community-light-scope space-y-6 pb-40 md:space-y-6 lg:pb-0">
+      <header className="space-y-4 rounded-[20px] border border-[#232323] bg-[#090909] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:p-5">
+        <div className="min-w-0 pr-[104px] sm:pr-0">
+          <h1 className="text-[23px] font-black leading-[1.05] tracking-normal text-white min-[380px]:text-[25px] sm:text-[30px]">
               Comunidade <span className="text-primary">IronShape</span>
-            </h1>
-            <p className="mt-1 line-clamp-1 text-xs font-medium text-text-muted sm:text-sm">
-              Evolução, disciplina e comunidade em tempo real.
-            </p>
-          </div>
+          </h1>
+          <p className="mt-2 text-xs font-medium leading-relaxed text-text-muted sm:text-sm">
+            Evolução, disciplina e comunidade em tempo real.
+          </p>
+        </div>
+
+        <div className="relative">
+          <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
+          <input
+            readOnly
+            value=""
+            placeholder="Pesquisar posts, usuários, hashtags..."
+            className="h-12 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50 sm:h-[52px]"
+            aria-label="Pesquisar usuários, posts e hashtags"
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
           <button
             type="button"
-            className="relative flex h-11 min-h-[44px] w-11 shrink-0 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
+            className="relative flex h-12 min-h-[44px] items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
             aria-label="Notificações"
           >
             <BellRing size={19} />
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">3</span>
+            <span className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">3</span>
+          </button>
+          <button
+            type="button"
+            className="relative flex h-12 min-h-[44px] items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
+            aria-label="Mensagens"
+          >
+            <Send size={18} />
+            <span className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">2</span>
           </button>
           <button
             onClick={() => openSocialProfile(profile.id, profile)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818]"
+            className="flex h-12 min-h-[44px] items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818]"
             aria-label="Abrir meu perfil social"
           >
             {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_44px] gap-2 sm:grid-cols-[minmax(0,1fr)_44px_auto]">
-          <div className="relative">
-            <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input
-              readOnly
-              value=""
-              placeholder="Pesquisar posts, usuários, hashtags..."
-              className="h-11 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50"
-              aria-label="Pesquisar usuários, posts e hashtags"
-            />
-          </div>
-          <button
-            type="button"
-            className="relative flex h-11 min-h-[44px] w-11 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
-            aria-label="Mensagens"
-          >
-            <Send size={18} />
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">2</span>
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="hidden h-11 min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(255,106,0,0.24)] transition-all hover:bg-primary-hover active:scale-[0.98] sm:flex"
-          >
-            <Plus size={18} />
-            Nova publicação
-          </button>
-        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="hidden h-11 min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(255,106,0,0.24)] transition-all hover:bg-primary-hover active:scale-[0.98] sm:flex"
+        >
+          <Plus size={18} />
+          Nova publicação
+        </button>
       </header>
 
       <section className="space-y-3" aria-label="Momentos da comunidade">
@@ -12530,7 +12531,7 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
             Ver todos
           </button>
         </div>
-        <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button type="button" className="w-[74px] shrink-0 text-center">
             <span className="mx-auto flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[22px] border border-dashed border-primary/50 bg-[#121212] text-primary transition-all hover:border-primary">
               <Plus size={22} />
@@ -12586,7 +12587,8 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
       <button
         type="button"
         onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-24 right-4 z-[80] flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_18px_40px_rgba(255,106,0,0.32)] transition-all active:scale-95 sm:hidden"
+        className="fixed right-4 z-[80] flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_18px_40px_rgba(255,106,0,0.32)] transition-all active:scale-95 sm:hidden"
+        style={{ bottom: 'calc(104px + env(safe-area-inset-bottom))' }}
         aria-label="Nova publicação"
       >
         <Plus size={25} />

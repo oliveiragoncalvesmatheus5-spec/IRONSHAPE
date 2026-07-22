@@ -40,8 +40,8 @@ export function MobileNavItem({ icon, label, active, onClick }: NavItemProps) {
   return (
     <button
       onClick={onClick}
-      className="flex-1 flex flex-col items-center justify-center gap-[5px] relative h-full"
-      style={{ minHeight: 44 }}
+      className="flex-1 flex flex-col items-center justify-center gap-1.5 relative h-full px-1"
+      style={{ minHeight: 56 }}
     >
       {active && (
         <span
@@ -49,9 +49,9 @@ export function MobileNavItem({ icon, label, active, onClick }: NavItemProps) {
           style={{ width: 28, height: 3, background: 'var(--color-primary)' }}
         />
       )}
-      <span style={{ color: active ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>{icon}</span>
+      <span className="flex h-6 items-center justify-center" style={{ color: active ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>{icon}</span>
       <span
-        className="text-[11px] leading-none"
+        className="w-full truncate text-center text-[10px] leading-none sm:text-[11px]"
         style={{ color: active ? 'var(--color-primary)' : 'var(--color-text-muted)', fontWeight: active ? 700 : 500 }}
       >
         {label}

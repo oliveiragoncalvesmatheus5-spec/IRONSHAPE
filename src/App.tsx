@@ -1633,6 +1633,12 @@ export default function App() {
 
   const effectivePlan = getEntitledPlan(profile, isAdmin ? simulatedPlan : null);
 
+  useEffect(() => {
+    if (!isAdmin && activeTab === 'community') {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, isAdmin]);
+
   const openPricing = (source: string, plan?: Plan | null) => {
     if (plan) setCheckoutPlan(plan);
     else setCheckoutPlan(null);
@@ -1659,6 +1665,13 @@ export default function App() {
     setDrawerOpen(false);
     setSettingsMenuOpen(false);
     setActiveTab('shop');
+  };
+
+  const openCommunity = () => {
+    if (!isAdmin) return;
+    setDrawerOpen(false);
+    setSettingsMenuOpen(false);
+    setActiveTab('community');
   };
 
   const openDesktopNavTab = (tab: string) => {
@@ -1924,7 +1937,7 @@ export default function App() {
           <NavItem icon={<Dumbbell size={20} />} active={activeTab === 'workouts'} onClick={() => setActiveTab('workouts')} label={text.nav.workouts} />
           <NavItem icon={<Apple size={20} />} active={activeTab === 'nutrition'} onClick={() => setActiveTab('nutrition')} label={text.nav.nutrition} />
           <NavItem icon={<BarChart3 size={20} />} active={activeTab === 'progress'} onClick={() => setActiveTab('progress')} label={text.nav.progress} />
-          <NavItem icon={<Users size={20} />} active={activeTab === 'community'} onClick={() => setActiveTab('community')} label={text.nav.social} />
+          <NavItem icon={<span className="relative flex"><Users size={20} />{!isAdmin && <Lock size={11} className="absolute -right-2 -top-2 text-primary" />}</span>} active={isAdmin && activeTab === 'community'} onClick={openCommunity} label={text.nav.social} />
           <NavItem icon={<span className="relative flex"><ShoppingBag size={20} />{!ironShopAccess.hasAccess && <Lock size={11} className="absolute -right-2 -top-2 text-primary" />}</span>} active={activeTab === 'shop'} onClick={openIronShop} label={text.nav.shop} />
         </div>
 
@@ -2103,7 +2116,7 @@ export default function App() {
           {/* Grid of items */}
           <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
             {[
-              { tab: 'community',  icon: <Users size={20} />,      label: text.nav.social,    desc: text.drawer.socialDesc },
+              { tab: 'community',  icon: <span className="relative flex"><Users size={20} />{!isAdmin && <Lock size={10} className="absolute -right-2 -top-2 text-primary" />}</span>,      label: text.nav.social,    desc: isAdmin ? text.drawer.socialDesc : 'Disponível apenas para administradores.', locked: !isAdmin },
               { tab: 'shop', icon: <span className="relative flex"><ShoppingBag size={20} />{!ironShopAccess.hasAccess && <Lock size={10} className="absolute -right-2 -top-2 text-primary" />}</span>, label: text.nav.shop, desc: text.drawer.shopDesc, locked: !ironShopAccess.hasAccess },
               { tab: 'affiliates', icon: <Wallet size={20} />,     label: text.nav.affiliates, desc: text.drawer.affiliatesDesc },
               { tab: 'settings',   icon: <Settings size={20} />,   label: text.nav.settings,   desc: text.drawer.settingsDesc },
@@ -2111,7 +2124,7 @@ export default function App() {
             ].map(item => (
               <button
                 key={item.tab}
-                onClick={() => { item.tab === 'shop' ? openIronShop() : (setActiveTab(item.tab), setDrawerOpen(false)); }}
+                onClick={() => { item.tab === 'shop' ? openIronShop() : item.tab === 'community' ? openCommunity() : (setActiveTab(item.tab), setDrawerOpen(false)); }}
                 className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all active:scale-95 min-h-[68px]"
                 style={{
                   background: themeMode === 'light' ? 'rgba(17,24,39,0.035)' : 'rgba(255,255,255,0.04)',
@@ -2126,7 +2139,7 @@ export default function App() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[13.5px] font-bold text-text-primary truncate">{item.label}</span>
-                    {activeTab === item.tab && <span className="flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: 'var(--color-primary)' }} />}
+                    {activeTab === item.tab && (item.tab !== 'community' || isAdmin) && <span className="flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: 'var(--color-primary)' }} />}
                     {'locked' in item && item.locked && <Lock size={10} className="text-primary shrink-0" />}
                   </div>
                   <p className="text-[10.5px] truncate" style={{ color: 'var(--color-text-muted)' }}>{item.desc}</p>
@@ -2178,7 +2191,7 @@ export default function App() {
               />
             )}
             {activeTab === 'progress' && <BodyProgressView userId={profile.id} language={language} />}
-            {activeTab === 'community' && <CommunityView profile={profile} language={language} />}
+            {activeTab === 'community' && isAdmin && <CommunityView profile={profile} language={language} />}
             {activeTab === 'shop' && <IronShopView access={ironShopAccess} language={language} />}
             {activeTab === 'affiliates' && <AffiliateView profile={profile} language={language} />}
             {activeTab === 'settings' && <SettingsView profile={profile} language={language} logout={logout} onUpgrade={() => openPricing('settings')} />}

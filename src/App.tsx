@@ -11189,6 +11189,17 @@ type CommunityComment = {
   likes: number;
 };
 
+type CommunityPersistedComment = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar?: string;
+  conteudo: string;
+  likes: number;
+  criado_em: string;
+};
+
 type CommunityMockPost = {
   id: string;
   sourcePostId?: string;
@@ -11264,9 +11275,25 @@ function getCommunityLevelLabel(plan?: Plan): CommunityMockPost['user']['level']
   return 'Nível Prata';
 }
 
+function mapPersistedCommentToCommunityComment(
+  comment: CommunityPersistedComment,
+  dateFnsLocale: ReturnType<typeof getDateFnsLocale>,
+): CommunityComment {
+  const createdAt = new Date(comment.criado_em);
+  return {
+    id: comment.id,
+    name: comment.user_name || 'Atleta IronShape',
+    avatar: comment.user_avatar || comment.user_name?.[0]?.toUpperCase() || 'I',
+    text: comment.conteudo,
+    time: isValid(createdAt) ? formatDistanceToNow(createdAt, { addSuffix: true, locale: dateFnsLocale }) : 'agora',
+    likes: comment.likes || 0,
+  };
+}
+
 function mapPostToCommunityFeedPost(
   post: Post,
   socialProfile: SocialProfile | undefined,
+  comments: CommunityComment[],
   index: number,
   dateFnsLocale: ReturnType<typeof getDateFnsLocale>,
 ): CommunityMockPost {
@@ -11302,10 +11329,10 @@ function mapPostToCommunityFeedPost(
     },
     metrics: {
       likes: post.likes || 0,
-      comments: 0,
+      comments: comments.length,
       views: Math.max(1, (post.likes || 0) * 8 + 1),
     },
-    comments: [],
+    comments,
   };
 }
 
@@ -11606,17 +11633,25 @@ function CommentsBottomSheet({
   comments,
   onClose,
   onAddComment,
+  saving,
+  error,
 }: {
   post: CommunityMockPost;
   comments: CommunityComment[];
   onClose: () => void;
-  onAddComment: (text: string) => void;
+  onAddComment: (text: string) => Promise<void> | void;
+  saving?: boolean;
+  error?: string | null;
 }) {
   const [draft, setDraft] = useState('');
-  const submit = () => {
+  const submit = async () => {
     if (!draft.trim()) return;
-    onAddComment(draft.trim());
-    setDraft('');
+    try {
+      await onAddComment(draft.trim());
+      setDraft('');
+    } catch {
+      // The parent keeps the user-facing error in the sheet.
+    }
   };
 
   return (
@@ -11636,13 +11671,26 @@ function CommentsBottomSheet({
           </div>
         </header>
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          {comments.map(comment => <CommentPreview key={comment.id} comment={comment} />)}
+          {comments.length === 0 ? (
+            <div className="flex h-full min-h-[180px] flex-col items-center justify-center text-center">
+              <MessageCircle size={34} className="text-text-muted" />
+              <h4 className="mt-3 text-sm font-black text-white">Nenhum comentário ainda</h4>
+              <p className="mt-1 text-xs text-text-muted">Seja o primeiro a responder esta evolução.</p>
+            </div>
+          ) : (
+            comments.map(comment => <CommentPreview key={comment.id} comment={comment} />)
+          )}
         </div>
         <div className="shrink-0 border-t border-[#232323] bg-[#111111] p-4">
+          {error && (
+            <p className="mb-3 rounded-2xl border border-error/20 bg-error/10 px-3 py-2 text-xs font-bold text-error">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2">
-            <input value={draft} onChange={event => setDraft(event.target.value)} placeholder="Adicione um comentário..." className="min-h-[44px] flex-1 rounded-2xl border border-[#232323] bg-[#090909] px-4 text-sm outline-none focus:border-primary/60" />
-            <button type="button" onClick={submit} disabled={!draft.trim()} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-primary text-white disabled:opacity-40">
-              <Send size={18} />
+            <input value={draft} onChange={event => setDraft(event.target.value)} disabled={saving} placeholder="Adicione um comentário..." className="min-h-[44px] flex-1 rounded-2xl border border-[#232323] bg-[#090909] px-4 text-sm outline-none focus:border-primary/60 disabled:opacity-60" />
+            <button type="button" onClick={submit} disabled={saving || !draft.trim()} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-primary text-white disabled:opacity-40">
+              {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
             </button>
           </div>
         </div>
@@ -11656,11 +11704,13 @@ function CommunityPostCard({
   profile,
   onLike,
   onOpenProfile,
+  onAddComment,
 }: {
   post: CommunityMockPost;
   profile: UserProfile;
   onLike?: (postId: string, nextLikes: number) => Promise<void> | void;
   onOpenProfile?: (post: CommunityMockPost) => void;
+  onAddComment?: (post: CommunityMockPost, text: string) => Promise<CommunityComment>;
 }) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -11668,15 +11718,42 @@ function CommunityPostCard({
   const [showShare, setShowShare] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [localComments, setLocalComments] = useState<CommunityComment[]>(post.comments);
+  const [commentSaving, setCommentSaving] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const currentLikes = post.metrics.likes + (liked ? 1 : 0);
   const currentComments = post.metrics.comments + Math.max(0, localComments.length - post.comments.length);
   const commentAvatar = profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I';
+
+  useEffect(() => {
+    setLocalComments(post.comments);
+  }, [post.comments, post.id]);
 
   const toggleLike = () => {
     const nextLiked = !liked;
     setLiked(nextLiked);
     if (post.sourcePostId) {
       onLike?.(post.sourcePostId, Math.max(0, post.metrics.likes + (nextLiked ? 1 : 0)));
+    }
+  };
+
+  const addComment = async (text: string) => {
+    setCommentSaving(true);
+    setCommentError(null);
+    try {
+      if (onAddComment && post.sourcePostId) {
+        const persistedComment = await onAddComment(post, text);
+        setLocalComments(current => [...current, persistedComment]);
+        return;
+      }
+      setLocalComments(current => [
+        ...current,
+        { id: `local-${Date.now()}`, name: profile.name || 'Você', avatar: commentAvatar, text, time: 'agora', likes: 0 },
+      ]);
+    } catch (error: any) {
+      setCommentError(error?.message || 'Não foi possível comentar agora.');
+      throw error;
+    } finally {
+      setCommentSaving(false);
     }
   };
 
@@ -11717,10 +11794,9 @@ function CommunityPostCard({
             post={post}
             comments={localComments}
             onClose={() => setShowComments(false)}
-            onAddComment={(text) => setLocalComments(current => [
-              ...current,
-              { id: `local-${Date.now()}`, name: profile.name || 'Você', avatar: commentAvatar, text, time: 'agora', likes: 0 },
-            ])}
+            onAddComment={addComment}
+            saving={commentSaving}
+            error={commentError}
           />
         )}
       </AnimatePresence>
@@ -11879,6 +11955,7 @@ function CommunityFeed({
   onCreate,
   onLike,
   onOpenProfile,
+  onAddComment,
 }: {
   profile: UserProfile;
   posts: CommunityMockPost[];
@@ -11888,6 +11965,7 @@ function CommunityFeed({
   onCreate: () => void;
   onLike: (postId: string, nextLikes: number) => Promise<void> | void;
   onOpenProfile: (post: CommunityMockPost) => void;
+  onAddComment: (post: CommunityMockPost, text: string) => Promise<CommunityComment>;
 }) {
   if (error) {
     return (
@@ -11918,6 +11996,7 @@ function CommunityFeed({
               profile={profile}
               onLike={onLike}
               onOpenProfile={onOpenProfile}
+              onAddComment={onAddComment}
             />
           ))
         )}
@@ -12069,6 +12148,7 @@ function CommunityView({
   const { updateProfile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [postProfiles, setPostProfiles] = useState<Record<string, SocialProfile>>({});
+  const [postComments, setPostComments] = useState<Record<string, CommunityComment[]>>({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
@@ -12101,8 +12181,8 @@ function CommunityView({
   const [newMockPostCategory, setNewMockPostCategory] = useState<CommunityCategory>('Treinos');
 
   const communityFeedPosts = useMemo(
-    () => posts.map((post, index) => mapPostToCommunityFeedPost(post, postProfiles[post.user_id], index, dateFnsLocale)),
-    [dateFnsLocale, postProfiles, posts]
+    () => posts.map((post, index) => mapPostToCommunityFeedPost(post, postProfiles[post.user_id], postComments[post.id] || [], index, dateFnsLocale)),
+    [dateFnsLocale, postComments, postProfiles, posts]
   );
 
   const filteredCommunityFeedPosts = useMemo(() => {
@@ -12152,6 +12232,7 @@ function CommunityView({
       if (error) throw error;
       const nextPosts = (data || []) as Post[];
       setPosts(nextPosts);
+      setPostComments({});
 
       const userIds = Array.from(new Set(nextPosts.map(post => post.user_id).filter(Boolean)));
       if (userIds.length > 0) {
@@ -12161,6 +12242,26 @@ function CommunityView({
           .in('id', userIds);
         if (!profilesError && profilesData) {
           setPostProfiles(Object.fromEntries((profilesData as SocialProfile[]).map(item => [item.id, item])));
+        }
+      }
+
+      const postIds = nextPosts.map(post => post.id).filter(Boolean);
+      if (postIds.length > 0) {
+        const { data: commentsData, error: commentsError } = await supabase
+          .from('post_comments')
+          .select('*')
+          .in('post_id', postIds)
+          .order('criado_em', { ascending: true });
+
+        if (commentsError) {
+          console.warn('Community comments unavailable:', commentsError.message);
+        } else {
+          const groupedComments = ((commentsData || []) as CommunityPersistedComment[]).reduce<Record<string, CommunityComment[]>>((acc, comment) => {
+            const current = acc[comment.post_id] || [];
+            acc[comment.post_id] = [...current, mapPersistedCommentToCommunityComment(comment, dateFnsLocale)];
+            return acc;
+          }, {});
+          setPostComments(groupedComments);
         }
       }
     } catch (error) {
@@ -12308,6 +12409,32 @@ function CommunityView({
       console.error('Error liking post:', error);
       setPosts(previousPosts);
     }
+  };
+
+  const handleAddComment = async (post: CommunityMockPost, text: string) => {
+    if (!post.sourcePostId) throw new Error('Publicação indisponível para comentários.');
+
+    const { data, error } = await supabase
+      .from('post_comments')
+      .insert({
+        post_id: post.sourcePostId,
+        user_id: profile.id,
+        user_name: profile.name || 'Atleta IronShape',
+        user_avatar: profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I',
+        conteudo: text.trim(),
+        likes: 0,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw new Error(error.message || 'Não foi possível salvar o comentário.');
+
+    const nextComment = mapPersistedCommentToCommunityComment(data as CommunityPersistedComment, dateFnsLocale);
+    setPostComments(current => ({
+      ...current,
+      [post.sourcePostId!]: [...(current[post.sourcePostId!] || []), nextComment],
+    }));
+    return nextComment;
   };
 
   const loadSocialStats = async (targetProfile: SocialProfile) => {
@@ -12938,6 +13065,7 @@ function CommunityView({
           onCreate={() => setShowCreateModal(true)}
           onLike={handleLike}
           onOpenProfile={openPostSocialProfile}
+          onAddComment={handleAddComment}
         />
         <CommunitySidebar />
       </div>

@@ -103,7 +103,11 @@ import {
   CreditCard,
   Headphones,
   Minus,
-  ShieldAlert
+  ShieldAlert,
+  Droplets,
+  BedDouble,
+  Gauge,
+  Target
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
 import { enUS, es, ptBR } from 'date-fns/locale';
@@ -4429,9 +4433,14 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
   const weeklyDoneStorageKey = `weekly_workouts_done_${storageUserId}`;
   const wellnessStorageKey = `wellness_checkins_${storageUserId}`;
   const todayCheckInDate = format(new Date(), 'yyyy-MM-dd');
+  const hydrationStorageKey = `hydration_intake_${storageUserId}_${todayCheckInDate}`;
   const [savedWeeklyWorkouts, setSavedWeeklyWorkouts] = useState<WeeklyWorkoutSlot[]>(() => safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
   const [savedWeeklyDoneIds, setSavedWeeklyDoneIds] = useState<string[]>(() => safeParseArray<string>(weeklyDoneStorageKey));
   const [dashboardWorkoutPendingId, setDashboardWorkoutPendingId] = useState<string | null>(null);
+  const [waterIntakeMl, setWaterIntakeMl] = useState(() => {
+    const saved = Number(localStorage.getItem(hydrationStorageKey) || 0);
+    return Number.isFinite(saved) ? saved : 0;
+  });
   const [dailyCheckIn, setDailyCheckIn] = useState<DailyWellnessCheckIn | null>(() => {
     try {
       const history = JSON.parse(localStorage.getItem(wellnessStorageKey) || '{}') as Record<string, DailyWellnessCheckIn>;
@@ -4570,6 +4579,8 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
     .sort((a, b) => WEEK_DAYS.indexOf(a.day) - WEEK_DAYS.indexOf(b.day));
   const todayName = WEEK_DAYS[(new Date().getDay() + 6) % 7];
   const todayScheduledWorkout = scheduledWorkoutDetails.find(slot => slot.day === todayName);
+  const dailyWaterGoalMl = Math.max(2000, Math.round(((displayedWeight || 70) * 35 + (todayScheduledWorkout ? 500 : 0)) / 100) * 100);
+  const waterProgress = Math.min(100, Math.round((waterIntakeMl / dailyWaterGoalMl) * 100));
 
   const firstWorkout = resolveWorkoutsByPlan(effectivePlan || 'Iniciante')[0] ?? ALL_WORKOUTS[0];
   const [nextWorkout, setNextWorkout] = useState({
@@ -4696,6 +4707,38 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
     if (g.includes('ganho') || g.includes('mass') || g.includes('hipert')) return Math.round(tdee + 300);
     return Math.round(tdee);
   })();
+
+  const todayNutritionLog = weeklyCalData.find(d => d.isToday);
+  const todayCalories = todayNutritionLog?.calories ?? 0;
+  const dietProgress = calorieGoal > 0 ? Math.min(100, Math.round((todayCalories / calorieGoal) * 100)) : 0;
+  const sleepTargetHours = 8;
+  const sleepProgress = dailyCheckIn ? Math.min(100, Math.round((dailyCheckIn.sleepHours / sleepTargetHours) * 100)) : 0;
+  const recoveryScore = Math.round((waterProgress + sleepProgress + dietProgress) / 3);
+  const waterRemainingMl = Math.max(0, dailyWaterGoalMl - waterIntakeMl);
+  const recoveryPriority = waterRemainingMl > 0
+    ? `Prioridade agora: beber ${(waterRemainingMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })}L de água.`
+    : !dailyCheckIn
+      ? 'Prioridade agora: registrar o sono para calibrar seu dia.'
+      : dietProgress < 70
+        ? 'Prioridade agora: registrar ou completar sua dieta de hoje.'
+        : 'Base alinhada para sustentar o treino de hoje.';
+
+  const updateWaterIntake = (amountMl: number) => {
+    const nextValue = Math.max(0, Math.min(10000, waterIntakeMl + amountMl));
+    setWaterIntakeMl(nextValue);
+    localStorage.setItem(hydrationStorageKey, String(nextValue));
+    trackEvent('hydration_quick_update', {
+      amount_ml: amountMl,
+      total_ml: nextValue,
+      goal_ml: dailyWaterGoalMl,
+      source: 'dashboard_recovery_base',
+    });
+  };
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(hydrationStorageKey) || 0);
+    setWaterIntakeMl(Number.isFinite(saved) ? saved : 0);
+  }, [hydrationStorageKey]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -5049,8 +5092,8 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
       </section>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <DashboardMetricCard 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <DashboardMetricCard
           label={dashboardText.currentWeight}
           value={`${displayedWeight.toLocaleString(locale)} kg`}
           subValue={weightSubValue}
@@ -5087,6 +5130,127 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
           actionLabel={dailyCheckIn ? dashboardText.editCheckIn : dashboardText.doCheckIn}
         />
       </div>
+
+      <section className="bg-surface border border-white/10 rounded-[28px] md:rounded-[40px] p-5 sm:p-6 md:p-8 overflow-hidden relative">
+        <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none opacity-20 bg-[radial-gradient(circle_at_top_right,rgba(255,106,0,0.35),transparent_58%)]" />
+        <div className="relative z-10 space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                <Gauge size={23} />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Base do dia</div>
+                <h2 className="mt-1 text-2xl sm:text-3xl font-black uppercase tracking-tight">Água, sono e dieta</h2>
+                <p className="mt-2 text-sm text-text-secondary max-w-2xl leading-relaxed">
+                  Você está <span className="font-black text-text-primary">{recoveryScore}%</span> alinhado com sua base de recuperação hoje.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">Próximo ajuste</div>
+              <div className="mt-1 text-sm font-bold text-text-primary">{recoveryPriority}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {[
+              {
+                label: 'Água hoje',
+                value: `${(waterIntakeMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })}L`,
+                target: `${(dailyWaterGoalMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })}L`,
+                progress: waterProgress,
+                icon: <span className="text-[22px] leading-none" aria-hidden="true">💧</span>,
+                tone: 'bg-cyan-500/15 text-cyan-200 border-cyan-400/20',
+                bar: 'bg-cyan-400',
+                action: (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updateWaterIntake(250)}
+                      className="min-h-[42px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-cyan-400/30 transition-all"
+                    >
+                      +250ml
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateWaterIntake(500)}
+                      className="min-h-[42px] rounded-xl bg-cyan-400/15 border border-cyan-400/20 text-[10px] font-black uppercase tracking-widest text-cyan-100 hover:bg-cyan-400/20 transition-all"
+                    >
+                      +500ml
+                    </button>
+                  </div>
+                ),
+              },
+              {
+                label: 'Sono recomendado',
+                value: dailyCheckIn ? `${dailyCheckIn.sleepHours.toLocaleString(locale, { maximumFractionDigits: 1 })}h` : '--',
+                target: `${sleepTargetHours}h`,
+                progress: sleepProgress,
+                icon: <span className="text-[22px] leading-none" aria-hidden="true">🌙</span>,
+                tone: 'bg-indigo-500/15 text-indigo-200 border-indigo-400/20',
+                bar: 'bg-indigo-400',
+                action: (
+                  <button
+                    type="button"
+                    onClick={openWellnessCheckIn}
+                    className="w-full min-h-[42px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-indigo-400/30 transition-all"
+                  >
+                    {dailyCheckIn ? 'Editar sono' : 'Registrar sono'}
+                  </button>
+                ),
+              },
+              {
+                label: 'Dieta hoje',
+                value: todayCalories > 0 ? todayCalories.toLocaleString(locale) : '--',
+                target: `${calorieGoal.toLocaleString(locale)} kcal`,
+                progress: dietProgress,
+                icon: <span className="text-[22px] leading-none" aria-hidden="true">🍎</span>,
+                tone: 'bg-primary/15 text-primary border-primary/20',
+                bar: 'bg-primary',
+                action: (
+                  <button
+                    type="button"
+                    onClick={onViewNutrition}
+                    className="w-full min-h-[42px] rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
+                  >
+                    Abrir dieta
+                  </button>
+                ),
+              },
+            ].map(item => (
+              <div key={item.label} className="bg-white/5 border border-white/10 rounded-[24px] p-4 sm:p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">{item.label}</div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-2xl font-black tracking-tight">{item.value}</span>
+                      <span className="text-xs font-bold text-text-muted">/ {item.target}</span>
+                    </div>
+                  </div>
+                  <div className={`w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 ${item.tone}`}>
+                    {item.icon}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-text-muted">Progresso</span>
+                    <span className="text-text-primary">{item.progress}%</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${item.progress}%` }}
+                      className={`h-full rounded-full ${item.bar}`}
+                    />
+                  </div>
+                </div>
+                {item.action}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Calorias da Semana */}

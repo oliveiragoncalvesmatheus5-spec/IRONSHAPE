@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useRef, useCallback } from 'react';
 import { Plan, UserProfile } from './types';
 import { supabase } from './lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
@@ -59,6 +59,7 @@ interface AuthContextType {
   setSimulatedPlan: (plan: Plan | null) => void;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   updatePlan: (plan: Plan) => Promise<void>;
+  refreshProfile: () => Promise<UserProfile | null>;
   resendConfirmationEmail: (email: string) => Promise<void>;
 }
 
@@ -200,9 +201,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchProfile = async (id: string, userObj?: User | null, retryCount = 0): Promise<void> => {
+  const fetchProfile = async (id: string, userObj?: User | null, retryCount = 0, forceFresh = false): Promise<UserProfile | null> => {
     // Serve cached profile instantly while fresh data loads
-    if (retryCount === 0) {
+    if (retryCount === 0 && !forceFresh) {
       const cached = localStorage.getItem(`profile_${id}`);
       if (cached) {
         try { setProfile(JSON.parse(cached) as UserProfile); } catch {}
@@ -222,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         if (error.message?.includes('schema cache') && retryCount < 2) {
-          return fetchProfile(id, userObj, retryCount + 1);
+          return fetchProfile(id, userObj, retryCount + 1, forceFresh);
         }
         if (error.code !== 'PGRST116') throw error;
       }
@@ -230,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data) {
         setProfile(data as UserProfile);
         localStorage.setItem(`profile_${id}`, JSON.stringify(data));
+        return data as UserProfile;
       } else {
         const targetUser = userObj;
         const newProfile: UserProfile = {
@@ -266,21 +268,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (existing) {
               setProfile(existing as UserProfile);
               localStorage.setItem(`profile_${id}`, JSON.stringify(existing));
+              return existing as UserProfile;
             }
-            return;
+            return null;
           }
           if ((createError.message?.includes('schema cache') || createError.message?.includes('network')) && retryCount < 3) {
-            return fetchProfile(id, userObj, retryCount + 1);
+            return fetchProfile(id, userObj, retryCount + 1, forceFresh);
           }
           // Insert failed but user is authenticated — use the new profile object in memory
           // so the app opens normally; next visit will retry persisting it
           setProfile(newProfile as UserProfile);
-          return;
+          return newProfile as UserProfile;
         }
 
         if (created) {
           setProfile(created as UserProfile);
           localStorage.setItem(`profile_${id}`, JSON.stringify(created));
+          return created as UserProfile;
         }
       }
     } catch (err: any) {
@@ -289,11 +293,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cached = localStorage.getItem(`profile_${id}`);
       if (cached) {
         try { setProfile(JSON.parse(cached) as UserProfile); } catch {}
-        return;
+        try { return JSON.parse(cached) as UserProfile; } catch { return null; }
       }
 
       if (retryCount < 2) {
-        return fetchProfile(id, userObj, retryCount + 1);
+        return fetchProfile(id, userObj, retryCount + 1, forceFresh);
       }
 
       // User is authenticated but profile couldn't be loaded/created.
@@ -316,11 +320,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updatedAt: new Date().toISOString(),
         };
         setProfile(fallback);
+        return fallback;
       } else {
         setAuthError('Erro ao carregar perfil. Tente recarregar a página.');
       }
     }
+    return null;
   };
+
+  const refreshProfile = useCallback(async () => {
+    if (!user) return null;
+    setProfileLoading(true);
+    try {
+      localStorage.removeItem(`profile_${user.id}`);
+      return await fetchProfile(user.id, user, 0, true);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [user]);
 
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -461,6 +478,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSimulatedPlan,
       updateProfile,
       updatePlan,
+      refreshProfile,
       resendConfirmationEmail
     }}>
       {children}

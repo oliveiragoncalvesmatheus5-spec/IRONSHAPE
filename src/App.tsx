@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient';
 import { withTimeout } from './lib/utils';
@@ -11203,11 +11203,11 @@ function PostMedia({ media }: { media: CommunityMockPost['media'] }) {
             }}
           >
             {media.images.map((image, index) => (
-              <img key={`${image}-${index}`} src={image} alt="" className="h-full w-full shrink-0 snap-center object-cover" referrerPolicy="no-referrer" />
+              <img key={`${image}-${index}`} src={image} alt="" loading="lazy" className="h-full w-full shrink-0 snap-center object-cover" referrerPolicy="no-referrer" />
             ))}
           </div>
         ) : (
-          <img src={media.images[0]} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+          <img src={media.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
         )}
         {media.type === 'video' && (
           <>
@@ -11609,7 +11609,7 @@ function CommunityFeed({
   }
 
   return (
-    <section className="mx-auto w-full max-w-[740px] space-y-4 px-0 sm:space-y-5">
+    <section className="w-full space-y-4 px-0 sm:space-y-5">
       <CreatePostComposer profile={profile} onOpen={onCreate} />
       <AnimatePresence mode="popLayout">
         {loading ? (
@@ -11621,6 +11621,128 @@ function CommunityFeed({
         )}
       </AnimatePresence>
     </section>
+  );
+}
+
+function CommunitySidebarCard({ title, action, icon, children }: { title: string; action: string; icon: ReactNode; children: ReactNode }) {
+  return (
+    <section className="rounded-[20px] border border-[#232323] bg-[#111111] p-4 transition-all duration-[250ms] hover:border-primary/35 hover:shadow-[0_16px_38px_rgba(255,106,0,0.08)] sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            {icon}
+          </span>
+          <h3 className="text-sm font-black text-white">{title}</h3>
+        </div>
+        <button type="button" className="min-h-[44px] text-xs font-black text-primary hover:text-primary-hover">
+          {action}
+        </button>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function CommunitySidebar() {
+  const ranking = [
+    { name: 'Marina Costa', xp: '12.840 XP', medal: 'Ouro', avatar: 'M' },
+    { name: 'Rafael Nunes', xp: '11.920 XP', medal: 'Elite', avatar: 'R' },
+    { name: 'Aline Torres', xp: '10.470 XP', medal: 'Prata', avatar: 'A' },
+    { name: 'Bruno Sato', xp: '9.880 XP', medal: 'Elite', avatar: 'B' },
+    { name: 'Sofia Mendes', xp: '8.740 XP', medal: 'Prata', avatar: 'S' },
+  ];
+  const trends = [
+    { tag: '#TreinoDePernas', posts: '1.248 posts' },
+    { tag: '#Evolução', posts: '986 posts' },
+    { tag: '#Foco', posts: '742 posts' },
+    { tag: '#Nutrição', posts: '691 posts' },
+  ];
+  const friends = [
+    { name: 'Leo Martins', status: 'Treinando agora', avatar: 'L' },
+    { name: 'Bia Rocha', status: 'Postou refeição', avatar: 'B' },
+    { name: 'Isa Fontes', status: 'Finalizou cardio', avatar: 'I' },
+  ];
+  const challenges = [
+    { icon: <Flame size={18} />, name: '21 dias sem falhar', progress: 72 },
+    { icon: <Dumbbell size={18} />, name: 'Força total', progress: 48 },
+    { icon: <Apple size={18} />, name: 'Macros em dia', progress: 64 },
+  ];
+
+  return (
+    <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
+      <CommunitySidebarCard title="Ranking semanal" action="Ver ranking" icon={<Trophy size={18} />}>
+        <div className="space-y-3">
+          {ranking.map((item, index) => (
+            <div key={item.name} className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-2.5">
+              <span className="w-5 text-xs font-black text-primary">{index + 1}</span>
+              <CommunityAvatar value={item.avatar} size="h-10 w-10 text-sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black text-white">{item.name}</p>
+                <p className="text-[11px] font-bold text-text-muted">{item.xp}</p>
+              </div>
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[9px] font-black text-primary">{item.medal}</span>
+            </div>
+          ))}
+        </div>
+      </CommunitySidebarCard>
+
+      <CommunitySidebarCard title="Em alta" action="Ver tudo" icon={<TrendingUp size={18} />}>
+        <div className="space-y-2">
+          {trends.map(item => (
+            <button key={item.tag} type="button" className="flex min-h-[44px] w-full items-center justify-between rounded-2xl bg-white/[0.03] px-3 text-left transition-all hover:bg-primary/10">
+              <span className="text-sm font-black text-primary">{item.tag}</span>
+              <span className="text-[11px] font-bold text-text-muted">{item.posts}</span>
+            </button>
+          ))}
+        </div>
+      </CommunitySidebarCard>
+
+      <CommunitySidebarCard title="Amigos ativos" action="Ver todos" icon={<Users size={18} />}>
+        <div className="space-y-3">
+          {friends.map(friend => (
+            <div key={friend.name} className="flex items-center gap-3">
+              <div className="relative">
+                <CommunityAvatar value={friend.avatar} size="h-10 w-10 text-sm" />
+                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#111111] bg-success" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-white">{friend.name}</p>
+                <p className="truncate text-[11px] font-bold text-text-muted">{friend.status}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CommunitySidebarCard>
+
+      <CommunitySidebarCard title="Transformações" action="Ver todas" icon={<Grid3X3 size={18} />}>
+        <div className="grid grid-cols-2 gap-2">
+          {[1, 2, 3, 4].map(index => (
+            <div key={index} className="aspect-square overflow-hidden rounded-2xl border border-[#232323] bg-[#090909]">
+              <img src={getCommunityMedia(index)} alt="" loading="lazy" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            </div>
+          ))}
+        </div>
+      </CommunitySidebarCard>
+
+      <CommunitySidebarCard title="Desafios" action="Ver todos" icon={<Activity size={18} />}>
+        <div className="space-y-3">
+          {challenges.map(challenge => (
+            <div key={challenge.name} className="rounded-2xl bg-white/[0.03] p-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">{challenge.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-white">{challenge.name}</p>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${challenge.progress}%` }} />
+                  </div>
+                </div>
+                <span className="text-xs font-black text-primary">{challenge.progress}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CommunitySidebarCard>
+    </aside>
   );
 }
 
@@ -12090,17 +12212,18 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
     name: post.user.name.split(' ')[0],
     avatar: post.user.avatar.startsWith('http') ? post.user.avatar : '',
     initial: post.user.avatar.startsWith('http') ? post.user.name[0]?.toUpperCase() || 'I' : post.user.avatar,
+    image: post.media.images[0],
   })).slice(0, 6);
   const visualStoryItems = communityStoryProfiles.length >= 5
     ? communityStoryProfiles
     : [
         ...communityStoryProfiles,
-        { id: 'visual-ana', name: 'Ana', avatar: '', initial: 'A' },
-        { id: 'visual-lucas', name: 'Lucas', avatar: '', initial: 'L' },
-        { id: 'visual-maya', name: 'Maya', avatar: '', initial: 'M' },
-        { id: 'visual-rafa', name: 'Rafa', avatar: '', initial: 'R' },
-        { id: 'visual-bia', name: 'Bia', avatar: '', initial: 'B' },
-        { id: 'visual-joao', name: 'Joao', avatar: '', initial: 'J' },
+        { id: 'visual-ana', name: 'Ana', avatar: '', initial: 'A', image: getCommunityMedia(0) },
+        { id: 'visual-lucas', name: 'Lucas', avatar: '', initial: 'L', image: getCommunityMedia(1) },
+        { id: 'visual-maya', name: 'Maya', avatar: '', initial: 'M', image: getCommunityMedia(2) },
+        { id: 'visual-rafa', name: 'Rafa', avatar: '', initial: 'R', image: getCommunityMedia(3) },
+        { id: 'visual-bia', name: 'Bia', avatar: '', initial: 'B', image: getCommunityMedia(4) },
+        { id: 'visual-joao', name: 'Joao', avatar: '', initial: 'J', image: getCommunityMedia(5) },
       ].slice(0, 6);
   const communityFilters = ['Todos', 'Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'];
 
@@ -12330,113 +12453,94 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
   }
 
   return (
-    <div className="community-light-scope space-y-6 md:space-y-8">
-      <header className="space-y-5 rounded-[24px] md:rounded-[28px] border border-[#232323] bg-[#090909] px-4 py-5 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:px-5 md:px-6">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.78fr)] lg:items-start">
-          <div className="min-w-0">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h1 className="text-[28px] font-black leading-[1.05] tracking-normal text-white sm:text-[32px] md:text-[34px]">
-                  <span>Comunidade</span>{' '}
-                  <span className="text-primary">IronShape</span>
-                  <span className="ml-2 text-[24px] align-[-1px]" aria-hidden="true">🤝</span>
-                </h1>
-              </div>
-              <button
-                onClick={() => openSocialProfile(profile.id, profile)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818] sm:h-11 sm:w-11 lg:hidden"
-                aria-label="Abrir meu perfil social"
-              >
-                {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
-              </button>
-            </div>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary sm:text-base">
-              Compartilhe sua jornada, inspire outras pessoas e evolua junto com a comunidade.
+    <div className="community-light-scope -mx-2 space-y-5 px-2 pb-24 sm:mx-0 sm:px-0 md:space-y-6 lg:pb-0">
+      <header className="rounded-[20px] border border-[#232323] bg-[#090909] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:p-5">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-[24px] font-black leading-none tracking-normal text-white sm:text-[30px]">
+              Comunidade <span className="text-primary">IronShape</span>
+            </h1>
+            <p className="mt-1 line-clamp-1 text-xs font-medium text-text-muted sm:text-sm">
+              Evolução, disciplina e comunidade em tempo real.
             </p>
           </div>
-
-          <div className="space-y-3 lg:pt-0.5">
-            <div className="relative">
-              <Search size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input
-                readOnly
-                value=""
-                placeholder="Pesquisar usuários, posts, hashtags..."
-                className="h-12 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50"
-                aria-label="Pesquisar usuários, posts e hashtags"
-              />
-            </div>
-
-            <div className="grid grid-cols-[minmax(0,1fr)_44px_44px] gap-2 sm:grid-cols-[minmax(0,1fr)_48px_48px] lg:grid-cols-[minmax(0,1fr)_48px_48px_48px]">
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex h-12 min-w-0 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-sm font-bold text-white shadow-[0_12px_28px_rgba(255,106,0,0.24)] transition-all hover:bg-primary-hover active:scale-[0.98]"
-              >
-                <Plus size={19} />
-                <span>Nova publicação</span>
-              </button>
-              <button
-                type="button"
-                className="relative flex h-11 min-h-[44px] w-11 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white sm:h-12 sm:w-12"
-                aria-label="Notificações"
-              >
-                <BellRing size={19} />
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">3</span>
-              </button>
-              <button
-                type="button"
-                className="relative flex h-11 min-h-[44px] w-11 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white sm:h-12 sm:w-12"
-                aria-label="Mensagens"
-              >
-                <Send size={18} />
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">2</span>
-              </button>
-              <button
-                onClick={() => openSocialProfile(profile.id, profile)}
-                className="hidden h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818] lg:flex"
-                aria-label="Abrir meu perfil social"
-              >
-                {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
-              </button>
-            </div>
-          </div>
+          <button
+            type="button"
+            className="relative flex h-11 min-h-[44px] w-11 shrink-0 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
+            aria-label="Notificações"
+          >
+            <BellRing size={19} />
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">3</span>
+          </button>
+          <button
+            onClick={() => openSocialProfile(profile.id, profile)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#232323] bg-[#121212] text-sm font-black text-primary transition-all hover:border-primary/50 hover:bg-[#181818]"
+            aria-label="Abrir meu perfil social"
+          >
+            {profile.avatar_url ? <img src={profile.avatar_url} alt="Meu perfil" className="h-full w-full object-cover" /> : profile.name?.[0]?.toUpperCase()}
+          </button>
         </div>
 
-        <section className="space-y-3" aria-label="Momentos da comunidade">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-black tracking-normal text-white">Momentos</h2>
-            <button type="button" className="min-h-[44px] px-1 text-xs font-bold text-primary transition-colors hover:text-primary-hover">
-              Ver todos
-            </button>
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_44px] gap-2 sm:grid-cols-[minmax(0,1fr)_44px_auto]">
+          <div className="relative">
+            <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
+            <input
+              readOnly
+              value=""
+              placeholder="Pesquisar posts, usuários, hashtags..."
+              className="h-11 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50"
+              aria-label="Pesquisar usuários, posts e hashtags"
+            />
           </div>
-          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden">
-            <button type="button" className="w-[70px] shrink-0 text-center">
-              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#232323] bg-[#121212] text-primary transition-all hover:border-primary/50">
-                <Plus size={22} />
-              </span>
-              <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">Seu story</span>
-            </button>
-            {visualStoryItems.map((item, index) => (
-              <button key={`${item.id}-${index}`} type="button" className="w-[70px] shrink-0 text-center">
-                <span className="mx-auto block h-16 w-16 rounded-full border border-primary p-[2px]">
-                  <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#121212] text-base font-black text-white">
-                    {item.avatar ? (
-                      <img src={item.avatar} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(255,106,0,0.42),rgba(18,18,18,0.95)_62%)]">
-                        {item.initial}
-                      </span>
-                    )}
+          <button
+            type="button"
+            className="relative flex h-11 min-h-[44px] w-11 items-center justify-center rounded-2xl border border-[#232323] bg-[#121212] text-text-secondary transition-all hover:border-primary/40 hover:text-white"
+            aria-label="Mensagens"
+          >
+            <Send size={18} />
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-black text-white ring-2 ring-[#090909]">2</span>
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="hidden h-11 min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(255,106,0,0.24)] transition-all hover:bg-primary-hover active:scale-[0.98] sm:flex"
+          >
+            <Plus size={18} />
+            Nova publicação
+          </button>
+        </div>
+      </header>
+
+      <section className="space-y-3" aria-label="Momentos da comunidade">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <h2 className="text-sm font-black tracking-normal text-white">Stories</h2>
+          <button type="button" className="min-h-[44px] px-1 text-xs font-bold text-primary transition-colors hover:text-primary-hover">
+            Ver todos
+          </button>
+        </div>
+        <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button type="button" className="w-[74px] shrink-0 text-center">
+            <span className="mx-auto flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[22px] border border-dashed border-primary/50 bg-[#121212] text-primary transition-all hover:border-primary">
+              <Plus size={22} />
+            </span>
+            <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">Seu story</span>
+          </button>
+          {visualStoryItems.map((item, index) => (
+            <button key={`${item.id}-${index}`} type="button" className="w-[74px] shrink-0 text-center">
+              <span className="mx-auto block h-[68px] w-[68px] rounded-[22px] border border-primary p-[2px] shadow-[0_12px_24px_rgba(255,106,0,0.14)]">
+                <span className="relative flex h-full w-full items-end justify-center overflow-hidden rounded-[19px] bg-[#121212]">
+                  <img src={item.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  <span className="relative mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-[10px] font-black text-white ring-1 ring-white/20">
+                    {item.initial}
                   </span>
                 </span>
-                <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">{item.name}</span>
-              </button>
-            ))}
-          </div>
-        </section>
+              </span>
+              <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">{item.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
-        <CommunityFilterBar filters={communityFilters} selected={selectedCommunityFilter} onSelect={setSelectedCommunityFilter} />
-      </header>
+      <CommunityFilterBar filters={communityFilters} selected={selectedCommunityFilter} onSelect={setSelectedCommunityFilter} />
 
       {shareFeedback && (
         <div className="max-w-2xl mx-auto flex items-start justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-text-secondary">
@@ -12450,18 +12554,30 @@ function CommunityView({ profile, language }: { profile: UserProfile; language: 
         </div>
       )}
 
-      <CommunityFeed
-        profile={profile}
-        posts={filteredMockFeedPosts}
-        loading={mockFeedLoading}
-        error={mockFeedError}
-        onRetry={() => {
-          setMockFeedError(false);
-          setMockFeedLoading(true);
-          window.setTimeout(() => setMockFeedLoading(false), 420);
-        }}
-        onCreate={() => setShowCreateModal(true)}
-      />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.7fr)_minmax(300px,0.3fr)] lg:items-start xl:gap-6">
+        <CommunityFeed
+          profile={profile}
+          posts={filteredMockFeedPosts}
+          loading={mockFeedLoading}
+          error={mockFeedError}
+          onRetry={() => {
+            setMockFeedError(false);
+            setMockFeedLoading(true);
+            window.setTimeout(() => setMockFeedLoading(false), 420);
+          }}
+          onCreate={() => setShowCreateModal(true)}
+        />
+        <CommunitySidebar />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowCreateModal(true)}
+        className="fixed bottom-24 right-4 z-[80] flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_18px_40px_rgba(255,106,0,0.32)] transition-all active:scale-95 sm:hidden"
+        aria-label="Nova publicação"
+      >
+        <Plus size={25} />
+      </button>
 
       {/* Create Post Modal */}
       <AnimatePresence>

@@ -12809,17 +12809,7 @@ function CommunityView({
     image: story.media_url,
     persistedStory: story,
   }));
-  const visualStoryItems = communityStoryProfiles.length >= 5
-    ? communityStoryProfiles.slice(0, 12)
-    : [
-        ...communityStoryProfiles,
-        { id: 'visual-ana', name: 'Ana', avatar: '', initial: 'A', image: getCommunityMedia(0), persistedStory: null },
-        { id: 'visual-lucas', name: 'Lucas', avatar: '', initial: 'L', image: getCommunityMedia(1), persistedStory: null },
-        { id: 'visual-maya', name: 'Maya', avatar: '', initial: 'M', image: getCommunityMedia(2), persistedStory: null },
-        { id: 'visual-rafa', name: 'Rafa', avatar: '', initial: 'R', image: getCommunityMedia(3), persistedStory: null },
-        { id: 'visual-bia', name: 'Bia', avatar: '', initial: 'B', image: getCommunityMedia(4), persistedStory: null },
-        { id: 'visual-joao', name: 'Joao', avatar: '', initial: 'J', image: getCommunityMedia(5), persistedStory: null },
-      ].slice(0, 6);
+  const visibleStoryItems = communityStoryProfiles.slice(0, 12);
   const communityFilters = ['Todos', 'Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'];
 
   if (activeSocialProfile) {
@@ -13175,7 +13165,7 @@ function CommunityView({
             <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">Seu story</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleStoryImageChange} disabled={storyUploadLoading} />
           </label>
-          {visualStoryItems.map((item, index) => (
+          {visibleStoryItems.map((item, index) => (
             <button
               key={`${item.id}-${index}`}
               type="button"

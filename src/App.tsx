@@ -11468,7 +11468,22 @@ function renderCaptionWithHashtags(caption: string, hashtags: string[]) {
   );
 }
 
-function PostHeader({ post, onOpenProfile }: { post: CommunityMockPost; onOpenProfile?: () => void }) {
+function PostHeader({
+  post,
+  onOpenProfile,
+  onReport,
+  onDelete,
+  canDelete,
+  busy,
+}: {
+  post: CommunityMockPost;
+  onOpenProfile?: () => void;
+  onReport?: () => void;
+  onDelete?: () => void;
+  canDelete?: boolean;
+  busy?: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div className="flex items-start gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
       <button type="button" onClick={onOpenProfile} className="shrink-0 active:scale-95" aria-label={`Abrir perfil de ${post.user.name}`}>
@@ -11487,9 +11502,55 @@ function PostHeader({ post, onOpenProfile }: { post: CommunityMockPost; onOpenPr
           {post.time} • {post.activity}
         </p>
       </div>
-      <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-text-muted transition-all hover:bg-white/5 hover:text-white" aria-label="Mais opções">
-        <MoreHorizontal size={21} />
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setMenuOpen(current => !current)}
+          className="flex h-11 w-11 items-center justify-center rounded-full text-text-muted transition-all hover:bg-white/5 hover:text-white"
+          aria-label="Mais opções"
+          aria-expanded={menuOpen}
+        >
+          {busy ? <Loader2 size={19} className="animate-spin" /> : <MoreHorizontal size={21} />}
+        </button>
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.96 }}
+              transition={{ duration: 0.16 }}
+              className="absolute right-0 top-full z-30 mt-2 w-52 overflow-hidden rounded-2xl border border-[#232323] bg-[#111111] p-1 shadow-2xl"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onReport?.();
+                }}
+                disabled={busy}
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-black text-text-secondary transition-all hover:bg-warning/10 hover:text-warning disabled:opacity-50"
+              >
+                <ShieldAlert size={17} />
+                Denunciar publicação
+              </button>
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete?.();
+                  }}
+                  disabled={busy}
+                  className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-black text-error transition-all hover:bg-error/10 disabled:opacity-50"
+                >
+                  <Trash2 size={17} />
+                  Remover publicação
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -11711,15 +11772,21 @@ function CommentsBottomSheet({
 function CommunityPostCard({
   post,
   profile,
+  isAdmin,
   onLike,
   onOpenProfile,
   onAddComment,
+  onReport,
+  onDelete,
 }: {
   post: CommunityMockPost;
   profile: UserProfile;
+  isAdmin?: boolean;
   onLike?: (post: CommunityMockPost, liked: boolean) => Promise<void> | void;
   onOpenProfile?: (post: CommunityMockPost) => void;
   onAddComment?: (post: CommunityMockPost, text: string) => Promise<CommunityComment>;
+  onReport?: (post: CommunityMockPost) => Promise<void> | void;
+  onDelete?: (post: CommunityMockPost) => Promise<void> | void;
 }) {
   const [liked, setLiked] = useState(Boolean(post.likedByCurrentUser));
   const [saved, setSaved] = useState(false);
@@ -11729,9 +11796,12 @@ function CommunityPostCard({
   const [localComments, setLocalComments] = useState<CommunityComment[]>(post.comments);
   const [commentSaving, setCommentSaving] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [moderationSaving, setModerationSaving] = useState(false);
+  const [moderationFeedback, setModerationFeedback] = useState<string | null>(null);
   const currentLikes = post.metrics.likes + (liked ? 1 : 0);
   const currentComments = post.metrics.comments + Math.max(0, localComments.length - post.comments.length);
   const commentAvatar = profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I';
+  const canDeletePost = Boolean(post.sourcePostId && (isAdmin || post.sourcePost?.user_id === profile.id));
 
   useEffect(() => {
     setLocalComments(post.comments);
@@ -11770,10 +11840,53 @@ function CommunityPostCard({
     }
   };
 
+  const reportPost = async () => {
+    if (!onReport || moderationSaving) return;
+    setModerationSaving(true);
+    setModerationFeedback(null);
+    try {
+      await onReport(post);
+      setModerationFeedback('Denúncia enviada para análise.');
+    } catch (error: any) {
+      setModerationFeedback(error?.message || 'Não foi possível enviar a denúncia.');
+    } finally {
+      setModerationSaving(false);
+    }
+  };
+
+  const deletePost = async () => {
+    if (!onDelete || moderationSaving || !canDeletePost) return;
+    const confirmed = window.confirm('Remover esta publicação da comunidade?');
+    if (!confirmed) return;
+    setModerationSaving(true);
+    setModerationFeedback(null);
+    try {
+      await onDelete(post);
+    } catch (error: any) {
+      setModerationFeedback(error?.message || 'Não foi possível remover a publicação.');
+      setModerationSaving(false);
+    }
+  };
+
   return (
     <motion.article layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden rounded-[20px] border border-[#232323] bg-[#111111] shadow-[0_18px_42px_rgba(0,0,0,0.22)]">
-      <PostHeader post={post} onOpenProfile={() => onOpenProfile?.(post)} />
+      <PostHeader
+        post={post}
+        onOpenProfile={() => onOpenProfile?.(post)}
+        onReport={reportPost}
+        onDelete={deletePost}
+        canDelete={canDeletePost}
+        busy={moderationSaving}
+      />
       <div className="px-4 py-4 sm:px-5">
+        {moderationFeedback && (
+          <div className="mb-3 flex items-start justify-between gap-3 rounded-2xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs font-bold text-text-secondary">
+            <span>{moderationFeedback}</span>
+            <button type="button" onClick={() => setModerationFeedback(null)} className="text-text-muted hover:text-text-primary" aria-label="Fechar aviso">
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <p className={`text-sm leading-relaxed text-text-secondary ${showAllCaption ? '' : 'line-clamp-4'}`}>
           {renderCaptionWithHashtags(post.caption, post.hashtags)}
         </p>
@@ -11961,6 +12074,7 @@ function EmptyFeedState({ onCreate }: { onCreate: () => void }) {
 
 function CommunityFeed({
   profile,
+  isAdmin,
   posts,
   loading,
   error,
@@ -11969,8 +12083,11 @@ function CommunityFeed({
   onLike,
   onOpenProfile,
   onAddComment,
+  onReport,
+  onDelete,
 }: {
   profile: UserProfile;
+  isAdmin?: boolean;
   posts: CommunityMockPost[];
   loading: boolean;
   error: boolean;
@@ -11979,6 +12096,8 @@ function CommunityFeed({
   onLike: (post: CommunityMockPost, liked: boolean) => Promise<void> | void;
   onOpenProfile: (post: CommunityMockPost) => void;
   onAddComment: (post: CommunityMockPost, text: string) => Promise<CommunityComment>;
+  onReport: (post: CommunityMockPost) => Promise<void> | void;
+  onDelete: (post: CommunityMockPost) => Promise<void> | void;
 }) {
   if (error) {
     return (
@@ -12007,9 +12126,12 @@ function CommunityFeed({
               key={post.id}
               post={post}
               profile={profile}
+              isAdmin={isAdmin}
               onLike={onLike}
               onOpenProfile={onOpenProfile}
               onAddComment={onAddComment}
+              onReport={onReport}
+              onDelete={onDelete}
             />
           ))
         )}
@@ -12158,7 +12280,7 @@ function CommunityView({
   setLanguageMenuOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   const dateFnsLocale = getDateFnsLocale(language);
-  const { updateProfile } = useAuth();
+  const { updateProfile, isAdmin } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [postProfiles, setPostProfiles] = useState<Record<string, SocialProfile>>({});
   const [postComments, setPostComments] = useState<Record<string, CommunityComment[]>>({});
@@ -12583,6 +12705,54 @@ function CommunityView({
       [post.sourcePostId!]: [...(current[post.sourcePostId!] || []), nextComment],
     }));
     return nextComment;
+  };
+
+  const handleReportPost = async (post: CommunityMockPost) => {
+    if (!post.sourcePostId) throw new Error('Publicação indisponível para denúncia.');
+
+    const { error } = await supabase
+      .from('community_post_reports')
+      .upsert(
+        {
+          post_id: post.sourcePostId,
+          reporter_id: profile.id,
+          reporter_name: profile.name || 'Atleta IronShape',
+          reason: 'conteudo_inadequado',
+          details: `Denúncia enviada pelo menu da comunidade contra publicação de ${post.user.name}.`,
+          status: 'pending',
+        },
+        { onConflict: 'post_id,reporter_id' }
+      );
+
+    if (error) throw new Error(error.message || 'Não foi possível enviar a denúncia.');
+  };
+
+  const handleDeleteCommunityPost = async (post: CommunityMockPost) => {
+    if (!post.sourcePostId) throw new Error('Publicação indisponível para remoção.');
+
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', post.sourcePostId);
+
+    if (error) throw new Error(error.message || 'Não foi possível remover a publicação.');
+
+    setPosts(current => current.filter(item => item.id !== post.sourcePostId));
+    setPostComments(current => {
+      const next = { ...current };
+      delete next[post.sourcePostId!];
+      return next;
+    });
+    setPostLikes(current => {
+      const next = { ...current };
+      delete next[post.sourcePostId!];
+      return next;
+    });
+    setLikedPostIds(current => {
+      const next = new Set(current);
+      next.delete(post.sourcePostId!);
+      return next;
+    });
   };
 
   const loadSocialStats = async (targetProfile: SocialProfile) => {
@@ -13204,6 +13374,7 @@ function CommunityView({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.7fr)_minmax(300px,0.3fr)] lg:items-start xl:gap-6">
         <CommunityFeed
           profile={profile}
+          isAdmin={isAdmin}
           posts={filteredCommunityFeedPosts}
           loading={loading}
           error={feedError}
@@ -13212,6 +13383,8 @@ function CommunityView({
           onLike={handleLike}
           onOpenProfile={openPostSocialProfile}
           onAddComment={handleAddComment}
+          onReport={handleReportPost}
+          onDelete={handleDeleteCommunityPost}
         />
         <CommunitySidebar />
       </div>

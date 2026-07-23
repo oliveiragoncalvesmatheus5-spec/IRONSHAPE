@@ -7,12 +7,12 @@ const PLAN_CONFIG: Record<PaidPlan, { productEnv: string; fallbackUrlEnv: string
   Pro: {
     productEnv: 'ABACATEPAY_PRODUCT_PRO_ID',
     fallbackUrlEnv: 'ABACATEPAY_CHECKOUT_PRO_URL',
-    defaultUrl: 'https://app.abacatepay.com/pay/bill_qcpZwfDkagE0js0dcQrLWTjq',
+    defaultUrl: 'https://buy.stripe.com/eVq3cv43n0dp1kj3Aefw400',
   },
   Elite: {
     productEnv: 'ABACATEPAY_PRODUCT_ELITE_ID',
     fallbackUrlEnv: 'ABACATEPAY_CHECKOUT_ELITE_URL',
-    defaultUrl: 'https://app.abacatepay.com/pay/bill_0mR4kgjeGnp5du3QSD5naMCU',
+    defaultUrl: 'https://buy.stripe.com/cNi3cv9nHe4f8MLc6Kfw401',
   },
 };
 

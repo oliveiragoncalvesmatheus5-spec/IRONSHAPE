@@ -4711,14 +4711,16 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
         : 'Base alinhada para sustentar o treino de hoje.';
 
   const updateWaterIntake = (amountMl: number) => {
-    const nextValue = Math.max(0, Math.min(10000, waterIntakeMl + amountMl));
-    setWaterIntakeMl(nextValue);
-    localStorage.setItem(hydrationStorageKey, String(nextValue));
-    trackEvent('hydration_quick_update', {
-      amount_ml: amountMl,
-      total_ml: nextValue,
-      goal_ml: dailyWaterGoalMl,
-      source: 'dashboard_recovery_base',
+    setWaterIntakeMl(currentValue => {
+      const nextValue = Math.max(0, Math.min(10000, currentValue + amountMl));
+      localStorage.setItem(hydrationStorageKey, String(nextValue));
+      trackEvent('hydration_quick_update', {
+        amount_ml: amountMl,
+        total_ml: nextValue,
+        goal_ml: dailyWaterGoalMl,
+        source: 'dashboard_recovery_base',
+      });
+      return nextValue;
     });
   };
 
@@ -5162,7 +5164,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                     <button
                       type="button"
                       onClick={() => updateWaterIntake(500)}
-                      className="min-h-[42px] rounded-xl bg-cyan-400/15 border border-cyan-400/20 text-[10px] font-black uppercase tracking-widest text-cyan-100 hover:bg-cyan-400/20 transition-all"
+                      className="min-h-[42px] rounded-xl bg-cyan-400/15 border border-cyan-400/30 text-[10px] font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-100 hover:bg-cyan-400/25 transition-all"
                     >
                       +500ml
                     </button>

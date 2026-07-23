@@ -73,8 +73,8 @@ let ironShopSettingsFallback: IronShopSettings = {
 };
 
 function getPlanValue(plan: string) {
-  if (plan === "Pro") return 19.9;
-  if (plan === "Elite") return 29.9;
+  if (plan === "Pro") return 29.9;
+  if (plan === "Elite") return 39.9;
   return 0;
 }
 
@@ -217,7 +217,7 @@ async function updateProfilePlanFromPayment(event: any) {
   if (existing && existing.length > 0) return;
 
   const valorAssinatura = ((payment?.paidAmount || payment?.amount || subscription?.amount || 0) as number) / 100;
-  const valorOriginal = plan === "Pro" ? 19.9 : 29.9;
+  const valorOriginal = plan === "Pro" ? 29.9 : 39.9;
 
   await admin.from("affiliate_conversions").insert([{
     affiliate_id: affiliate.id,

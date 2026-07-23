@@ -13689,7 +13689,7 @@ function AdminView({ language }: { language: LanguageCode }) {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const paidProfiles = adminData.profiles.filter(p => (p.plano === 'Pro' || p.plano === 'Elite') && p.subscriptionStatus === 'active');
-  const getAdminPlanValue = (plan?: Plan) => plan === 'Elite' ? 29.9 : plan === 'Pro' ? 19.9 : 0;
+  const getAdminPlanValue = (plan?: Plan) => plan === 'Elite' ? 39.9 : plan === 'Pro' ? 29.9 : 0;
   const getSubscriptionDate = (profile: UserProfile) => profile.subscriptionPaidAt || profile.updatedAt || profile.criado_em || '';
   const onboardingStuck = adminData.profiles.filter(p => !p.age || !p.weight || !p.height || !p.goal);
   const activeToday = new Set([
@@ -15393,10 +15393,10 @@ function PricingView({
       id: 'Pro' as Plan,
       name: 'Pro',
       eyebrow: 'Melhor custo-benefício',
-      price: hasReferral ? 'R$ 17,91' : 'R$ 19,90',
-      originalPrice: hasReferral ? 'R$ 19,90' : null,
+      price: hasReferral ? 'R$ 26,91' : 'R$ 29,90',
+      originalPrice: hasReferral ? 'R$ 29,90' : null,
       period: '/mês',
-      priceDetail: hasReferral ? 'menos de R$ 0,60 por dia' : 'menos de R$ 0,67 por dia',
+      priceDetail: hasReferral ? 'menos de R$ 0,90 por dia' : 'menos de R$ 1 por dia',
       description: 'Evolução contínua com IA, nutrição precisa e protocolos completos.',
       features: [
         'Tudo do plano Grátis',
@@ -15415,10 +15415,10 @@ function PricingView({
       id: 'Elite' as Plan,
       name: 'Elite',
       eyebrow: 'Experiência completa',
-      price: hasReferral ? 'R$ 26,91' : 'R$ 29,90',
-      originalPrice: hasReferral ? 'R$ 29,90' : null,
+      price: hasReferral ? 'R$ 35,91' : 'R$ 39,90',
+      originalPrice: hasReferral ? 'R$ 39,90' : null,
       period: '/mês',
-      priceDetail: hasReferral ? 'menos de R$ 0,90 por dia' : 'menos de R$ 1 por dia',
+      priceDetail: hasReferral ? 'menos de R$ 1,20 por dia' : 'menos de R$ 1,34 por dia',
       description: 'Máximo controle para quem quer treinar sem limites e ir além.',
       features: [
         'Tudo do Pro',
@@ -15501,7 +15501,7 @@ function PricingView({
           .single();
         
         if (aff) {
-          const valorOriginal = selectedPlan === 'Pro' ? 19.90 : 29.90;
+          const valorOriginal = selectedPlan === 'Pro' ? 29.90 : 39.90;
           const valorComDesconto = valorOriginal * 0.9;
           const comissao = valorOriginal * 0.35; // 35% do valor original conforme solicitado
           
@@ -15661,8 +15661,8 @@ function PricingView({
                   <span className="text-text-muted">Valor Mensal</span>
                   <span className="font-bold text-primary">
                     {selectedPlan === 'Iniciante' ? 'GRÁTIS' : 
-                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 17,91' : 'R$ 19,90') :
-                     (hasReferral ? 'R$ 26,91' : 'R$ 29,90')}
+                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 26,91' : 'R$ 29,90') :
+                     (hasReferral ? 'R$ 35,91' : 'R$ 39,90')}
                   </span>
                 </div>
                 {hasReferral && selectedPlan !== 'Iniciante' && (
@@ -15676,8 +15676,8 @@ function PricingView({
                   <span>Total Hoje</span>
                   <span className="text-xl">
                     {selectedPlan === 'Iniciante' ? 'GRÁTIS' : 
-                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 17,91' : 'R$ 19,90') :
-                     (hasReferral ? 'R$ 26,91' : 'R$ 29,90')}
+                     selectedPlan === 'Pro' ? (hasReferral ? 'R$ 26,91' : 'R$ 29,90') :
+                     (hasReferral ? 'R$ 35,91' : 'R$ 39,90')}
                   </span>
                 </div>
               </div>

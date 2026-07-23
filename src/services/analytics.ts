@@ -58,7 +58,7 @@ export function trackPlanEvent(eventName: string, plan: Plan, params: Record<str
   trackEvent(eventName, {
     plan,
     currency: 'BRL',
-    value: plan === 'Pro' ? 19.9 : plan === 'Elite' ? 29.9 : 0,
+    value: plan === 'Pro' ? 29.9 : plan === 'Elite' ? 39.9 : 0,
     ...params,
   });
 }

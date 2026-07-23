@@ -11206,6 +11206,18 @@ type CommunityPersistedLike = {
   criado_em?: string;
 };
 
+type CommunityPersistedStory = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar?: string;
+  media_url: string;
+  caption: string;
+  view_count: number;
+  criado_em: string;
+  expires_at: string;
+};
+
 type CommunityMockPost = {
   id: string;
   sourcePostId?: string;
@@ -12165,6 +12177,9 @@ function CommunityView({
   const [postComments, setPostComments] = useState<Record<string, CommunityComment[]>>({});
   const [postLikes, setPostLikes] = useState<Record<string, number>>({});
   const [likedPostIds, setLikedPostIds] = useState<Set<string>>(() => new Set());
+  const [communityStories, setCommunityStories] = useState<CommunityPersistedStory[]>([]);
+  const [selectedCommunityStory, setSelectedCommunityStory] = useState<CommunityPersistedStory | null>(null);
+  const [storyUploadLoading, setStoryUploadLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
@@ -12228,6 +12243,24 @@ function CommunityView({
     });
   }, [communityFeedPosts, communitySearchQuery, selectedCommunityFilter]);
 
+  const fetchCommunityStories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('community_stories')
+        .select('*')
+        .eq('active', true)
+        .gt('expires_at', new Date().toISOString())
+        .order('criado_em', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setCommunityStories((data || []) as CommunityPersistedStory[]);
+    } catch (error: any) {
+      console.warn('Community stories unavailable:', error?.message || error);
+      setCommunityStories([]);
+    }
+  };
+
   const fetchPosts = async () => {
     setLoading(true);
     setFeedError(false);
@@ -12259,6 +12292,7 @@ function CommunityView({
       setPostComments({});
       setPostLikes(Object.fromEntries(nextPosts.map(post => [post.id, post.likes || 0])));
       setLikedPostIds(new Set());
+      await fetchCommunityStories();
 
       const userIds = Array.from(new Set(nextPosts.map(post => post.user_id).filter(Boolean)));
       if (userIds.length > 0) {
@@ -12486,6 +12520,55 @@ function CommunityView({
       setPostLikes(previousPostLikes);
       setLikedPostIds(previousLikedPostIds);
       setPosts(current => current.map(item => item.id === postId ? { ...item, likes: currentCount } : item));
+    }
+  };
+
+  const handleStoryImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || storyUploadLoading) return;
+
+    setPostError(null);
+    setShareFeedback(null);
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPostError('O story deve ter no máximo 5MB.');
+      return;
+    }
+
+    setStoryUploadLoading(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `${profile.id}/stories/story-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await withTimeout(
+        () => supabase.storage.from('post-images').upload(filePath, file, { upsert: false }),
+        30000,
+        1
+      ) as any;
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(filePath);
+      const { data, error } = await supabase
+        .from('community_stories')
+        .insert({
+          user_id: profile.id,
+          user_name: profile.name || 'Atleta IronShape',
+          user_avatar: profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I',
+          media_url: publicUrl,
+          caption: 'Story da comunidade IronShape',
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      setCommunityStories(current => [data as CommunityPersistedStory, ...current.filter(story => story.id !== (data as CommunityPersistedStory).id)]);
+      setShareFeedback('Story publicado por 24 horas na comunidade.');
+    } catch (error: any) {
+      console.error('Error creating community story:', error);
+      setPostError(error?.message || 'Não foi possível publicar o story agora.');
+    } finally {
+      setStoryUploadLoading(false);
     }
   };
 
@@ -12731,23 +12814,24 @@ function CommunityView({
     }
   };
 
-  const communityStoryProfiles = communityFeedPosts.map(post => ({
-    id: post.id,
-    name: post.user.name.split(' ')[0],
-    avatar: post.user.avatar.startsWith('http') ? post.user.avatar : '',
-    initial: post.user.avatar.startsWith('http') ? post.user.name[0]?.toUpperCase() || 'I' : post.user.avatar,
-    image: post.media.images[0],
-  })).slice(0, 6);
+  const communityStoryProfiles = communityStories.map(story => ({
+    id: story.id,
+    name: story.user_name.split(' ')[0],
+    avatar: story.user_avatar?.startsWith('http') ? story.user_avatar : '',
+    initial: story.user_avatar?.startsWith('http') ? story.user_name[0]?.toUpperCase() || 'I' : story.user_avatar || story.user_name[0]?.toUpperCase() || 'I',
+    image: story.media_url,
+    persistedStory: story,
+  }));
   const visualStoryItems = communityStoryProfiles.length >= 5
-    ? communityStoryProfiles
+    ? communityStoryProfiles.slice(0, 12)
     : [
         ...communityStoryProfiles,
-        { id: 'visual-ana', name: 'Ana', avatar: '', initial: 'A', image: getCommunityMedia(0) },
-        { id: 'visual-lucas', name: 'Lucas', avatar: '', initial: 'L', image: getCommunityMedia(1) },
-        { id: 'visual-maya', name: 'Maya', avatar: '', initial: 'M', image: getCommunityMedia(2) },
-        { id: 'visual-rafa', name: 'Rafa', avatar: '', initial: 'R', image: getCommunityMedia(3) },
-        { id: 'visual-bia', name: 'Bia', avatar: '', initial: 'B', image: getCommunityMedia(4) },
-        { id: 'visual-joao', name: 'Joao', avatar: '', initial: 'J', image: getCommunityMedia(5) },
+        { id: 'visual-ana', name: 'Ana', avatar: '', initial: 'A', image: getCommunityMedia(0), persistedStory: null },
+        { id: 'visual-lucas', name: 'Lucas', avatar: '', initial: 'L', image: getCommunityMedia(1), persistedStory: null },
+        { id: 'visual-maya', name: 'Maya', avatar: '', initial: 'M', image: getCommunityMedia(2), persistedStory: null },
+        { id: 'visual-rafa', name: 'Rafa', avatar: '', initial: 'R', image: getCommunityMedia(3), persistedStory: null },
+        { id: 'visual-bia', name: 'Bia', avatar: '', initial: 'B', image: getCommunityMedia(4), persistedStory: null },
+        { id: 'visual-joao', name: 'Joao', avatar: '', initial: 'J', image: getCommunityMedia(5), persistedStory: null },
       ].slice(0, 6);
   const communityFilters = ['Todos', 'Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'];
 
@@ -13097,14 +13181,21 @@ function CommunityView({
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <button type="button" className="w-[74px] shrink-0 text-center">
+          <label className="w-[74px] shrink-0 cursor-pointer text-center">
             <span className="mx-auto flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[22px] border border-dashed border-primary/50 bg-[#121212] text-primary transition-all hover:border-primary">
-              <Plus size={22} />
+              {storyUploadLoading ? <Loader2 size={22} className="animate-spin" /> : <Plus size={22} />}
             </span>
             <span className="mt-2 block truncate text-[11px] font-semibold text-text-secondary">Seu story</span>
-          </button>
+            <input type="file" accept="image/*" className="hidden" onChange={handleStoryImageChange} disabled={storyUploadLoading} />
+          </label>
           {visualStoryItems.map((item, index) => (
-            <button key={`${item.id}-${index}`} type="button" className="w-[74px] shrink-0 text-center">
+            <button
+              key={`${item.id}-${index}`}
+              type="button"
+              onClick={() => item.persistedStory && setSelectedCommunityStory(item.persistedStory)}
+              className="w-[74px] shrink-0 text-center"
+              aria-label={`Abrir story de ${item.name}`}
+            >
               <span className="mx-auto block h-[68px] w-[68px] rounded-[22px] border border-primary p-[2px] shadow-[0_12px_24px_rgba(255,106,0,0.14)]">
                 <span className="relative flex h-full w-full items-end justify-center overflow-hidden rounded-[19px] bg-[#121212]">
                   <img src={item.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" referrerPolicy="no-referrer" />
@@ -13160,6 +13251,40 @@ function CommunityView({
 
       {/* Create Post Modal */}
       <AnimatePresence>
+        {selectedCommunityStory && (
+          <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/90 p-4">
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedCommunityStory(null)}
+              className="absolute inset-0"
+              aria-label="Fechar story"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/10 bg-[#090909] shadow-2xl"
+            >
+              <div className="absolute left-4 right-4 top-4 z-10 h-1 overflow-hidden rounded-full bg-white/20">
+                <div className="h-full w-full rounded-full bg-primary" />
+              </div>
+              <div className="absolute left-4 right-4 top-8 z-10 flex items-center gap-3">
+                <CommunityAvatar value={selectedCommunityStory.user_avatar || selectedCommunityStory.user_name[0]?.toUpperCase() || 'I'} size="h-9 w-9 text-xs" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-white">{selectedCommunityStory.user_name}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Story</p>
+                </div>
+                <button onClick={() => setSelectedCommunityStory(null)} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white">
+                  <X size={18} />
+                </button>
+              </div>
+              <img src={selectedCommunityStory.media_url} alt="Story da comunidade" className="aspect-[9/16] w-full object-cover" />
+            </motion.div>
+          </div>
+        )}
+
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
             <motion.div 

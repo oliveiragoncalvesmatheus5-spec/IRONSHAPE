@@ -11,6 +11,7 @@ import { getLocalExerciseMedia, translateExerciseName } from './utils/exerciseTr
 import { getExerciseDisplay, getWorkoutDisplay, translateMuscleGroup, translateWorkoutName } from './utils/workoutDataI18n';
 import { installUiAutoTranslate } from './utils/uiAutoTranslate';
 import AIChat from './AIChat';
+import ironShopHeroBanner from './assets/ironshop-hero-banner.png';
 import { DashboardMetricCard } from './components/dashboardCards';
 import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
 import { MobileNavItem, NavItem } from './components/navigation';
@@ -2509,28 +2510,14 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
         </div>
       ) : (
         <>
-          <section className="rounded-[24px] lg:rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden grid lg:grid-cols-[45%_55%] shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
-            <div className="relative z-10 order-2 lg:order-1 p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
-              <h2 className="text-[32px] min-[390px]:text-[36px] sm:text-[44px] lg:text-[52px] font-black italic leading-[0.95] tracking-normal max-w-xl">
-                SUPLEMENTOS<br /><span className="text-primary">DE QUALIDADE</span><br />PARA RESULTADOS REAIS
-              </h2>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-3 mt-6 lg:mt-8 text-[11px] min-[390px]:text-xs sm:text-sm font-semibold text-[#D7D7D7]">
-                {['Produtos selecionados', 'Entrega rápida', 'Compra segura', 'Parcelamento'].map(item => (
-                  <span key={item} className="flex items-center gap-2">
-                    <CheckCircle2 size={15} className="text-primary shrink-0" />
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <button className="mt-7 lg:mt-9 w-full sm:w-fit min-h-[50px] lg:min-h-[52px] px-8 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest hover:bg-[#FF7E1F] active:scale-[0.98] lg:hover:scale-[1.03] transition-all duration-200">
-                Ver Produtos
-              </button>
-            </div>
-            <div className="relative order-1 lg:order-2 h-[210px] min-[390px]:h-[235px] sm:h-[300px] lg:h-auto lg:min-h-[420px] bg-[#090909]">
-              {firstProductImage && <img src={firstProductImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/15 to-transparent lg:bg-gradient-to-r lg:from-[#111111] lg:via-[#111111]/30 lg:to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#090909]/65 via-transparent to-transparent" />
-            </div>
+          <section className="rounded-[18px] sm:rounded-[24px] lg:rounded-3xl border border-[#232323] bg-[#050505] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+            <a href="#ironshop-full-catalog" className="block w-full" aria-label="Ver produtos da IronShop">
+              <img
+                src={ironShopHeroBanner}
+                alt="IronShop: mais que suplementos, sao resultados."
+                className="block w-full h-auto aspect-[2010/782] object-contain object-center"
+              />
+            </a>
           </section>
 
           <section className="space-y-5">

@@ -11200,10 +11200,17 @@ type CommunityPersistedComment = {
   criado_em: string;
 };
 
+type CommunityPersistedLike = {
+  post_id: string;
+  user_id: string;
+  criado_em?: string;
+};
+
 type CommunityMockPost = {
   id: string;
   sourcePostId?: string;
   sourcePost?: Post;
+  likedByCurrentUser?: boolean;
   user: {
     name: string;
     avatar: string;
@@ -11294,6 +11301,8 @@ function mapPostToCommunityFeedPost(
   post: Post,
   socialProfile: SocialProfile | undefined,
   comments: CommunityComment[],
+  likesCount: number | undefined,
+  likedByCurrentUser: boolean,
   index: number,
   dateFnsLocale: ReturnType<typeof getDateFnsLocale>,
 ): CommunityMockPost {
@@ -11310,6 +11319,7 @@ function mapPostToCommunityFeedPost(
     id: post.id,
     sourcePostId: post.id,
     sourcePost: post,
+    likedByCurrentUser,
     user: {
       name: socialProfile?.name || post.user_name || 'Atleta IronShape',
       avatar,
@@ -11328,9 +11338,9 @@ function mapPostToCommunityFeedPost(
       duration: category === 'Vídeos' ? '0:21' : undefined,
     },
     metrics: {
-      likes: post.likes || 0,
+      likes: likesCount ?? post.likes ?? 0,
       comments: comments.length,
-      views: Math.max(1, (post.likes || 0) * 8 + 1),
+      views: Math.max(1, (likesCount ?? post.likes ?? 0) * 8 + 1),
     },
     comments,
   };
@@ -11708,11 +11718,11 @@ function CommunityPostCard({
 }: {
   post: CommunityMockPost;
   profile: UserProfile;
-  onLike?: (postId: string, nextLikes: number) => Promise<void> | void;
+  onLike?: (post: CommunityMockPost, liked: boolean) => Promise<void> | void;
   onOpenProfile?: (post: CommunityMockPost) => void;
   onAddComment?: (post: CommunityMockPost, text: string) => Promise<CommunityComment>;
 }) {
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(Boolean(post.likedByCurrentUser));
   const [saved, setSaved] = useState(false);
   const [showAllCaption, setShowAllCaption] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -11728,11 +11738,15 @@ function CommunityPostCard({
     setLocalComments(post.comments);
   }, [post.comments, post.id]);
 
+  useEffect(() => {
+    setLiked(Boolean(post.likedByCurrentUser));
+  }, [post.likedByCurrentUser, post.id]);
+
   const toggleLike = () => {
     const nextLiked = !liked;
     setLiked(nextLiked);
     if (post.sourcePostId) {
-      onLike?.(post.sourcePostId, Math.max(0, post.metrics.likes + (nextLiked ? 1 : 0)));
+      onLike?.(post, nextLiked);
     }
   };
 
@@ -11963,7 +11977,7 @@ function CommunityFeed({
   error: boolean;
   onRetry: () => void;
   onCreate: () => void;
-  onLike: (postId: string, nextLikes: number) => Promise<void> | void;
+  onLike: (post: CommunityMockPost, liked: boolean) => Promise<void> | void;
   onOpenProfile: (post: CommunityMockPost) => void;
   onAddComment: (post: CommunityMockPost, text: string) => Promise<CommunityComment>;
 }) {
@@ -12149,6 +12163,8 @@ function CommunityView({
   const [posts, setPosts] = useState<Post[]>([]);
   const [postProfiles, setPostProfiles] = useState<Record<string, SocialProfile>>({});
   const [postComments, setPostComments] = useState<Record<string, CommunityComment[]>>({});
+  const [postLikes, setPostLikes] = useState<Record<string, number>>({});
+  const [likedPostIds, setLikedPostIds] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
@@ -12181,8 +12197,16 @@ function CommunityView({
   const [newMockPostCategory, setNewMockPostCategory] = useState<CommunityCategory>('Treinos');
 
   const communityFeedPosts = useMemo(
-    () => posts.map((post, index) => mapPostToCommunityFeedPost(post, postProfiles[post.user_id], postComments[post.id] || [], index, dateFnsLocale)),
-    [dateFnsLocale, postComments, postProfiles, posts]
+    () => posts.map((post, index) => mapPostToCommunityFeedPost(
+      post,
+      postProfiles[post.user_id],
+      postComments[post.id] || [],
+      postLikes[post.id],
+      likedPostIds.has(post.id),
+      index,
+      dateFnsLocale,
+    )),
+    [dateFnsLocale, likedPostIds, postComments, postLikes, postProfiles, posts]
   );
 
   const filteredCommunityFeedPosts = useMemo(() => {
@@ -12233,6 +12257,8 @@ function CommunityView({
       const nextPosts = (data || []) as Post[];
       setPosts(nextPosts);
       setPostComments({});
+      setPostLikes(Object.fromEntries(nextPosts.map(post => [post.id, post.likes || 0])));
+      setLikedPostIds(new Set());
 
       const userIds = Array.from(new Set(nextPosts.map(post => post.user_id).filter(Boolean)));
       if (userIds.length > 0) {
@@ -12262,6 +12288,28 @@ function CommunityView({
             return acc;
           }, {});
           setPostComments(groupedComments);
+        }
+
+        const { data: likesData, error: likesError } = await supabase
+          .from('post_likes')
+          .select('post_id,user_id,criado_em')
+          .in('post_id', postIds);
+
+        if (likesError) {
+          console.warn('Community likes unavailable:', likesError.message);
+        } else {
+          const persistedLikes = (likesData || []) as CommunityPersistedLike[];
+          const nextLikeCounts = persistedLikes.reduce<Record<string, number>>((acc, like) => {
+            acc[like.post_id] = (acc[like.post_id] || 0) + 1;
+            return acc;
+          }, {});
+          const currentUserLikedPostIds = new Set(
+            persistedLikes
+              .filter(like => like.user_id === profile.id)
+              .map(like => like.post_id)
+          );
+          setPostLikes(Object.fromEntries(nextPosts.map(post => [post.id, nextLikeCounts[post.id] || 0])));
+          setLikedPostIds(currentUserLikedPostIds);
         }
       }
     } catch (error) {
@@ -12395,19 +12443,49 @@ function CommunityView({
     }
   };
 
-  const handleLike = async (postId: string, nextLikes: number) => {
-    const previousPosts = posts;
-    setPosts(current => current.map(post => post.id === postId ? { ...post, likes: nextLikes } : post));
+  const handleLike = async (post: CommunityMockPost, nextLiked: boolean) => {
+    if (!post.sourcePostId) return;
+    const postId = post.sourcePostId;
+    const previousPostLikes = postLikes;
+    const previousLikedPostIds = likedPostIds;
+    const currentCount = postLikes[postId] ?? post.metrics.likes ?? 0;
+    const nextLikes = Math.max(0, currentCount + (nextLiked ? 1 : -1));
+
+    setPostLikes(current => ({ ...current, [postId]: nextLikes }));
+    setLikedPostIds(current => {
+      const next = new Set(current);
+      if (nextLiked) next.add(postId);
+      else next.delete(postId);
+      return next;
+    });
+    setPosts(current => current.map(item => item.id === postId ? { ...item, likes: nextLikes } : item));
+
     try {
-      const { error } = await supabase
+      if (nextLiked) {
+        const { error } = await supabase
+          .from('post_likes')
+          .upsert({ post_id: postId, user_id: profile.id }, { onConflict: 'post_id,user_id' });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', profile.id);
+        if (error) throw error;
+      }
+
+      const { error: postUpdateError } = await supabase
         .from('posts')
         .update({ likes: nextLikes })
         .eq('id', postId);
 
-      if (error) throw error;
+      if (postUpdateError) console.warn('Could not sync legacy likes count:', postUpdateError.message);
     } catch (error) {
       console.error('Error liking post:', error);
-      setPosts(previousPosts);
+      setPostLikes(previousPostLikes);
+      setLikedPostIds(previousLikedPostIds);
+      setPosts(current => current.map(item => item.id === postId ? { ...item, likes: currentCount } : item));
     }
   };
 

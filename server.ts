@@ -1044,6 +1044,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       if (!query.includes("decline") && itemContext.includes("decline")) score -= 35;
       if (!query.includes("depth") && itemContext.includes("depth")) score -= 35;
       if (!query.includes("jump") && /(jump|plyometric)/.test(itemContext)) score -= 40;
+      if (query.includes("squat") && !query.includes("lunge") && /(lunge|step rear|step back)/.test(itemContext)) score -= 120;
       if (query.includes("push up") && equipment.some((equip: string) => equip.includes("body weight"))) score += 35;
       if (query.includes("push up") && equipment.some((equip: string) => equip && !equip.includes("body weight"))) score -= 90;
       if (query.includes("push up") && /(bosu|ball|weighted|medicine|stability|suspension)/.test(itemContext)) score -= 70;

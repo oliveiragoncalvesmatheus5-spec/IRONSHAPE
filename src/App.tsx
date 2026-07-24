@@ -12174,36 +12174,39 @@ function CommunitySidebarCard({ title, action, icon, children }: { title: string
   );
 }
 
-function CommunitySidebar() {
-  const ranking = [
-    { name: 'Marina Costa', xp: '12.840 XP', medal: 'Ouro', avatar: 'M' },
-    { name: 'Rafael Nunes', xp: '11.920 XP', medal: 'Elite', avatar: 'R' },
-    { name: 'Aline Torres', xp: '10.470 XP', medal: 'Prata', avatar: 'A' },
-    { name: 'Bruno Sato', xp: '9.880 XP', medal: 'Elite', avatar: 'B' },
-    { name: 'Sofia Mendes', xp: '8.740 XP', medal: 'Prata', avatar: 'S' },
-  ];
-  const trends = [
-    { tag: '#TreinoDePernas', posts: '1.248 posts' },
-    { tag: '#Evolução', posts: '986 posts' },
-    { tag: '#Foco', posts: '742 posts' },
-    { tag: '#Nutrição', posts: '691 posts' },
-  ];
-  const friends = [
-    { name: 'Leo Martins', status: 'Treinando agora', avatar: 'L' },
-    { name: 'Bia Rocha', status: 'Postou refeição', avatar: 'B' },
-    { name: 'Isa Fontes', status: 'Finalizou cardio', avatar: 'I' },
-  ];
-  const challenges = [
-    { icon: <Flame size={18} />, name: '21 dias sem falhar', progress: 72 },
-    { icon: <Dumbbell size={18} />, name: 'Força total', progress: 48 },
-    { icon: <Apple size={18} />, name: 'Macros em dia', progress: 64 },
-  ];
+const COMMUNITY_RANKING = [
+  { name: 'Marina Costa', xp: '12.840 XP', medal: 'Ouro', avatar: 'M' },
+  { name: 'Rafael Nunes', xp: '11.920 XP', medal: 'Elite', avatar: 'R' },
+  { name: 'Aline Torres', xp: '10.470 XP', medal: 'Prata', avatar: 'A' },
+  { name: 'Bruno Sato', xp: '9.880 XP', medal: 'Elite', avatar: 'B' },
+  { name: 'Sofia Mendes', xp: '8.740 XP', medal: 'Prata', avatar: 'S' },
+];
 
+const COMMUNITY_TRENDS = [
+  { tag: '#TreinoDePernas', posts: '1.248 posts' },
+  { tag: '#Evolução', posts: '986 posts' },
+  { tag: '#Foco', posts: '742 posts' },
+  { tag: '#Nutrição', posts: '691 posts' },
+];
+
+const COMMUNITY_ACTIVE_FRIENDS = [
+  { name: 'Leo Martins', status: 'Treinando agora', avatar: 'L' },
+  { name: 'Bia Rocha', status: 'Postou refeição', avatar: 'B' },
+  { name: 'Isa Fontes', status: 'Finalizou cardio', avatar: 'I' },
+];
+
+const COMMUNITY_CHALLENGES = [
+  { icon: <Flame size={18} />, name: '21 dias sem falhar', progress: 72 },
+  { icon: <Dumbbell size={18} />, name: 'Força total', progress: 48 },
+  { icon: <Apple size={18} />, name: 'Macros em dia', progress: 64 },
+];
+
+function CommunitySidebar() {
   return (
-    <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
+    <aside className="hidden space-y-5 lg:sticky lg:top-6 lg:block lg:self-start">
       <CommunitySidebarCard title="Ranking semanal" action="Ver ranking" icon={<Trophy size={18} />}>
         <div className="space-y-3">
-          {ranking.map((item, index) => (
+          {COMMUNITY_RANKING.map((item, index) => (
             <div key={item.name} className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-2.5">
               <span className="w-5 text-xs font-black text-primary">{index + 1}</span>
               <CommunityAvatar value={item.avatar} size="h-10 w-10 text-sm" />
@@ -12219,7 +12222,7 @@ function CommunitySidebar() {
 
       <CommunitySidebarCard title="Em alta" action="Ver tudo" icon={<TrendingUp size={18} />}>
         <div className="space-y-2">
-          {trends.map(item => (
+          {COMMUNITY_TRENDS.map(item => (
             <button key={item.tag} type="button" className="flex min-h-[44px] w-full items-center justify-between rounded-2xl bg-white/[0.03] px-3 text-left transition-all hover:bg-primary/10">
               <span className="text-sm font-black text-primary">{item.tag}</span>
               <span className="text-[11px] font-bold text-text-muted">{item.posts}</span>
@@ -12230,7 +12233,7 @@ function CommunitySidebar() {
 
       <CommunitySidebarCard title="Amigos ativos" action="Ver todos" icon={<Users size={18} />}>
         <div className="space-y-3">
-          {friends.map(friend => (
+          {COMMUNITY_ACTIVE_FRIENDS.map(friend => (
             <div key={friend.name} className="flex items-center gap-3">
               <div className="relative">
                 <CommunityAvatar value={friend.avatar} size="h-10 w-10 text-sm" />
@@ -12257,7 +12260,7 @@ function CommunitySidebar() {
 
       <CommunitySidebarCard title="Desafios" action="Ver todos" icon={<Activity size={18} />}>
         <div className="space-y-3">
-          {challenges.map(challenge => (
+          {COMMUNITY_CHALLENGES.map(challenge => (
             <div key={challenge.name} className="rounded-2xl bg-white/[0.03] p-3">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">{challenge.icon}</span>
@@ -12274,6 +12277,65 @@ function CommunitySidebar() {
         </div>
       </CommunitySidebarCard>
     </aside>
+  );
+}
+
+function CommunityMobileHighlights() {
+  return (
+    <section className="lg:hidden rounded-[20px] border border-[#232323] bg-[#111111] p-4">
+      <details className="group">
+        <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <TrendingUp size={18} />
+            </span>
+            <div>
+              <h2 className="text-sm font-black text-white">Explorar comunidade</h2>
+              <p className="text-[11px] font-bold text-text-muted">Ranking e assuntos em alta ficam aqui.</p>
+            </div>
+          </div>
+          <ChevronDown size={18} className="text-text-muted transition-transform group-open:rotate-180" />
+        </summary>
+
+        <div className="mt-4 space-y-4 border-t border-[#232323] pt-4">
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-xs font-black uppercase tracking-widest text-white">Ranking semanal</h3>
+              <span className="text-[10px] font-black text-primary">Top 3</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {COMMUNITY_RANKING.slice(0, 3).map((item, index) => (
+                <div key={item.name} className="min-w-[170px] rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-black text-primary">{index + 1}</span>
+                    <CommunityAvatar value={item.avatar} size="h-10 w-10 text-sm" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-white">{item.name}</p>
+                      <p className="text-[11px] font-bold text-text-muted">{item.xp}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-xs font-black uppercase tracking-widest text-white">Em alta</h3>
+              <span className="text-[10px] font-black text-primary">Hashtags</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {COMMUNITY_TRENDS.map(item => (
+                <button key={item.tag} type="button" className="min-h-[42px] shrink-0 rounded-full border border-primary/20 bg-primary/10 px-4 text-left">
+                  <span className="block text-xs font-black text-primary">{item.tag}</span>
+                  <span className="block text-[10px] font-bold text-text-muted">{item.posts}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
   );
 }
 
@@ -13513,6 +13575,7 @@ function CommunityView({
           onReport={handleReportPost}
           onDelete={handleDeleteCommunityPost}
         />
+        <CommunityMobileHighlights />
         <CommunitySidebar />
       </div>
 

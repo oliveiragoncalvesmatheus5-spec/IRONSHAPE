@@ -12018,7 +12018,7 @@ function CreatePostModal({
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {(['Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'] as CommunityCategory[]).map(option => (
+            {(['Treinos', 'Nutrição', 'Vídeos', 'Fotos', 'Desafios'] as CommunityCategory[]).map(option => (
               <button key={option} type="button" onClick={() => setCategory(option)} className={`min-h-[40px] rounded-xl border px-2 text-[10px] font-black transition-all ${category === option ? 'border-primary bg-primary text-white' : 'border-[#232323] bg-white/5 text-text-muted'}`}>
                 {option}
               </button>
@@ -12031,27 +12031,6 @@ function CreatePostModal({
         </div>
       </motion.div>
     </div>
-  );
-}
-
-function CommunityFilterBar({ filters, selected, onSelect }: { filters: string[]; selected: string; onSelect: (filter: string) => void }) {
-  return (
-    <nav className="grid grid-cols-2 gap-2 min-[390px]:grid-cols-4 sm:flex sm:gap-3 sm:overflow-x-auto sm:pb-1 sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
-      {filters.map((filter) => (
-        <button
-          key={filter}
-          type="button"
-          onClick={() => onSelect(filter)}
-          className={`h-[40px] min-w-0 rounded-full border px-3 text-[12px] font-bold transition-all duration-200 sm:h-[42px] sm:shrink-0 sm:px-4 sm:text-sm ${
-            selected === filter
-              ? 'border-primary bg-primary text-white shadow-[0_10px_24px_rgba(255,106,0,0.2)]'
-              : 'border-[#232323] bg-[#121212] text-text-secondary hover:border-primary/40 hover:text-white'
-          }`}
-        >
-          <span className="block truncate">{filter}</span>
-        </button>
-      ))}
-    </nav>
   );
 }
 
@@ -12248,16 +12227,6 @@ function CommunitySidebar() {
         </div>
       </CommunitySidebarCard>
 
-      <CommunitySidebarCard title="Transformações" action="Ver todas" icon={<Grid3X3 size={18} />}>
-        <div className="grid grid-cols-2 gap-2">
-          {[1, 2, 3, 4].map(index => (
-            <div key={index} className="aspect-square overflow-hidden rounded-2xl border border-[#232323] bg-[#090909]">
-              <img src={getCommunityMedia(index)} alt="" loading="lazy" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-            </div>
-          ))}
-        </div>
-      </CommunitySidebarCard>
-
       <CommunitySidebarCard title="Desafios" action="Ver todos" icon={<Activity size={18} />}>
         <div className="space-y-3">
           {COMMUNITY_CHALLENGES.map(challenge => (
@@ -12282,59 +12251,58 @@ function CommunitySidebar() {
 
 function CommunityMobileHighlights() {
   return (
-    <section className="lg:hidden rounded-[20px] border border-[#232323] bg-[#111111] p-4">
-      <details className="group">
-        <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <TrendingUp size={18} />
-            </span>
-            <div>
-              <h2 className="text-sm font-black text-white">Explorar comunidade</h2>
-              <p className="text-[11px] font-bold text-text-muted">Ranking e assuntos em alta ficam aqui.</p>
-            </div>
-          </div>
-          <ChevronDown size={18} className="text-text-muted transition-transform group-open:rotate-180" />
-        </summary>
-
-        <div className="mt-4 space-y-4 border-t border-[#232323] pt-4">
+    <section className="lg:hidden space-y-3 rounded-[20px] border border-[#232323] bg-[#111111] p-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Trophy size={17} />
+          </span>
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-widest text-white">Ranking semanal</h3>
-              <span className="text-[10px] font-black text-primary">Top 3</span>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {COMMUNITY_RANKING.slice(0, 3).map((item, index) => (
-                <div key={item.name} className="min-w-[170px] rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-black text-primary">{index + 1}</span>
-                    <CommunityAvatar value={item.avatar} size="h-10 w-10 text-sm" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-white">{item.name}</p>
-                      <p className="text-[11px] font-bold text-text-muted">{item.xp}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-widest text-white">Em alta</h3>
-              <span className="text-[10px] font-black text-primary">Hashtags</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {COMMUNITY_TRENDS.map(item => (
-                <button key={item.tag} type="button" className="min-h-[42px] shrink-0 rounded-full border border-primary/20 bg-primary/10 px-4 text-left">
-                  <span className="block text-xs font-black text-primary">{item.tag}</span>
-                  <span className="block text-[10px] font-bold text-text-muted">{item.posts}</span>
-                </button>
-              ))}
-            </div>
+            <h2 className="text-sm font-black text-white">Ranking semanal</h2>
+            <p className="text-[11px] font-bold text-text-muted">Atletas em destaque</p>
           </div>
         </div>
-      </details>
+        <button type="button" className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 text-[10px] font-black uppercase tracking-normal text-primary">
+          <Activity size={14} />
+          Desafios
+        </button>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {COMMUNITY_RANKING.slice(0, 3).map((item, index) => (
+          <div key={item.name} className="min-w-[160px] rounded-2xl border border-white/5 bg-white/[0.03] p-2.5">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-black text-primary">{index + 1}</span>
+              <CommunityAvatar value={item.avatar} size="h-9 w-9 text-xs" />
+              <div className="min-w-0">
+                <p className="truncate text-xs font-black text-white">{item.name}</p>
+                <p className="text-[10px] font-bold text-text-muted">{item.xp}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-[#232323] pt-3">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-black uppercase tracking-widest text-white">Amigos ativos</h3>
+          <span className="text-[10px] font-black text-primary">Agora</span>
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {COMMUNITY_ACTIVE_FRIENDS.map(friend => (
+            <div key={friend.name} className="flex min-w-[148px] items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] p-2.5">
+              <div className="relative">
+                <CommunityAvatar value={friend.avatar} size="h-9 w-9 text-xs" />
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#111111] bg-success" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-black text-white">{friend.name}</p>
+                <p className="truncate text-[10px] font-bold text-text-muted">{friend.status}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
@@ -12394,7 +12362,6 @@ function CommunityView({
   const [editSocialAvatar, setEditSocialAvatar] = useState<File | null>(null);
   const [editSocialAvatarPreview, setEditSocialAvatarPreview] = useState(profile.avatar_url || '');
   const [savingSocialProfile, setSavingSocialProfile] = useState(false);
-  const [selectedCommunityFilter, setSelectedCommunityFilter] = useState('Todos');
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
   const [feedError, setFeedError] = useState(false);
   const [newMockPostCategory, setNewMockPostCategory] = useState<CommunityCategory>('Treinos');
@@ -12415,11 +12382,6 @@ function CommunityView({
   const filteredCommunityFeedPosts = useMemo(() => {
     const normalizedQuery = normalizeCommunityText(communitySearchQuery.trim());
     return communityFeedPosts.filter(post => {
-      const matchesFilter = selectedCommunityFilter === 'Todos'
-        || (selectedCommunityFilter === 'Fotos' && post.format === 'photo')
-        || (selectedCommunityFilter === 'Vídeos' && post.format === 'video')
-        || post.category === selectedCommunityFilter;
-      if (!matchesFilter) return false;
       if (!normalizedQuery) return true;
       return normalizeCommunityText([
         post.user.name,
@@ -12429,7 +12391,7 @@ function CommunityView({
         ...post.hashtags,
       ].join(' ')).includes(normalizedQuery);
     });
-  }, [communityFeedPosts, communitySearchQuery, selectedCommunityFilter]);
+  }, [communityFeedPosts, communitySearchQuery]);
 
   const fetchCommunityStories = async () => {
     try {
@@ -13121,7 +13083,6 @@ function CommunityView({
     persistedStory: story,
   }));
   const visibleStoryItems = communityStoryProfiles.slice(0, 12);
-  const communityFilters = ['Todos', 'Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'];
   const unreadNotifications = communityNotifications.filter(item => !item.read_at).length;
 
   if (activeSocialProfile) {
@@ -13553,7 +13514,7 @@ function CommunityView({
         </div>
       </section>
 
-      <CommunityFilterBar filters={communityFilters} selected={selectedCommunityFilter} onSelect={setSelectedCommunityFilter} />
+      <CommunityMobileHighlights />
 
       {shareFeedback && (
         <div className="max-w-2xl mx-auto flex items-start justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-text-secondary">
@@ -13582,7 +13543,6 @@ function CommunityView({
           onReport={handleReportPost}
           onDelete={handleDeleteCommunityPost}
         />
-        <CommunityMobileHighlights />
         <CommunitySidebar />
       </div>
 
@@ -13721,7 +13681,7 @@ function CommunityView({
                 <div className="space-y-3">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Categoria</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {(['Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'] as CommunityCategory[]).map(option => (
+                    {(['Treinos', 'Nutrição', 'Vídeos', 'Fotos', 'Desafios'] as CommunityCategory[]).map(option => (
                       <button
                         key={option}
                         type="button"

@@ -11207,6 +11207,19 @@ type CommunityPersistedStory = {
   expires_at: string;
 };
 
+type CommunityNotification = {
+  id: string;
+  recipient_id: string;
+  actor_id?: string;
+  actor_name: string;
+  type: 'like' | 'comment' | 'system' | string;
+  title: string;
+  body: string;
+  post_id?: string;
+  read_at?: string | null;
+  criado_em: string;
+};
+
 type CommunityMockPost = {
   id: string;
   sourcePostId?: string;
@@ -12289,6 +12302,8 @@ function CommunityView({
   const [postLikes, setPostLikes] = useState<Record<string, number>>({});
   const [likedPostIds, setLikedPostIds] = useState<Set<string>>(() => new Set());
   const [communityStories, setCommunityStories] = useState<CommunityPersistedStory[]>([]);
+  const [communityNotifications, setCommunityNotifications] = useState<CommunityNotification[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedCommunityStory, setSelectedCommunityStory] = useState<CommunityPersistedStory | null>(null);
   const [storyUploadLoading, setStoryUploadLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -12372,6 +12387,23 @@ function CommunityView({
     }
   };
 
+  const fetchCommunityNotifications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('community_notifications')
+        .select('*')
+        .eq('recipient_id', profile.id)
+        .order('criado_em', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setCommunityNotifications((data || []) as CommunityNotification[]);
+    } catch (error: any) {
+      console.warn('Community notifications unavailable:', error?.message || error);
+      setCommunityNotifications([]);
+    }
+  };
+
   const fetchPosts = async () => {
     setLoading(true);
     setFeedError(false);
@@ -12404,6 +12436,7 @@ function CommunityView({
       setPostLikes(Object.fromEntries(nextPosts.map(post => [post.id, post.likes || 0])));
       setLikedPostIds(new Set());
       await fetchCommunityStories();
+      await fetchCommunityNotifications();
 
       const userIds = Array.from(new Set(nextPosts.map(post => post.user_id).filter(Boolean)));
       if (userIds.length > 0) {
@@ -12611,6 +12644,18 @@ function CommunityView({
           .from('post_likes')
           .upsert({ post_id: postId, user_id: profile.id }, { onConflict: 'post_id,user_id' });
         if (error) throw error;
+
+        if (post.sourcePost?.user_id && post.sourcePost.user_id !== profile.id) {
+          await supabase.from('community_notifications').insert({
+            recipient_id: post.sourcePost.user_id,
+            actor_id: profile.id,
+            actor_name: profile.name || 'Atleta IronShape',
+            type: 'like',
+            title: 'Nova curtida',
+            body: `${profile.name || 'Um atleta'} curtiu sua publicação.`,
+            post_id: postId,
+          });
+        }
       } else {
         const { error } = await supabase
           .from('post_likes')
@@ -12706,7 +12751,39 @@ function CommunityView({
       ...current,
       [post.sourcePostId!]: [...(current[post.sourcePostId!] || []), nextComment],
     }));
+
+    if (post.sourcePost?.user_id && post.sourcePost.user_id !== profile.id) {
+      await supabase.from('community_notifications').insert({
+        recipient_id: post.sourcePost.user_id,
+        actor_id: profile.id,
+        actor_name: profile.name || 'Atleta IronShape',
+        type: 'comment',
+        title: 'Novo comentário',
+        body: `${profile.name || 'Um atleta'} comentou na sua publicação.`,
+        post_id: post.sourcePostId,
+      });
+    }
+
     return nextComment;
+  };
+
+  const openNotifications = async () => {
+    setNotificationsOpen(current => !current);
+    if (communityNotifications.some(item => !item.read_at)) {
+      const readAt = new Date().toISOString();
+      setCommunityNotifications(current => current.map(item => item.read_at ? item : { ...item, read_at: readAt }));
+      const unreadIds = communityNotifications.filter(item => !item.read_at).map(item => item.id);
+      if (unreadIds.length > 0) {
+        const { error } = await supabase
+          .from('community_notifications')
+          .update({ read_at: readAt })
+          .in('id', unreadIds);
+        if (error) {
+          console.warn('Could not mark community notifications as read:', error.message);
+          fetchCommunityNotifications();
+        }
+      }
+    }
   };
 
   const handleReportPost = async (post: CommunityMockPost) => {
@@ -12983,6 +13060,7 @@ function CommunityView({
   }));
   const visibleStoryItems = communityStoryProfiles.slice(0, 12);
   const communityFilters = ['Todos', 'Treinos', 'Nutrição', 'Transformações', 'Vídeos', 'Fotos', 'Desafios'];
+  const unreadNotifications = communityNotifications.filter(item => !item.read_at).length;
 
   if (activeSocialProfile) {
     const isOwnSocialProfile = activeSocialProfile.id === profile.id;
@@ -13239,11 +13317,17 @@ function CommunityView({
             </button>
             <button
               type="button"
+              onClick={openNotifications}
               className="relative flex h-9 w-8 items-center justify-center text-text-secondary transition-all hover:text-white active:scale-95"
               aria-label="Notificações"
+              aria-expanded={notificationsOpen}
             >
               <BellRing size={18} />
-              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black text-white ring-2 ring-[#090909]">3</span>
+              {unreadNotifications > 0 && (
+                <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black text-white ring-2 ring-[#090909]">
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -13251,7 +13335,6 @@ function CommunityView({
               aria-label="Mensagens"
             >
               <Send size={17} />
-              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[9px] font-black text-white ring-2 ring-[#090909]">2</span>
             </button>
             <button
               onClick={() => openSocialProfile(profile.id, profile)}
@@ -13263,6 +13346,48 @@ function CommunityView({
               </span>
             </button>
             <AnimatePresence>
+              {notificationsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                  transition={{ duration: 0.16 }}
+                  className="absolute right-0 top-full z-20 mt-2 w-[280px] overflow-hidden rounded-2xl border border-white/10 bg-surface/95 p-2 shadow-2xl shadow-black/20 backdrop-blur-xl"
+                >
+                  <div className="flex items-center justify-between px-2 py-2">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white">Notificações</h3>
+                    <button type="button" onClick={() => setNotificationsOpen(false)} className="text-text-muted hover:text-white" aria-label="Fechar notificações">
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <div className="max-h-[300px] space-y-1 overflow-y-auto">
+                    {communityNotifications.length === 0 ? (
+                      <div className="rounded-xl bg-white/5 px-3 py-5 text-center">
+                        <BellRing size={22} className="mx-auto text-text-muted" />
+                        <p className="mt-2 text-xs font-bold text-text-muted">Nenhuma notificação ainda.</p>
+                      </div>
+                    ) : (
+                      communityNotifications.map(item => {
+                        const createdAt = new Date(item.criado_em);
+                        return (
+                          <div key={item.id} className={`rounded-xl px-3 py-2.5 ${item.read_at ? 'bg-white/[0.03]' : 'bg-primary/10'}`}>
+                            <div className="flex items-start gap-2">
+                              <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${item.read_at ? 'bg-white/20' : 'bg-primary'}`} />
+                              <div className="min-w-0">
+                                <p className="text-xs font-black text-white">{item.title}</p>
+                                <p className="mt-1 text-[11px] leading-relaxed text-text-secondary">{item.body}</p>
+                                <p className="mt-1 text-[10px] font-bold text-text-muted">
+                                  {isValid(createdAt) ? formatDistanceToNow(createdAt, { addSuffix: true, locale: dateFnsLocale }) : 'agora'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </motion.div>
+              )}
               {languageMenuOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -6, scale: 0.96 }}

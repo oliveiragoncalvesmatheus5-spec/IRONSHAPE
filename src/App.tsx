@@ -11500,15 +11500,15 @@ function PostHeader({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <div className="flex items-start gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+    <div className="flex items-start gap-2.5 px-3.5 pt-3.5 sm:gap-3 sm:px-5 sm:pt-5">
       <button type="button" onClick={onOpenProfile} className="shrink-0 active:scale-95" aria-label={`Abrir perfil de ${post.user.name}`}>
-        <CommunityAvatar value={post.user.avatar} size="h-11 w-11 sm:h-12 sm:w-12" />
+        <CommunityAvatar value={post.user.avatar} size="h-10 w-10 text-sm sm:h-12 sm:w-12" />
       </button>
       <div className="min-w-0 flex-1">
-        <button type="button" onClick={onOpenProfile} className="flex min-w-0 items-center gap-2 text-left">
+        <button type="button" onClick={onOpenProfile} className="flex min-w-0 flex-wrap items-center gap-1.5 text-left sm:gap-2">
           <h3 className="min-w-0 truncate text-sm font-semibold text-white sm:text-[15px]">{post.user.name}</h3>
           {post.user.level && (
-            <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
+            <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-normal text-primary sm:px-2 sm:text-[9px] sm:tracking-wider">
               {post.user.level}
             </span>
           )}
@@ -11521,7 +11521,7 @@ function PostHeader({
         <button
           type="button"
           onClick={() => setMenuOpen(current => !current)}
-          className="flex h-11 w-11 items-center justify-center rounded-full text-text-muted transition-all hover:bg-white/5 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted transition-all hover:bg-white/5 hover:text-white sm:h-11 sm:w-11"
           aria-label="Mais opções"
           aria-expanded={menuOpen}
         >
@@ -11575,8 +11575,8 @@ function PostMedia({ media }: { media: CommunityMockPost['media'] }) {
   const hasCarousel = media.type === 'carousel' && media.images.length > 1;
 
   return (
-    <div className="px-4 sm:px-5">
-      <div className={`relative w-full overflow-hidden rounded-[16px] border border-[#232323] bg-black ${media.ratio} max-h-[520px]`}>
+    <div className="px-3.5 sm:px-5">
+      <div className={`relative w-full overflow-hidden rounded-[16px] border border-[#232323] bg-black ${media.ratio} max-h-[460px] sm:max-h-[520px]`}>
         {hasCarousel ? (
           <div
             className="flex h-full snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -11617,7 +11617,7 @@ function PostMedia({ media }: { media: CommunityMockPost['media'] }) {
 
 function PostMetrics({ likes, comments, views }: CommunityMockPost['metrics']) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 text-[11px] font-bold text-text-muted sm:px-5 sm:text-xs">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 text-[10px] font-bold text-text-muted sm:px-5 sm:text-xs">
       <span className="flex items-center gap-1.5"><Heart size={14} /> {formatCommunityNumber(likes)} curtidas</span>
       <span className="flex items-center gap-1.5"><MessageCircle size={14} /> {formatCommunityNumber(comments)} comentários</span>
       <span className="flex items-center gap-1.5"><Eye size={14} /> {formatCommunityNumber(views)} visualizações</span>
@@ -11647,13 +11647,13 @@ function PostActions({
     { label: 'Salvar', icon: <Bookmark size={20} className={saved ? 'fill-current' : ''} />, onClick: onSave, active: saved },
   ];
   return (
-    <div className="grid grid-cols-4 gap-1 border-t border-[#232323] px-2 py-2 sm:px-3">
+    <div className="grid grid-cols-4 gap-1 border-t border-[#232323] px-1.5 py-2 sm:px-3">
       {actions.map(action => (
         <button
           key={action.label}
           type="button"
           onClick={action.onClick}
-          className={`flex min-h-[46px] items-center justify-center gap-1.5 rounded-xl px-1 text-[11px] font-black transition-all duration-200 active:scale-95 sm:text-xs ${
+          className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-black transition-all duration-200 active:scale-95 sm:min-h-[46px] sm:gap-1.5 sm:text-xs ${
             action.active ? 'text-primary' : 'text-text-muted hover:bg-white/5 hover:text-white'
           }`}
         >
@@ -11884,7 +11884,7 @@ function CommunityPostCard({
   };
 
   return (
-    <motion.article layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden rounded-[20px] border border-[#232323] bg-[#111111] shadow-[0_18px_42px_rgba(0,0,0,0.22)]">
+    <motion.article layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden rounded-[18px] border border-[#232323] bg-[#111111] shadow-[0_18px_42px_rgba(0,0,0,0.22)] sm:rounded-[20px]">
       <PostHeader
         post={post}
         onOpenProfile={() => onOpenProfile?.(post)}
@@ -11893,7 +11893,7 @@ function CommunityPostCard({
         canDelete={canDeletePost}
         busy={moderationSaving}
       />
-      <div className="px-4 py-4 sm:px-5">
+      <div className="px-3.5 py-3.5 sm:px-5 sm:py-4">
         {moderationFeedback && (
           <div className="mb-3 flex items-start justify-between gap-3 rounded-2xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs font-bold text-text-secondary">
             <span>{moderationFeedback}</span>
@@ -11915,7 +11915,7 @@ function CommunityPostCard({
       <div className="space-y-4 py-4">
         <PostMetrics likes={currentLikes} comments={currentComments} views={post.metrics.views} />
         <PostActions liked={liked} saved={saved} onLike={toggleLike} onSave={() => setSaved(current => !current)} onComment={() => setShowComments(true)} onShare={() => setShowShare(true)} />
-        <div className="space-y-3 px-4 sm:px-5">
+        <div className="space-y-3 px-3.5 sm:px-5">
           {localComments.slice(0, 2).map(comment => <CommentPreview key={comment.id} comment={comment} />)}
           <button type="button" onClick={() => setShowComments(true)} className="text-xs font-bold text-text-muted hover:text-primary">
             Ver todos os comentários
@@ -11947,14 +11947,14 @@ function CommunityPostCard({
 
 function CreatePostComposer({ profile, onOpen }: { profile: UserProfile; onOpen: () => void }) {
   return (
-    <button type="button" onClick={onOpen} className="flex w-full items-start gap-3 rounded-[20px] border border-[#232323] bg-[#111111] p-4 text-left transition-all hover:border-primary/40 sm:p-5">
-      <CommunityAvatar value={profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I'} size="h-11 w-11" />
+    <button type="button" onClick={onOpen} className="flex w-full items-start gap-3 rounded-[18px] border border-[#232323] bg-[#111111] p-3.5 text-left transition-all hover:border-primary/40 sm:rounded-[20px] sm:p-5">
+      <CommunityAvatar value={profile.avatar_url || profile.name?.[0]?.toUpperCase() || 'I'} size="h-10 w-10 text-sm sm:h-11 sm:w-11" />
       <div className="min-w-0 flex-1 space-y-3">
-        <p className="pt-1 text-sm font-medium leading-relaxed text-text-muted">Compartilhe sua evolução...</p>
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <span className="flex min-h-[40px] min-w-[86px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><ImageIcon size={14} /> Foto</span>
-          <span className="flex min-h-[40px] min-w-[86px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Play size={14} /> Vídeo</span>
-          <span className="flex min-h-[40px] min-w-[86px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 text-[11px] font-black text-text-secondary"><Dumbbell size={14} /> Treino</span>
+        <p className="pt-0.5 text-sm font-medium leading-relaxed text-text-muted">Compartilhe sua evolução...</p>
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          <span className="flex min-h-[38px] min-w-0 items-center justify-center gap-1 rounded-xl bg-white/5 px-2 text-[10px] font-black text-text-secondary sm:min-h-[40px] sm:gap-1.5 sm:px-3 sm:text-[11px]"><ImageIcon size={13} /> Foto</span>
+          <span className="flex min-h-[38px] min-w-0 items-center justify-center gap-1 rounded-xl bg-white/5 px-2 text-[10px] font-black text-text-secondary sm:min-h-[40px] sm:gap-1.5 sm:px-3 sm:text-[11px]"><Play size={13} /> Vídeo</span>
+          <span className="flex min-h-[38px] min-w-0 items-center justify-center gap-1 rounded-xl bg-white/5 px-2 text-[10px] font-black text-text-secondary sm:min-h-[40px] sm:gap-1.5 sm:px-3 sm:text-[11px]"><Dumbbell size={13} /> Treino</span>
         </div>
       </div>
     </button>
@@ -12036,19 +12036,19 @@ function CreatePostModal({
 
 function CommunityFilterBar({ filters, selected, onSelect }: { filters: string[]; selected: string; onSelect: (filter: string) => void }) {
   return (
-    <nav className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
+    <nav className="grid grid-cols-2 gap-2 min-[390px]:grid-cols-4 sm:flex sm:gap-3 sm:overflow-x-auto sm:pb-1 sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden" aria-label="Filtros da comunidade">
       {filters.map((filter) => (
         <button
           key={filter}
           type="button"
           onClick={() => onSelect(filter)}
-          className={`h-[42px] shrink-0 rounded-full border px-4 text-sm font-bold transition-all duration-200 ${
+          className={`h-[40px] min-w-0 rounded-full border px-3 text-[12px] font-bold transition-all duration-200 sm:h-[42px] sm:shrink-0 sm:px-4 sm:text-sm ${
             selected === filter
               ? 'border-primary bg-primary text-white shadow-[0_10px_24px_rgba(255,106,0,0.2)]'
               : 'border-[#232323] bg-[#121212] text-text-secondary hover:border-primary/40 hover:text-white'
           }`}
         >
-          {filter}
+          <span className="block truncate">{filter}</span>
         </button>
       ))}
     </nav>
@@ -12128,7 +12128,7 @@ function CommunityFeed({
   }
 
   return (
-    <section className="w-full space-y-4 px-0 sm:space-y-5">
+    <section className="w-full space-y-3.5 px-0 sm:space-y-5">
       <CreatePostComposer profile={profile} onOpen={onCreate} />
       <AnimatePresence mode="popLayout">
         {loading ? (
@@ -13350,16 +13350,23 @@ function CommunityView({
   }
 
   return (
-    <div className="community-light-scope space-y-6 pb-40 md:space-y-6 lg:pb-0">
-      <header className="space-y-4 rounded-[20px] border border-[#232323] bg-[#090909] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:p-5">
-        <div className="flex justify-end">
-          <div className="relative flex items-center gap-1">
+    <div className="community-light-scope space-y-5 pb-[calc(164px+env(safe-area-inset-bottom))] md:space-y-6 lg:pb-0">
+      <header className="space-y-4 rounded-[18px] border border-[#232323] bg-[#090909] p-3.5 shadow-[0_18px_50px_rgba(0,0,0,0.22)] sm:rounded-[20px] sm:p-5">
+        <div className="flex justify-between gap-3">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex h-9 min-w-0 max-w-[132px] items-center justify-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 text-[10px] font-black uppercase tracking-normal text-primary active:scale-[0.98] sm:hidden"
+          >
+            <Plus size={14} />
+            Publicar
+          </button>
+          <div className="relative ml-auto flex items-center gap-0.5">
             <button
               type="button"
               aria-label="Idioma"
               aria-expanded={languageMenuOpen}
               onClick={() => setLanguageMenuOpen(open => !open)}
-              className="flex h-9 w-8 items-center justify-center text-text-primary transition-all active:scale-95"
+              className="flex h-9 w-7 items-center justify-center text-text-primary transition-all active:scale-95 sm:w-8"
             >
               <span className="relative flex items-center justify-center">
                 <Languages size={18} className="text-primary" />
@@ -13373,14 +13380,14 @@ function CommunityView({
               aria-label={themeMode === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
               aria-pressed={themeMode === 'light'}
               onClick={() => setThemeMode(current => current === 'dark' ? 'light' : 'dark')}
-              className="flex h-9 w-8 items-center justify-center text-text-primary transition-all active:scale-95"
+              className="flex h-9 w-7 items-center justify-center text-text-primary transition-all active:scale-95 sm:w-8"
             >
               {themeMode === 'dark' ? <Sun size={18} className="text-primary" /> : <Moon size={18} className="text-primary" />}
             </button>
             <button
               type="button"
               onClick={openNotifications}
-              className="relative flex h-9 w-8 items-center justify-center text-text-secondary transition-all hover:text-white active:scale-95"
+              className="relative flex h-9 w-7 items-center justify-center text-text-secondary transition-all hover:text-white active:scale-95 sm:w-8"
               aria-label="Notificações"
               aria-expanded={notificationsOpen}
             >
@@ -13393,14 +13400,14 @@ function CommunityView({
             </button>
             <button
               type="button"
-              className="relative flex h-9 w-8 items-center justify-center text-text-secondary transition-all hover:text-white active:scale-95"
+              className="relative flex h-9 w-7 items-center justify-center text-text-secondary transition-all hover:text-white active:scale-95 sm:w-8"
               aria-label="Mensagens"
             >
               <Send size={17} />
             </button>
             <button
               onClick={() => openSocialProfile(profile.id, profile)}
-              className="flex h-9 w-8 items-center justify-center overflow-hidden text-sm font-black text-primary transition-all active:scale-95"
+              className="flex h-9 w-7 items-center justify-center overflow-hidden text-sm font-black text-primary transition-all active:scale-95 sm:w-8"
               aria-label="Abrir meu perfil social"
             >
               <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary text-xs text-white">
@@ -13414,7 +13421,7 @@ function CommunityView({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -6, scale: 0.96 }}
                   transition={{ duration: 0.16 }}
-                  className="absolute right-0 top-full z-20 mt-2 w-[280px] overflow-hidden rounded-2xl border border-white/10 bg-surface/95 p-2 shadow-2xl shadow-black/20 backdrop-blur-xl"
+                  className="absolute right-0 top-full z-20 mt-2 w-[min(280px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/10 bg-surface/95 p-2 shadow-2xl shadow-black/20 backdrop-blur-xl"
                 >
                   <div className="flex items-center justify-between px-2 py-2">
                     <h3 className="text-xs font-black uppercase tracking-widest text-white">Notificações</h3>
@@ -13481,10 +13488,10 @@ function CommunityView({
         </div>
 
         <div className="min-w-0">
-          <h1 className="text-[24px] font-black leading-[1.05] tracking-normal text-white min-[380px]:text-[26px] sm:text-[30px]">
+          <h1 className="text-[22px] font-black leading-[1.08] tracking-normal text-white min-[380px]:text-[24px] sm:text-[30px]">
             Comunidade <span className="text-primary">IronShape</span>
           </h1>
-          <p className="mt-2 text-xs font-medium leading-relaxed text-text-muted sm:text-sm">
+          <p className="mt-2 text-[11px] font-medium leading-relaxed text-text-muted sm:text-sm">
             Evolução, disciplina e comunidade em tempo real.
           </p>
         </div>
@@ -13495,7 +13502,7 @@ function CommunityView({
             value={communitySearchQuery}
             onChange={(event) => setCommunitySearchQuery(event.target.value)}
             placeholder="Pesquisar posts, usuários, hashtags..."
-            className="h-12 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50 sm:h-[52px]"
+            className="h-11 w-full rounded-2xl border border-[#232323] bg-[#121212] pl-11 pr-4 text-xs text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/50 sm:h-[52px] sm:text-sm"
             aria-label="Pesquisar usuários, posts e hashtags"
           />
         </div>
@@ -13578,16 +13585,6 @@ function CommunityView({
         <CommunityMobileHighlights />
         <CommunitySidebar />
       </div>
-
-      <button
-        type="button"
-        onClick={() => setShowCreateModal(true)}
-        className="fixed right-4 z-[80] flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_18px_40px_rgba(255,106,0,0.32)] transition-all active:scale-95 sm:hidden"
-        style={{ bottom: 'calc(104px + env(safe-area-inset-bottom))' }}
-        aria-label="Nova publicação"
-      >
-        <Plus size={25} />
-      </button>
 
       {/* Create Post Modal */}
       <AnimatePresence>

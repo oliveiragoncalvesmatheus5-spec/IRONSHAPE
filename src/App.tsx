@@ -4487,6 +4487,49 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
     return dashboardText.notProvided;
   };
 
+  const getWellnessCheckInMessage = (draft: WellnessCheckInDraft) => {
+    const sleptWell = draft.sleepHours >= 7 && draft.sleepQuality === 'high';
+    const sleptPoorly = draft.sleepHours < 6 || draft.sleepQuality === 'low';
+    const highEnergy = draft.energy === 'high';
+    const lowEnergy = draft.energy === 'low';
+    const highSoreness = draft.soreness === 'high';
+    const lowSoreness = draft.soreness === 'low';
+
+    if (sleptWell && highEnergy && !highSoreness) {
+      return 'Sono em dia e energia alta: excelente base para treinar forte hoje. Capriche no aquecimento, entre focado e aproveite essa disposição para buscar uma execução ainda melhor.';
+    }
+
+    if (sleptWell && highEnergy && highSoreness) {
+      return 'Seu sono está ótimo e sua energia veio alta. Como o cansaço muscular também está alto, use essa disposição com inteligência: aqueça bem, respeite a técnica e ajuste a carga se algum músculo reclamar.';
+    }
+
+    if (sleptWell && lowSoreness) {
+      return 'Boa recuperação hoje: sono de qualidade e pouco cansaço muscular. Um ótimo cenário para treinar com consistência, subir o ritmo aos poucos e fazer uma sessão bem feita.';
+    }
+
+    if (sleptWell) {
+      return 'Seu sono foi um ponto forte hoje. Use essa base a seu favor: aqueça com calma, mantenha o foco e deixe a intensidade crescer conforme o corpo responder.';
+    }
+
+    if (sleptPoorly && (lowEnergy || highSoreness)) {
+      return 'Seu relato pede um treino mais estratégico hoje. Priorize aquecimento, técnica e controle de carga, respeitando qualquer sinal de dor ou queda de disposição.';
+    }
+
+    if (sleptPoorly) {
+      return 'Seu sono pode afetar a performance hoje. Comece de forma gradual, ajuste o ritmo conforme sua disposição e transforme o treino em uma vitória de consistência.';
+    }
+
+    if (lowEnergy || highSoreness) {
+      return 'Seu corpo parece pedir atenção extra hoje. Faça um aquecimento cuidadoso, controle a carga e mantenha o treino produtivo sem ignorar sinais de desconforto.';
+    }
+
+    if (highEnergy && lowSoreness) {
+      return 'Você relata boa disposição e pouco cansaço muscular. Ótimo momento para treinar com intenção, manter a técnica firme e sair com a sensação de missão cumprida.';
+    }
+
+    return 'Seu relato indica disposição moderada. Comece pelo aquecimento, encontre o ritmo do corpo e ajuste a intensidade para fazer um treino sólido.';
+  };
+
   const saveWellnessCheckIn = () => {
     if (!checkInDraft.energy || !checkInDraft.sleepQuality || !checkInDraft.soreness || checkInDraft.sleepHours <= 0) return;
     const nextCheckIn: DailyWellnessCheckIn = {
@@ -5535,13 +5578,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                   <div className="rounded-2xl border border-primary/20 bg-primary/[0.07] p-4 flex items-start gap-3">
                     <Info size={18} className="text-primary mt-0.5 shrink-0" />
                     <p className="text-xs sm:text-sm leading-relaxed text-text-secondary">
-                      {checkInDraft.energy === 'low' || checkInDraft.soreness === 'high'
-                        ? 'Seu relato indica recuperação reduzida. Considere diminuir a carga, alongar mais e respeitar qualquer sinal de dor.'
-                        : checkInDraft.sleepHours < 6 || checkInDraft.sleepQuality === 'low'
-                          ? 'Seu sono pode afetar a performance hoje. Faça um aquecimento gradual e ajuste o ritmo conforme sua disposição.'
-                          : checkInDraft.energy === 'high' && checkInDraft.soreness === 'low'
-                            ? 'Você relata boa disposição e pouco cansaço muscular para o treino de hoje.'
-                            : 'Seu relato indica disposição moderada. Comece pelo aquecimento e ajuste a intensidade conforme se sentir.'}
+                      {getWellnessCheckInMessage(checkInDraft)}
                     </p>
                   </div>
                 )}
@@ -11997,10 +12034,10 @@ function CreatePostModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[125] flex items-end justify-center sm:items-center sm:p-5">
+    <div className="fixed inset-0 z-[125] flex items-end justify-center overflow-y-auto sm:items-center sm:p-5">
       <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/75 backdrop-blur-sm" aria-label="Fechar criação" />
-      <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} className="relative w-full max-w-lg rounded-t-[30px] border border-[#232323] bg-[#111111] p-5 shadow-2xl sm:rounded-[30px]">
-        <div className="mb-5 flex items-center justify-between">
+      <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} className="relative flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-[30px] border border-[#232323] bg-[#111111] shadow-2xl sm:rounded-[30px]">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#232323] p-5">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Mock local</p>
             <h3 className="text-xl font-black">Criar publicação</h3>
@@ -12009,7 +12046,7 @@ function CreatePostModal({
             <X size={19} />
           </button>
         </div>
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 pb-[calc(96px+env(safe-area-inset-bottom))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <textarea value={content} onChange={event => setContent(event.target.value)} placeholder="Compartilhe sua evolução com a comunidade..." className="min-h-[130px] w-full resize-none rounded-2xl border border-[#232323] bg-[#090909] p-4 text-sm outline-none focus:border-primary/60" />
           <div className="flex min-h-[118px] items-center justify-center rounded-2xl border border-dashed border-[#333333] bg-[#090909] text-center text-sm font-bold text-text-muted">
             <div>
@@ -12024,6 +12061,8 @@ function CreatePostModal({
               </button>
             ))}
           </div>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 border-t border-[#232323] bg-[#111111]/95 p-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur">
           <button type="button" onClick={publish} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-primary/20">
             <Send size={18} />
             Publicar
@@ -13659,7 +13698,7 @@ function CommunityView({
         )}
 
         {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 sm:items-center sm:p-6">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -13668,22 +13707,25 @@ function CommunityView({
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.96, y: 28 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-surface rounded-[40px] border border-white/10 shadow-2xl overflow-hidden"
+              exit={{ opacity: 0, scale: 0.96, y: 28 }}
+              className="relative flex max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[30px] border border-white/10 bg-surface shadow-2xl sm:max-h-[90vh] sm:rounded-[40px]"
             >
-              <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
-                <h3 className="text-xl font-black">Nova Publicação</h3>
+              <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-white/5 px-5 py-4 sm:p-6">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary">Comunidade</p>
+                  <h3 className="text-lg font-black sm:text-xl">Nova Publicação</h3>
+                </div>
                 <button 
                   onClick={() => setShowCreateModal(false)}
-                  className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors hover:bg-white/10"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 pb-[calc(96px+env(safe-area-inset-bottom))] sm:space-y-6 sm:p-6 sm:pb-28 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {postError && (
                   <div className="p-4 bg-error/10 border border-error/20 rounded-2xl flex items-center gap-3 text-error text-sm animate-shake">
                     <AlertTriangle size={18} className="shrink-0" />
@@ -13705,7 +13747,7 @@ function CommunityView({
                   <label className="text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Mídia</label>
                   {imagePreview ? (
                     <div className="space-y-3">
-                      <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-[4/5] sm:aspect-[4/3] max-h-[480px] bg-black">
+                      <div className="relative max-h-[300px] overflow-hidden rounded-2xl border border-white/10 bg-black aspect-[4/5] sm:aspect-[4/3] sm:max-h-[420px]">
                         <img
                           src={imagePreview}
                           alt=""
@@ -13774,10 +13816,13 @@ function CommunityView({
                   </div>
                 </div>
 
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-surface/95 px-5 py-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur sm:px-6">
                 <button 
                   onClick={handleCreatePost}
                   disabled={isPublishing || (!newPostContent.trim() && !imagePreview)}
-                  className="w-full bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all shadow-xl shadow-primary/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-sm font-black text-text-primary shadow-xl shadow-primary/20 transition-all hover:bg-primary-hover active:scale-[0.98] disabled:opacity-50"
                 >
                   {isPublishing ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                   {isPublishing ? 'Publicando...' : 'Publicar no Feed'}

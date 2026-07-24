@@ -12250,22 +12250,33 @@ function CommunitySidebar() {
 }
 
 function CommunityMobileHighlights() {
+  const [activeMobilePanel, setActiveMobilePanel] = useState<'ranking' | 'friends' | 'challenges' | null>(null);
   const topRanking = COMMUNITY_RANKING[0];
   const activeCount = COMMUNITY_ACTIVE_FRIENDS.length;
   const challengeCount = COMMUNITY_CHALLENGES.length;
 
   return (
-    <section className="lg:hidden">
+    <section className="lg:hidden space-y-2.5">
       <div className="grid grid-cols-3 gap-2">
-        <button type="button" className="min-w-0 rounded-2xl border border-primary/25 bg-primary/10 px-2 py-3 text-left transition-all active:scale-[0.98]">
-          <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white shadow-[0_10px_22px_rgba(255,106,0,0.22)]">
+        <button
+          type="button"
+          onClick={() => setActiveMobilePanel(activeMobilePanel === 'ranking' ? null : 'ranking')}
+          aria-expanded={activeMobilePanel === 'ranking'}
+          className={`min-w-0 rounded-2xl border px-2 py-3 text-left transition-all active:scale-[0.98] ${activeMobilePanel === 'ranking' ? 'border-primary/40 bg-primary/15' : 'border-primary/25 bg-primary/10'}`}
+        >
+          <span className={`mb-2 flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-[0_10px_22px_rgba(255,106,0,0.22)] ${activeMobilePanel === 'ranking' ? 'bg-primary' : 'bg-primary/80'}`}>
             <Trophy size={15} />
           </span>
           <span className="block truncate text-[11px] font-black text-white">Ranking</span>
           <span className="mt-0.5 block truncate text-[9px] font-bold text-text-muted">{topRanking ? `#1 ${topRanking.name}` : 'Top semanal'}</span>
         </button>
 
-        <button type="button" className="min-w-0 rounded-2xl border border-[#232323] bg-[#111111] px-2 py-3 text-left transition-all active:scale-[0.98]">
+        <button
+          type="button"
+          onClick={() => setActiveMobilePanel(activeMobilePanel === 'friends' ? null : 'friends')}
+          aria-expanded={activeMobilePanel === 'friends'}
+          className={`min-w-0 rounded-2xl border px-2 py-3 text-left transition-all active:scale-[0.98] ${activeMobilePanel === 'friends' ? 'border-primary/40 bg-primary/10' : 'border-[#232323] bg-[#111111]'}`}
+        >
           <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-primary">
             <Users size={15} />
           </span>
@@ -12273,7 +12284,12 @@ function CommunityMobileHighlights() {
           <span className="mt-0.5 block truncate text-[9px] font-bold text-text-muted">{activeCount} online agora</span>
         </button>
 
-        <button type="button" className="min-w-0 rounded-2xl border border-[#232323] bg-[#111111] px-2 py-3 text-left transition-all active:scale-[0.98]">
+        <button
+          type="button"
+          onClick={() => setActiveMobilePanel(activeMobilePanel === 'challenges' ? null : 'challenges')}
+          aria-expanded={activeMobilePanel === 'challenges'}
+          className={`min-w-0 rounded-2xl border px-2 py-3 text-left transition-all active:scale-[0.98] ${activeMobilePanel === 'challenges' ? 'border-primary/40 bg-primary/10' : 'border-[#232323] bg-[#111111]'}`}
+        >
           <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-primary">
             <Activity size={15} />
           </span>
@@ -12281,6 +12297,88 @@ function CommunityMobileHighlights() {
           <span className="mt-0.5 block truncate text-[9px] font-bold text-text-muted">{challengeCount} ativos</span>
         </button>
       </div>
+
+      <AnimatePresence mode="wait">
+        {activeMobilePanel === 'ranking' && (
+          <motion.div
+            key="ranking"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="rounded-2xl border border-[#232323] bg-[#111111] p-3"
+          >
+            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {COMMUNITY_RANKING.slice(0, 5).map((item, index) => (
+                <div key={item.name} className="flex min-w-[148px] items-center gap-2 rounded-xl bg-white/[0.04] p-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[11px] font-black text-primary">{index + 1}</span>
+                  <CommunityAvatar value={item.avatar} size="h-8 w-8 text-xs" />
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-black text-white">{item.name}</p>
+                    <p className="text-[10px] font-bold text-text-muted">{item.xp}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {activeMobilePanel === 'friends' && (
+          <motion.div
+            key="friends"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="rounded-2xl border border-[#232323] bg-[#111111] p-3"
+          >
+            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {COMMUNITY_ACTIVE_FRIENDS.map(friend => (
+                <div key={friend.name} className="flex min-w-[150px] items-center gap-2 rounded-xl bg-white/[0.04] p-2">
+                  <div className="relative">
+                    <CommunityAvatar value={friend.avatar} size="h-8 w-8 text-xs" />
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#111111] bg-success" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-black text-white">{friend.name}</p>
+                    <p className="truncate text-[10px] font-bold text-text-muted">{friend.status}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {activeMobilePanel === 'challenges' && (
+          <motion.div
+            key="challenges"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="rounded-2xl border border-[#232323] bg-[#111111] p-3"
+          >
+            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {COMMUNITY_CHALLENGES.map(challenge => (
+                <div key={challenge.name} className="min-w-[170px] rounded-xl bg-white/[0.04] p-2.5">
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        {challenge.icon}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-black text-white">{challenge.name}</p>
+                        <p className="truncate text-[10px] font-bold text-text-muted">Progresso do desafio</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black text-primary">{challenge.progress}%</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${challenge.progress}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -13428,10 +13526,10 @@ function CommunityView({
 
         <div className="min-w-0">
           <h1 className="text-[22px] font-black leading-[1.08] tracking-normal text-white min-[380px]:text-[24px] sm:text-[30px]">
-            Comunidade <span className="text-primary">IronShape</span>
+            Sua evolução começa na <span className="text-primary">Comunidade IronShape</span>
           </h1>
           <p className="mt-2 text-[11px] font-medium leading-relaxed text-text-muted sm:text-sm">
-            Evolução, disciplina e comunidade em tempo real.
+            Compartilhe vitórias, acompanhe atletas reais e mantenha o foco todos os dias.
           </p>
         </div>
 

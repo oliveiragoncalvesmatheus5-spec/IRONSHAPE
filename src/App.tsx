@@ -4394,6 +4394,70 @@ type WellnessCheckInDraft = {
   soreness: WellnessLevel | '';
 };
 
+type DashboardNutritionDay = {
+  day: string;
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  isToday: boolean;
+  isFuture: boolean;
+};
+
+type NutritionTrackerSnapshot = {
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+const getNutritionTrackerStorageKey = (userId: string, date: string) => `nutrition_tracker_${userId}_${date}`;
+
+const readNutritionTrackerSnapshot = (userId: string, date: string): NutritionTrackerSnapshot | null => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getNutritionTrackerStorageKey(userId, date)) || 'null') as NutritionTrackerSnapshot | null;
+    if (!parsed || parsed.date !== date) return null;
+    return {
+      date,
+      calories: Number(parsed.calories) || 0,
+      protein: Number(parsed.protein) || 0,
+      carbs: Number(parsed.carbs) || 0,
+      fat: Number(parsed.fat) || 0,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const buildDashboardNutritionWeek = (userId: string, todayStr: string, logMap = new Map<string, Omit<NutritionTrackerSnapshot, 'date'>>()): DashboardNutritionDay[] => {
+  const today = new Date(`${todayStr}T12:00:00`);
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const localToday = readNutritionTrackerSnapshot(userId, todayStr);
+  if (localToday) logMap.set(todayStr, localToday);
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const date = d.toISOString().split('T')[0];
+    const log = logMap.get(date);
+    return {
+      day: labels[i],
+      date,
+      calories: log?.calories ?? 0,
+      protein: log?.protein ?? 0,
+      carbs: log?.carbs ?? 0,
+      fat: log?.fat ?? 0,
+      isToday: date === todayStr,
+      isFuture: date > todayStr,
+    };
+  });
+};
+
 function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNutrition, onViewProgress }: {
   profile: UserProfile,
   language: LanguageCode,
@@ -4412,7 +4476,6 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
     return fullName.split(' ')[0].toUpperCase();
   };
 
-  const [weeklyCalData, setWeeklyCalData] = useState<{ day: string; date: string; calories: number; protein: number; carbs: number; fat: number; isToday: boolean; isFuture: boolean }[]>([]);
   const [weeklyCount, setWeeklyCount] = useState(0);
   const [trainingOnboarding, setTrainingOnboarding] = useState<any>(null);
   const storageUserId = user?.id || profile.id || 'guest';
@@ -4421,6 +4484,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
   const wellnessStorageKey = `wellness_checkins_${storageUserId}`;
   const todayCheckInDate = format(new Date(), 'yyyy-MM-dd');
   const hydrationStorageKey = `hydration_intake_${storageUserId}_${todayCheckInDate}`;
+  const [weeklyCalData, setWeeklyCalData] = useState<DashboardNutritionDay[]>(() => buildDashboardNutritionWeek(storageUserId, todayCheckInDate));
   const [savedWeeklyWorkouts, setSavedWeeklyWorkouts] = useState<WeeklyWorkoutSlot[]>(() => safeParseArray<WeeklyWorkoutSlot>(weeklyStorageKey));
   const [savedWeeklyDoneIds, setSavedWeeklyDoneIds] = useState<string[]>(() => safeParseArray<string>(weeklyDoneStorageKey));
   const [dashboardWorkoutPendingId, setDashboardWorkoutPendingId] = useState<string | null>(null);
@@ -4552,6 +4616,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
 
     setDailyCheckIn(nextCheckIn);
     setShowWellnessCheckIn(false);
+    window.dispatchEvent(new CustomEvent('ironshape:wellness-checkin-updated', { detail: nextCheckIn }));
     trackEvent('wellness_checkin_saved', {
       energy: nextCheckIn.energy,
       sleep_quality: nextCheckIn.sleepQuality,
@@ -4757,6 +4822,9 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
     setWaterIntakeMl(currentValue => {
       const nextValue = Math.max(0, Math.min(10000, currentValue + amountMl));
       localStorage.setItem(hydrationStorageKey, String(nextValue));
+      window.dispatchEvent(new CustomEvent('ironshape:hydration-updated', {
+        detail: { userId: storageUserId, date: todayCheckInDate, waterIntakeMl: nextValue },
+      }));
       trackEvent('hydration_quick_update', {
         amount_ml: amountMl,
         total_ml: nextValue,
@@ -4801,33 +4869,30 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
   }, [weeklyStorageKey, weeklyDoneStorageKey]);
 
   useEffect(() => {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const dow = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
-    const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-    const weekDates = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      return d.toISOString().split('T')[0];
-    });
-    type DayLog = { calories: number; protein: number; carbs: number; fat: number };
-    const build = (logMap: Map<string, DayLog>) =>
-      setWeeklyCalData(weekDates.map((date, i) => {
-        const log = logMap.get(date);
-        return {
-          day: labels[i], date,
-          calories: log?.calories ?? 0,
-          protein: log?.protein ?? 0,
-          carbs: log?.carbs ?? 0,
-          fat: log?.fat ?? 0,
-          isToday: date === todayStr,
-          isFuture: date > todayStr,
-        };
-      }));
+    const todayStr = todayCheckInDate;
+    const weekDates = buildDashboardNutritionWeek(storageUserId, todayStr).map(day => day.date);
+    const build = (logMap = new Map<string, Omit<NutritionTrackerSnapshot, 'date'>>()) =>
+      setWeeklyCalData(buildDashboardNutritionWeek(storageUserId, todayStr, logMap));
+
+    const syncTodayNutritionSnapshot = (event?: Event) => {
+      const detail = event instanceof CustomEvent ? event.detail as Partial<NutritionTrackerSnapshot> & { userId?: string } : null;
+      if (detail?.userId && detail.userId !== storageUserId) return;
+      if (detail?.date && detail.date !== todayStr) return;
+      const snapshot = readNutritionTrackerSnapshot(storageUserId, todayStr);
+      if (!snapshot && !detail) return;
+      const next = snapshot || detail;
+      setWeeklyCalData(current => current.map(day => day.date === todayStr ? {
+        ...day,
+        calories: Number(next.calories) || 0,
+        protein: Number(next.protein) || 0,
+        carbs: Number(next.carbs) || 0,
+        fat: Number(next.fat) || 0,
+      } : day));
+    };
+
     const fetchCals = async () => {
-      if (!profile.id || !isSupabaseConfigured) { build(new Map()); return; }
+      build();
+      if (!profile.id || !isSupabaseConfigured) return;
       try {
         const { data } = await supabase
           .from('nutrition_logs')
@@ -4836,10 +4901,16 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
           .gte('date', weekDates[0])
           .lte('date', weekDates[6]);
         build(new Map((data ?? []).map((l: any) => [l.date, { calories: l.calories, protein: l.protein, carbs: l.carbs, fat: l.fat }])));
-      } catch { build(new Map()); }
+      } catch { build(); }
     };
     fetchCals();
-  }, [profile.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    window.addEventListener('storage', syncTodayNutritionSnapshot);
+    window.addEventListener('ironshape:nutrition-tracker-updated', syncTodayNutritionSnapshot);
+    return () => {
+      window.removeEventListener('storage', syncTodayNutritionSnapshot);
+      window.removeEventListener('ironshape:nutrition-tracker-updated', syncTodayNutritionSnapshot);
+    };
+  }, [profile.id, storageUserId, todayCheckInDate]);
 
   return (
     <div className="space-y-10 pb-12">
@@ -8965,6 +9036,19 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
       fat: tracker.fat,
       meals: tracker.meals,
     };
+    const snapshot: NutritionTrackerSnapshot = {
+      date: today,
+      calories: tracker.calories,
+      protein: tracker.protein,
+      carbs: tracker.carbs,
+      fat: tracker.fat,
+    };
+    try {
+      localStorage.setItem(getNutritionTrackerStorageKey(profile.id, today), JSON.stringify(snapshot));
+    } catch { /* ignore */ }
+    window.dispatchEvent(new CustomEvent('ironshape:nutrition-tracker-updated', {
+      detail: { userId: profile.id, ...snapshot },
+    }));
     setNutritionHistory(prev => [todayLog, ...prev.filter(log => log.date !== today)].slice(0, 7));
   };
 

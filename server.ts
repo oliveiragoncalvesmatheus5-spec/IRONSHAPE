@@ -936,7 +936,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
   app.get("/api/workout-gif", async (req, res) => {
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
-    const cacheKey = name.toLowerCase().trim();
+    const cacheKey = `v2:${name.toLowerCase().trim()}`;
     const cached = exerciseMediaCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       res.setHeader("X-Exercise-Media-Cache", "HIT");

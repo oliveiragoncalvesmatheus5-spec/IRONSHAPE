@@ -7427,6 +7427,7 @@ function ExecutionModal({
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(true);
   const exerciseDisplay = getExerciseDisplay(exercise, language);
+  const fallbackAnimationType = getExerciseAnimationType(exercise.name);
 
   useEffect(() => {
     let cancelled = false;
@@ -7494,6 +7495,8 @@ function ExecutionModal({
             />
           ) : gifUrl ? (
             <img src={gifUrl} alt={exerciseDisplay.name} onError={() => setGifUrl(null)} className="w-full h-full object-contain" />
+          ) : fallbackAnimationType ? (
+            <ExerciseAnimation type={fallbackAnimationType} label={exerciseDisplay.name} />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted flex-col gap-5 p-8 text-center">
               <div className="w-20 h-20 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">
@@ -7610,6 +7613,7 @@ function ExerciseCard({
   const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
   const exerciseDisplay = getExerciseDisplay(exercise, language);
+  const fallbackAnimationType = getExerciseAnimationType(exercise.name);
 
   const fetchApiExerciseMedia = async () => {
     if (gifUrl || apiVideoUrl) return;
@@ -7819,6 +7823,8 @@ function ExerciseCard({
                     onError={() => setGifUrl(null)}
                     className="w-full h-full object-contain"
                   />
+                ) : fallbackAnimationType ? (
+                  <ExerciseAnimation type={fallbackAnimationType} label={exerciseDisplay.name} />
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-text-muted p-8 text-center">
                     <div className="w-16 h-16 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center">

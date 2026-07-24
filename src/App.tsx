@@ -5881,10 +5881,8 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
   const favoriteStorageKey = `favorite_workouts_${storageUserId}`;
   const weeklyDoneStorageKey = `weekly_workouts_done_${storageUserId}`;
   const weeklyWorkoutLimit = getWeeklyWorkoutLimit(effectivePlan, isAdmin);
-  const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(
-    (effectivePlan === 'free' || !effectivePlan) ? 'Iniciante' : effectivePlan
-  );
-  const initialLevel: Level = effectivePlan === 'Elite' ? 'Avançado' : effectivePlan === 'Pro' ? 'Intermediário' : 'Iniciante';
+  const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>('Iniciante');
+  const initialLevel: Level = 'Iniciante';
   const [selectedLevel, setSelectedLevel] = useState<Level>(initialLevel);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'Todos'>('Todos');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
@@ -6278,14 +6276,71 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
   }
 
   return (
-    <div className="space-y-10 pb-12">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="space-y-3 md:space-y-6 pb-8 md:pb-12">
+      <header className="border-b border-white/10 pb-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">{workoutsText.title}</h1>
+            <p className="mt-1 text-xs text-text-secondary truncate">{profile.goal || workoutsText.fallbackGoal}</p>
+          </div>
+          <div className="rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-right shrink-0">
+            <div className="text-[8px] font-black uppercase tracking-widest text-text-muted">{workoutsText.points}</div>
+            <div className="text-sm font-black text-primary">{points.toLocaleString(locale)}</div>
+          </div>
+        </div>
+
+        <div
+          className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1"
+          role="group"
+          aria-label={workoutsText.placeToggleLabel}
+        >
+          {([
+            { id: 'gym', label: workoutsText.gymOption, icon: <Dumbbell size={15} /> },
+            { id: 'home', label: workoutsText.homeOption, icon: <Home size={15} /> },
+          ] as const).map((option) => {
+            const selected = activeTrainingPlace === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => handleTrainingPlaceChange(option.id)}
+                className={`min-h-[34px] rounded-lg px-3 text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
+                  selected
+                    ? 'bg-primary text-text-primary'
+                    : 'text-text-muted'
+                }`}
+              >
+                {option.icon}
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-3 divide-x divide-white/10 rounded-xl border border-white/10 bg-surface overflow-hidden">
+          <div className="p-3">
+            <div className="text-[8px] font-black uppercase tracking-widest text-text-muted">Progresso</div>
+            <div className="mt-1 text-sm font-black text-primary">{pointsProgress}%</div>
+          </div>
+          <div className="p-3">
+            <div className="text-[8px] font-black uppercase tracking-widest text-text-muted">Semana</div>
+            <div className="mt-1 text-sm font-black text-text-primary">{weeklyWorkouts.length}/{weeklyWorkoutLimit}</div>
+          </div>
+          <div className="p-3">
+            <div className="text-[8px] font-black uppercase tracking-widest text-text-muted">Plano</div>
+            <div className="mt-1 text-sm font-black text-text-primary truncate">{selectedPlanTab}</div>
+          </div>
+        </div>
+      </header>
+
+      <header className="hidden flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
-            <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase">{workoutsText.title}</h1>
+            <div className="w-1 h-7 md:h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
+            <h1 className="text-2xl md:text-5xl font-black tracking-tighter uppercase">{workoutsText.title}</h1>
           </div>
-          <p className="text-text-secondary text-base md:text-lg">
+          <p className="text-text-secondary text-xs md:text-lg leading-relaxed">
             {workoutsText.subtitle(placeLabel, profile.goal || workoutsText.fallbackGoal)}
           </p>
           <div
@@ -6318,8 +6373,8 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
           </div>
         </div>
         
-        <div className="bg-surface border border-white/10 rounded-2xl p-4 shrink-0 w-full md:w-[320px] shadow-xl shadow-black/10">
-          <div className="flex items-center justify-between gap-4 mb-3">
+        <div className="bg-surface border border-white/10 rounded-2xl p-3 md:p-4 shrink-0 w-full md:w-[320px] shadow-xl shadow-black/10">
+          <div className="flex items-center justify-between gap-4 mb-2 md:mb-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
                 <Trophy size={18} />
@@ -6369,8 +6424,8 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
         <>
 
       {usesHomeProtocol && (
-        <section className="space-y-4">
-          <div className="bg-primary/10 border border-primary/20 rounded-[24px] p-5 flex flex-col gap-4">
+        <section className="space-y-3 md:space-y-4">
+          <div className="hidden md:flex bg-primary/10 border border-primary/20 rounded-[24px] p-5 flex-col gap-4">
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">{workoutsText.homeActive}</div>
               <p className="text-sm text-text-secondary leading-relaxed">
@@ -6383,7 +6438,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5">
+          <div className="grid grid-cols-3 gap-1.5 md:gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5">
             {([
               { id: 'training', label: workoutsText.train, icon: <Dumbbell size={16} /> },
               { id: 'mobility', label: workoutsText.mobility, icon: <Activity size={16} /> },
@@ -6397,7 +6452,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                   setSelectedMuscleGroup('Todos');
                   setSelectedWorkout(null);
                 }}
-                className={`min-h-[58px] rounded-xl flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase transition-all ${
+                className={`min-h-[42px] md:min-h-[58px] rounded-xl flex flex-row md:flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase transition-all ${
                   activeHomeMode === item.id
                     ? 'bg-primary text-text-primary shadow-lg shadow-primary/20'
                     : 'text-text-muted hover:text-text-secondary'
@@ -6411,7 +6466,50 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
         </section>
       )}
 
-      <section className="bg-surface border border-white/10 rounded-[28px] p-5 md:p-6 space-y-5 shadow-xl shadow-black/10">
+      <section className="border-b border-white/10 pb-3 space-y-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">{workoutsText.weeklyTitle}</div>
+            <div className="mt-1 text-sm font-black text-text-primary">
+              {weeklyWorkouts.length}/{weeklyWorkoutLimit} selecionados
+            </div>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+            {weeklyCompletedCount}/{weeklyWorkoutDetails.length || weeklyWorkoutLimit} feitos
+          </span>
+        </div>
+        {weeklyWorkoutDetails.length > 0 ? (
+          <div className="divide-y divide-white/10 rounded-xl border border-white/10 bg-surface overflow-hidden">
+            {weeklyWorkoutDetails.slice(0, 3).map(({ workout, day, workoutId }) => (
+              <button
+                key={workoutId}
+                type="button"
+                onClick={() => setSelectedWorkout(workout)}
+                className="w-full min-h-[42px] px-3 flex items-center justify-between gap-3 text-left"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-primary">{day}</span>
+                    <span className="text-sm font-black truncate">{translateWorkoutName(workout.name, language)}</span>
+                  </div>
+                </div>
+                <ChevronRight size={16} className="text-text-muted shrink-0" />
+              </button>
+            ))}
+            {weeklyWorkoutDetails.length > 3 && (
+              <div className="text-[10px] font-bold text-text-muted px-1">
+                +{weeklyWorkoutDetails.length - 3} treinos na semana
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-white/10 bg-surface px-3 py-3">
+            <p className="text-xs font-bold text-text-muted leading-relaxed">{workoutsText.emptyWeekly}</p>
+          </div>
+        )}
+      </section>
+
+      <section className="hidden bg-surface border border-white/10 rounded-[28px] p-5 md:p-6 space-y-5 shadow-xl shadow-black/10">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
@@ -6549,8 +6647,11 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
       </section>
 
       {/* Main Plan Tabs */}
-      {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="flex flex-col gap-3">
-        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">{workoutsText.protocol}</span>
+      {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="hidden md:static md:bg-transparent md:p-0 flex-col gap-2 md:gap-3">
+        <div className="flex items-center justify-between gap-3 md:block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">{workoutsText.protocol}</span>
+          <span className="md:hidden text-[10px] font-bold text-text-muted">{visibleMuscleGroups.length} grupos</span>
+        </div>
         <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
           {(['Iniciante', 'Pro', 'Elite'] as Plan[]).map((p) => (
             <button
@@ -6560,7 +6661,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                 setActiveSubTab('workouts');
                 setSelectedLevel(p === 'Elite' ? 'Avançado' : p === 'Pro' ? 'Intermediário' : 'Iniciante');
               }}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap ${
+              className={`min-h-[38px] px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap ${
                 selectedPlanTab === p 
                   ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' 
                   : 'text-text-muted hover:text-text-secondary'
@@ -6574,7 +6675,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
 
       {/* Sub-tabs for Pro and Elite */}
       {hasAccess(selectedPlanTab) && (
-        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+        <div className="hidden gap-4 overflow-x-auto no-scrollbar pb-2">
           <SubTabButton 
             active={activeSubTab === 'workouts'} 
             onClick={() => setActiveSubTab('workouts')} 
@@ -6645,21 +6746,21 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
         {!hasAccess(selectedPlanTab) ? (
           <LockedFeatureOverlay onUpgrade={onUpgrade} plan={selectedPlanTab} language={language} />
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-6 md:space-y-12">
             {activeSubTab === 'workouts' && (
               <>
                 {/* Filters Area */}
-                {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="space-y-8">
+                {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="space-y-2 md:space-y-8">
                   <div>
-                    <div className="flex flex-col gap-3 max-w-4xl">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">{workoutsText.muscleGroup}</span>
-                      <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
+                    <div className="flex flex-col gap-2 max-w-4xl">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{workoutsText.muscleGroup}</span>
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                         <button
                           onClick={() => setSelectedMuscleGroup('Todos')}
-                          className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap ${
+                          className={`min-h-[32px] px-4 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${
                             selectedMuscleGroup === 'Todos' 
-                              ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' 
-                              : 'text-text-muted hover:text-text-secondary'
+                              ? 'bg-primary border-primary text-text-primary' 
+                              : 'border-white/10 text-text-muted hover:text-text-secondary'
                           }`}
                         >
                           {workoutsText.all}
@@ -6668,10 +6769,10 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                           <button
                             key={group}
                             onClick={() => setSelectedMuscleGroup(group)}
-                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap ${
+                            className={`min-h-[32px] px-4 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${
                               selectedMuscleGroup === group 
-                                ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' 
-                                : 'text-text-muted hover:text-text-secondary'
+                                ? 'bg-primary border-primary text-text-primary' 
+                                : 'border-white/10 text-text-muted hover:text-text-secondary'
                             }`}
                           >
                             {translateMuscleGroup(group, language)}
@@ -6682,7 +6783,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                   </div>
                 </div>}
 
-                <div className={usesHomeProtocol ? 'space-y-6' : 'space-y-16'}>
+                <div className={usesHomeProtocol ? 'space-y-5 md:space-y-6' : 'space-y-7 md:space-y-16'}>
                   {visibleMuscleGroups.filter(g => selectedMuscleGroup === 'Todos' || g === selectedMuscleGroup).map((group) => {
                     const groupWorkouts = workoutSource.filter(w =>
                       w.planRequired === selectedPlanTab && 
@@ -6693,9 +6794,9 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                     if (groupWorkouts.length === 0) return null;
 
                     return (
-                      <section key={group} className={usesHomeProtocol ? 'space-y-4' : 'space-y-8'}>
-                        <div className="flex items-center gap-6">
-                          <h2 className="text-xl md:text-2xl font-black tracking-tight uppercase">
+                      <section key={group} className={usesHomeProtocol ? 'space-y-3 md:space-y-4' : 'space-y-3 md:space-y-8'}>
+                        <div className="flex items-center gap-4 md:gap-6">
+                          <h2 className="text-base md:text-2xl font-black tracking-tight uppercase">
                             {usesHomeProtocol && activeHomeMode === 'mobility'
                               ? workoutsText.mobilityRoutines
                               : usesHomeProtocol && activeHomeMode === 'stretching'
@@ -6706,7 +6807,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                         </div>
                         <div className={usesHomeProtocol
                           ? 'grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4'
-                          : 'flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:overflow-visible md:pb-0 md:snap-none'}>
+                          : 'space-y-2'}>
                           {groupWorkouts.map((workout) => (
                             usesHomeProtocol ? (
                               <HomeRoutineCard
@@ -6723,19 +6824,18 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
                                 onToggleWeekly={() => addWorkoutToWeek(workout)}
                               />
                             ) : (
-                              <div key={workout.id} className="shrink-0 w-[78vw] sm:w-[60vw] md:w-auto snap-start">
-                                <WorkoutCard
-                                  workout={workout}
-                                  language={language}
-                                  isCompleted={completedWorkouts.includes(workout.id)}
-                                  isFavorite={favoriteWorkoutIds.includes(workout.id)}
-                                  isInWeeklyPlan={weeklyWorkoutIds.includes(workout.id)}
-                                  weeklyLimitReached={weeklyWorkouts.length >= weeklyWorkoutLimit}
-                                  onClick={() => setSelectedWorkout(workout)}
-                                  onToggleFavorite={() => toggleFavoriteWorkout(workout.id)}
-                                  onToggleWeekly={() => addWorkoutToWeek(workout)}
-                                />
-                              </div>
+                              <CompactWorkoutCard
+                                key={workout.id}
+                                workout={workout}
+                                language={language}
+                                isCompleted={completedWorkouts.includes(workout.id)}
+                                isFavorite={favoriteWorkoutIds.includes(workout.id)}
+                                isInWeeklyPlan={weeklyWorkoutIds.includes(workout.id)}
+                                weeklyLimitReached={weeklyWorkouts.length >= weeklyWorkoutLimit}
+                                onClick={() => setSelectedWorkout(workout)}
+                                onToggleFavorite={() => toggleFavoriteWorkout(workout.id)}
+                                onToggleWeekly={() => addWorkoutToWeek(workout)}
+                              />
                             )
                           ))}
                         </div>
@@ -6850,6 +6950,98 @@ function LockedFeatureOverlay({ onUpgrade, plan, language, title, description }:
         </button>
       </div>
     </motion.div>
+  );
+}
+
+function CompactWorkoutCard({
+  workout,
+  language,
+  isCompleted,
+  isFavorite,
+  isInWeeklyPlan,
+  weeklyLimitReached,
+  onClick,
+  onToggleFavorite,
+  onToggleWeekly
+}: {
+  workout: Workout,
+  language: LanguageCode,
+  isCompleted: boolean,
+  isFavorite: boolean,
+  isInWeeklyPlan: boolean,
+  weeklyLimitReached: boolean,
+  onClick: () => void,
+  onToggleFavorite: () => void,
+  onToggleWeekly: () => void
+}) {
+  const workoutDisplay = getWorkoutDisplay(workout, language);
+  const labels = {
+    exercises: language === 'en' ? 'exercises' : language === 'es' ? 'ejercicios' : 'exercícios',
+    inWeek: language === 'en' ? 'In week' : language === 'es' ? 'En semana' : 'Na semana',
+    add: language === 'en' ? 'Add' : language === 'es' ? 'Agregar' : 'Adicionar',
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && onClick()}
+      className={`w-full min-h-[66px] rounded-2xl border px-3 py-2.5 bg-surface text-left active:scale-[0.99] transition-all ${
+        isCompleted ? 'border-success/30 bg-success/5' : 'border-white/10'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] font-black uppercase tracking-widest text-primary">{workoutDisplay.level}</span>
+            <span className="w-1 h-1 rounded-full bg-white/20" />
+            <span className="text-[8px] font-black uppercase tracking-widest text-text-muted">{translateMuscleGroup(workout.muscleGroup, language)}</span>
+          </div>
+          <h3 className="mt-1 text-sm font-black tracking-tight leading-tight truncate text-text-primary">{workoutDisplay.name}</h3>
+          <div className="mt-1 flex items-center gap-3 text-[10px] font-bold text-text-muted">
+            <span className="flex items-center gap-1"><Clock size={12} />{workout.duration}</span>
+            <span className="flex items-center gap-1"><Activity size={12} />{workout.exercises.length} {labels.exercises}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="min-h-[32px] px-3 rounded-xl bg-primary text-text-primary text-[9px] font-black uppercase tracking-widest flex items-center justify-center">
+            Abrir
+          </span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleFavorite();
+            }}
+            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+              isFavorite
+                ? 'bg-primary/15 border-primary/30 text-primary'
+                : 'bg-white/5 border-white/10 text-text-muted'
+            }`}
+            aria-label={isFavorite ? 'Remover dos favoritos' : 'Favoritar treino'}
+          >
+            <Star size={15} className={isFavorite ? 'fill-current' : ''} />
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleWeekly();
+            }}
+            disabled={!isInWeeklyPlan && weeklyLimitReached}
+            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+              isInWeeklyPlan
+                ? 'bg-success/10 border-success/25 text-success'
+                : 'bg-primary/10 border-primary/20 text-primary'
+            }`}
+            aria-label={isInWeeklyPlan ? labels.inWeek : labels.add}
+          >
+            {isInWeeklyPlan ? <CheckCircle2 size={15} /> : <PlusCircle size={15} />}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

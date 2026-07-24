@@ -108,7 +108,8 @@ import {
   Droplets,
   BedDouble,
   Gauge,
-  Target
+  Target,
+  Home
 } from 'lucide-react';
 import { addMonths, format, formatDistanceToNow, isValid } from 'date-fns';
 import { enUS, es, ptBR } from 'date-fns/locale';
@@ -251,6 +252,9 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
     phaseGoal: (limit: string) => string;
     pointsGoal: (limit: string) => string;
     continueEvolution: string;
+    placeToggleLabel: string;
+    gymOption: string;
+    homeOption: string;
     homeActive: string;
     homeActiveText: (goal: string) => string;
     train: string;
@@ -423,6 +427,9 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       phaseGoal: limit => `Fase 1: ${limit} pts`,
       pointsGoal: limit => `Meta ${limit} pts`,
       continueEvolution: 'Continuar evolução',
+      placeToggleLabel: 'Escolher ambiente de treino',
+      gymOption: 'Academia',
+      homeOption: 'Casa',
       homeActive: 'Treino em casa ativado',
       homeActiveText: goal => `Sessões práticas para o objetivo ${goal}, com progressão segura e rotina adaptada ao seu espaço.`,
       train: 'Treinar',
@@ -623,6 +630,9 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       phaseGoal: limit => `Phase 1: ${limit} pts`,
       pointsGoal: limit => `Goal ${limit} pts`,
       continueEvolution: 'Continue progress',
+      placeToggleLabel: 'Choose training place',
+      gymOption: 'Gym',
+      homeOption: 'Home',
       homeActive: 'Home training enabled',
       homeActiveText: goal => `Practical sessions for the goal ${goal}, with safe progression and a routine adapted to your space.`,
       train: 'Train',
@@ -823,6 +833,9 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       phaseGoal: limit => `Fase 1: ${limit} pts`,
       pointsGoal: limit => `Meta ${limit} pts`,
       continueEvolution: 'Continuar evolución',
+      placeToggleLabel: 'Elegir lugar de entreno',
+      gymOption: 'Gimnasio',
+      homeOption: 'Casa',
       homeActive: 'Entreno en casa activado',
       homeActiveText: goal => `Sesiones prácticas para el objetivo ${goal}, con progresión segura y rutina adaptada a tu espacio.`,
       train: 'Entrenar',
@@ -6014,6 +6027,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
       : ['Full Body' as MuscleGroup]
     : muscleGroups;
   const placeLabel = usesHomeProtocol ? 'Casa' : usesHybridProtocol ? 'Híbrido' : 'Academia';
+  const activeTrainingPlace: 'gym' | 'home' = usesHomeProtocol ? 'home' : 'gym';
   const points = livePoints;
   const pointsProgress = Math.min(100, Math.round((points / planPointsLimit) * 100));
   const freePointsLimitReached = isFreePointsPlan && points >= FREE_POINTS_LIMIT;
@@ -6059,6 +6073,29 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
   const hasAccess = (planId: Plan) => {
     const weights = { 'free': 0, 'Iniciante': 1, 'Pro': 2, 'Elite': 3, 'Admin': 4 };
     return weights[effectivePlan] >= weights[planId];
+  };
+
+  const handleTrainingPlaceChange = (nextTrainingPlace: 'gym' | 'home') => {
+    if (!user?.id || activeTrainingPlace === nextTrainingPlace) return;
+    let onboarding: any = null;
+    try {
+      onboarding = JSON.parse(localStorage.getItem(`training_onboarding_${user.id}`) || 'null');
+    } catch {
+      onboarding = null;
+    }
+    const nextOnboarding = {
+      ...(onboarding || {}),
+      trainingPlace: nextTrainingPlace,
+      savedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(`training_onboarding_${user.id}`, JSON.stringify(nextOnboarding));
+    setTrainingOnboarding(nextOnboarding);
+    setActiveHomeMode('training');
+    setActiveSubTab('workouts');
+    setSelectedMuscleGroup('Todos');
+    setSelectedWorkout(null);
+    window.dispatchEvent(new CustomEvent('ironshape:training-place-changed', { detail: { trainingPlace: nextTrainingPlace } }));
   };
 
   const toggleFavoriteWorkout = (workoutId: string) => {
@@ -6251,6 +6288,34 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
           <p className="text-text-secondary text-base md:text-lg">
             {workoutsText.subtitle(placeLabel, profile.goal || workoutsText.fallbackGoal)}
           </p>
+          <div
+            className="grid grid-cols-2 gap-1.5 rounded-2xl border border-white/10 bg-white/5 p-1.5 sm:inline-grid sm:min-w-[300px]"
+            role="group"
+            aria-label={workoutsText.placeToggleLabel}
+          >
+            {([
+              { id: 'gym', label: workoutsText.gymOption, icon: <Dumbbell size={16} /> },
+              { id: 'home', label: workoutsText.homeOption, icon: <Home size={16} /> },
+            ] as const).map((option) => {
+              const selected = activeTrainingPlace === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => handleTrainingPlaceChange(option.id)}
+                  className={`min-h-[44px] rounded-xl px-3 text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
+                    selected
+                      ? 'bg-primary text-text-primary shadow-lg shadow-primary/20'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-white/5'
+                  }`}
+                >
+                  {option.icon}
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         
         <div className="bg-surface border border-white/10 rounded-2xl p-4 shrink-0 w-full md:w-[320px] shadow-xl shadow-black/10">

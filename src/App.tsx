@@ -12250,58 +12250,36 @@ function CommunitySidebar() {
 }
 
 function CommunityMobileHighlights() {
+  const topRanking = COMMUNITY_RANKING[0];
+  const activeCount = COMMUNITY_ACTIVE_FRIENDS.length;
+  const challengeCount = COMMUNITY_CHALLENGES.length;
+
   return (
-    <section className="lg:hidden space-y-3 rounded-[20px] border border-[#232323] bg-[#111111] p-3.5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Trophy size={17} />
+    <section className="lg:hidden">
+      <div className="grid grid-cols-3 gap-2">
+        <button type="button" className="min-w-0 rounded-2xl border border-primary/25 bg-primary/10 px-2 py-3 text-left transition-all active:scale-[0.98]">
+          <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white shadow-[0_10px_22px_rgba(255,106,0,0.22)]">
+            <Trophy size={15} />
           </span>
-          <div>
-            <h2 className="text-sm font-black text-white">Ranking semanal</h2>
-            <p className="text-[11px] font-bold text-text-muted">Atletas em destaque</p>
-          </div>
-        </div>
-        <button type="button" className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 text-[10px] font-black uppercase tracking-normal text-primary">
-          <Activity size={14} />
-          Desafios
+          <span className="block truncate text-[11px] font-black text-white">Ranking</span>
+          <span className="mt-0.5 block truncate text-[9px] font-bold text-text-muted">{topRanking ? `#1 ${topRanking.name}` : 'Top semanal'}</span>
         </button>
-      </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {COMMUNITY_RANKING.slice(0, 3).map((item, index) => (
-          <div key={item.name} className="min-w-[160px] rounded-2xl border border-white/5 bg-white/[0.03] p-2.5">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-black text-primary">{index + 1}</span>
-              <CommunityAvatar value={item.avatar} size="h-9 w-9 text-xs" />
-              <div className="min-w-0">
-                <p className="truncate text-xs font-black text-white">{item.name}</p>
-                <p className="text-[10px] font-bold text-text-muted">{item.xp}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+        <button type="button" className="min-w-0 rounded-2xl border border-[#232323] bg-[#111111] px-2 py-3 text-left transition-all active:scale-[0.98]">
+          <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-primary">
+            <Users size={15} />
+          </span>
+          <span className="block truncate text-[11px] font-black text-white">Amigos ativos</span>
+          <span className="mt-0.5 block truncate text-[9px] font-bold text-text-muted">{activeCount} online agora</span>
+        </button>
 
-      <div className="border-t border-[#232323] pt-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-xs font-black uppercase tracking-widest text-white">Amigos ativos</h3>
-          <span className="text-[10px] font-black text-primary">Agora</span>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {COMMUNITY_ACTIVE_FRIENDS.map(friend => (
-            <div key={friend.name} className="flex min-w-[148px] items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] p-2.5">
-              <div className="relative">
-                <CommunityAvatar value={friend.avatar} size="h-9 w-9 text-xs" />
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#111111] bg-success" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-black text-white">{friend.name}</p>
-                <p className="truncate text-[10px] font-bold text-text-muted">{friend.status}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <button type="button" className="min-w-0 rounded-2xl border border-[#232323] bg-[#111111] px-2 py-3 text-left transition-all active:scale-[0.98]">
+          <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-primary">
+            <Activity size={15} />
+          </span>
+          <span className="block truncate text-[11px] font-black text-white">Desafios</span>
+          <span className="mt-0.5 block truncate text-[9px] font-bold text-text-muted">{challengeCount} ativos</span>
+        </button>
       </div>
     </section>
   );

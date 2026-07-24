@@ -1038,6 +1038,7 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       if (extraWords > 0) score -= Math.min(extraWords * 8, 40);
       if (itemContext.includes("neck") && !query.includes("neck")) score -= 35;
       if (itemContext.includes("calf") && !query.includes("calf")) score -= 25;
+      if (itemContext.includes("on knees") && !query.includes("knee")) score -= 70;
       if ((itemName.includes("reverse") || itemName.includes("rear") || itemName.includes("bent over")) && !query.includes("reverse") && !query.includes("rear")) score -= 45;
       if (!query.includes("incline") && itemContext.includes("incline")) score -= 35;
       if (!query.includes("decline") && itemContext.includes("decline")) score -= 35;
@@ -1050,6 +1051,8 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       if (query.includes("dumbbell") && equipment.some((equip: string) => equip && !equip.includes("dumbbell"))) score -= 50;
       if (query.includes("barbell") && equipment.some((equip: string) => equip.includes("barbell"))) score += 30;
       if (query.includes("barbell") && equipment.some((equip: string) => equip && !equip.includes("barbell"))) score -= 50;
+      if (query.includes("barbell squat") && itemName.includes("full squat")) score += 45;
+      if (query.includes("barbell squat") && itemContext.includes("on knees")) score -= 110;
 
       if (isChestQuery && bodyParts.some((part: string) => part.includes("chest"))) score += 30;
       if (isChestQuery && targetMuscles.some((muscle: string) => muscle.includes("pectoral"))) score += 30;
@@ -1102,7 +1105,22 @@ Use valores reais e precisos para ${quantity}g de ${food}. Apenas o JSON, nada m
       "dumbbell chest fly": ["dumbbell fly"],
       "dumbbell lying fly": ["dumbbell fly"],
       "dumbbell flat fly": ["dumbbell fly"],
+      "cable crossover": ["cable middle fly", "cable fly", "lever pec deck fly"],
+      "cable chest fly": ["cable middle fly", "cable fly", "lever pec deck fly"],
+      "cable incline fly": ["cable middle fly", "cable fly", "dumbbell incline fly"],
+      "barbell squat": ["barbell full squat", "barbell high bar squat", "smith squat"],
+      "squat": ["barbell full squat", "smith squat"],
+      "bodyweight squat": ["full squat", "smith chair squat"],
+      "body weight squat": ["full squat", "smith chair squat"],
       "cable seated row": ["seated row", "lever seated row", "barbell bent over row", "dumbbell bent over row", "row"],
+      "ez bar skull crusher": ["barbell lying triceps extension", "lever triceps extension"],
+      "dumbbell skull crusher": ["barbell lying triceps extension", "lever triceps extension"],
+      "dumbbell triceps overhead extension": ["cable overhead triceps extension", "lever triceps extension"],
+      "close grip barbell bench press": ["barbell bench press", "weighted bench dip"],
+      "plate front raise": ["dumbbell front raise", "barbell front raise"],
+      "ab wheel rollout": ["wheel rollout"],
+      "cable crunch": ["weighted crunch", "crunch"],
+      "kneeling cable crunch": ["weighted crunch", "crunch"],
       "superman": ["superman", "back extension", "hyperextension"],
       "cable straight arm pulldown": ["straight arm pulldown", "cable pulldown", "lat pulldown", "pulldown"],
       "chair squat": ["bodyweight squat", "squat"],

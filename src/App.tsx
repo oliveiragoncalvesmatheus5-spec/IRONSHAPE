@@ -7445,16 +7445,21 @@ function ExecutionModal({
         if (cancelled) return;
         const list = Array.isArray(results) ? results : results?.data;
         if (Array.isArray(list) && list.length > 0) {
-          setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);
-          setGifUrl(list[0].gifUrl ?? list[0].gif_url ?? null);
+          const nextGifUrl = list[0].gifUrl ?? list[0].gif_url ?? null;
+          setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? (!nextGifUrl ? exercise.videoUrl : null) ?? null);
+          setGifUrl(nextGifUrl);
         } else {
+          setApiVideoUrl(exercise.videoUrl || null);
           console.warn('[ExerciseModal] No GIF found for:', exercise.name, 'query:', searchName, results);
         }
       })
-      .catch((err: any) => { console.error('[ExerciseModal] GIF fetch error:', err?.message); })
+      .catch((err: any) => {
+        if (!cancelled) setApiVideoUrl(exercise.videoUrl || null);
+        console.error('[ExerciseModal] GIF fetch error:', err?.message);
+      })
       .finally(() => { if (!cancelled) setGifLoading(false); });
     return () => { cancelled = true; };
-  }, [exercise.name]);
+  }, [exercise.name, exercise.videoUrl]);
 
   return (
     <motion.div
@@ -7619,12 +7624,15 @@ function ExerciseCard({
       const results = await searchExercisesByName(exercise.name);
       const list = Array.isArray(results) ? results : results?.data;
       if (Array.isArray(list) && list.length > 0) {
-        setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? null);
-        setGifUrl(list[0].gifUrl ?? list[0].gif_url ?? null);
+        const nextGifUrl = list[0].gifUrl ?? list[0].gif_url ?? null;
+        setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? (!nextGifUrl ? exercise.videoUrl : null) ?? null);
+        setGifUrl(nextGifUrl);
       } else {
+        setApiVideoUrl(exercise.videoUrl || null);
         console.warn('[ActiveExercise] No GIF found for:', exercise.name, 'query:', searchName, results);
       }
     } catch (err: any) {
+      setApiVideoUrl(exercise.videoUrl || null);
       console.error('[ActiveExercise] GIF fetch error:', err?.message);
     } finally {
       setGifLoading(false);

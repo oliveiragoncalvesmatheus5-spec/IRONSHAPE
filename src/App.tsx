@@ -362,7 +362,7 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       day: 'Dia',
       member: 'MEMBER',
       adminMode: 'ADMIN MODE',
-      greeting: 'BOM TRABALHO',
+      greeting: 'PRONTO PRO TREINO',
       weeklyQuote: '"A disciplina é a ponte entre metas e realizações."',
       weeklyProgress: (percent, count, target) => `Você já completou ${percent}% da sua meta semanal (${count}/${target} treinos).`,
       startTodayWorkout: 'INICIAR TREINO DE HOJE',
@@ -4926,7 +4926,261 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
   }, [profile.id, storageUserId, todayCheckInDate]);
 
   return (
-    <div className="space-y-10 pb-12">
+    <div className="space-y-0 md:space-y-6 pb-12">
+      <div className="md:hidden space-y-4">
+        <section className="border-y border-white/10 py-4 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.18em]">
+              {effectivePlan} {dashboardText.member}
+            </span>
+            {isAdmin && (
+              <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-text-muted text-[9px] font-black uppercase tracking-[0.18em]">
+                Admin
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-[30px] font-black tracking-tighter leading-[0.92]">
+              {dashboardText.greeting},<br />
+              <span className="text-primary">{getFirstName()}!</span>
+            </h1>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {dashboardText.weeklyQuote} <span className="font-black text-text-primary">{weeklyPercent}% da meta semanal</span>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+            <div className="space-y-2 min-w-0">
+              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                <span className="text-text-muted">{dashboardText.weeklyGoal}</span>
+                <span className="text-primary">{weeklyCount}/{WEEKLY_TARGET}</span>
+              </div>
+              <div className="h-2 rounded-full bg-white/5 border border-white/5 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${weeklyPercent}%` }}
+                  className="h-full bg-primary"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+              <div className="flex items-center gap-1.5 px-3 py-2">
+                <Flame size={15} className="text-primary" />
+                <span className="font-black">{profile.streak}</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-2 border-l border-white/10">
+                <Trophy size={15} className="text-primary" />
+                <span className="font-black">{profile.points}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => todayScheduledWorkout
+              ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))
+              : onStartWorkout()}
+            className="w-full min-h-[48px] rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]"
+          >
+            <Play size={16} />
+            {dashboardText.startTodayWorkout}
+          </button>
+        </section>
+
+        <section className="border-b border-white/10 pb-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[0.22em] text-primary">Hoje</div>
+              <h2 className="text-lg font-black uppercase tracking-tight">{dashboardText.weeklyWorkoutsTitle}</h2>
+            </div>
+            <button
+              onClick={() => onStartWorkout()}
+              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-primary flex items-center justify-center"
+              aria-label={dashboardText.organizeWeek}
+            >
+              <SlidersHorizontal size={17} />
+            </button>
+          </div>
+
+          {todayScheduledWorkout ? (
+            <div className="rounded-2xl border border-primary/25 bg-primary/10 p-3 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-primary">{todayName}</div>
+                  <h3 className="text-base font-black truncate">{translateWorkoutName(todayScheduledWorkout.workout.name, language)}</h3>
+                  <p className="text-[11px] text-text-muted truncate">
+                    {todayScheduledWorkout.workout.muscleGroup} · {todayScheduledWorkout.workout.duration} · {todayScheduledWorkout.workout.exercises.length} {dashboardText.exercises}
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleDashboardWorkoutDone(todayScheduledWorkout.workoutId)}
+                  disabled={dashboardWorkoutPendingId === todayScheduledWorkout.workoutId}
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+                    savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId)
+                      ? 'bg-success/15 border-success/30 text-success'
+                      : 'bg-white/5 border-white/10 text-text-secondary'
+                  }`}
+                  aria-label={savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? dashboardText.unmarkDone : dashboardText.markDone}
+                >
+                  {dashboardWorkoutPendingId === todayScheduledWorkout.workoutId ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={17} />}
+                </button>
+              </div>
+              <button
+                onClick={() => onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))}
+                className="w-full min-h-[40px] rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                <Play size={15} />
+                {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? dashboardText.openWorkout : dashboardText.startNow}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => onStartWorkout()}
+              className="w-full rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-3 text-left flex items-center gap-3"
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                <CalendarPlus size={19} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-black">{dashboardText.buildWeek}</h3>
+                <p className="text-[11px] text-text-muted line-clamp-2">{dashboardText.buildWeekText}</p>
+              </div>
+            </button>
+          )}
+
+          {scheduledWorkoutDetails.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+              {WEEK_DAYS.map(day => {
+                const slot = scheduledWorkoutDetails.find(item => item.day === day);
+                const isToday = day === todayName;
+                const isDone = !!slot && savedWeeklyDoneIds.includes(slot.workoutId);
+                return (
+                  <button
+                    key={day}
+                    onClick={() => slot && onStartWorkout(slot.workoutId, getScheduledWorkoutMode(slot.workoutId))}
+                    disabled={!slot}
+                    className={`shrink-0 w-14 rounded-xl border px-2 py-2 text-center ${
+                      isDone
+                        ? 'bg-success/10 border-success/25 text-success'
+                        : isToday
+                          ? 'bg-primary/10 border-primary/30 text-primary'
+                          : slot
+                            ? 'bg-white/5 border-white/10 text-text-secondary'
+                            : 'bg-white/[0.02] border-white/5 text-text-muted opacity-60'
+                    }`}
+                    title={slot?.workout ? translateWorkoutName(slot.workout.name, language) : dashboardText.rest}
+                  >
+                    <div className="text-[8px] font-black uppercase tracking-widest">{day.slice(0, 3)}</div>
+                    <div className="mt-1 h-1 rounded-full bg-current opacity-70" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="grid grid-cols-2 gap-2">
+          {[
+            { label: dashboardText.currentWeight, value: `${displayedWeight.toLocaleString(locale)} kg`, icon: <TrendingUp size={16} />, action: () => openDashboardMetric('weight', onViewProgress) },
+            { label: dashboardText.nextWorkout, value: todayScheduledWorkout ? translateWorkoutName(todayScheduledWorkout.workout.name, language) : translateWorkoutName(nextWorkout.name, language), icon: <Calendar size={16} />, action: () => openDashboardMetric('workout', () => todayScheduledWorkout ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId)) : onStartWorkout()) },
+            { label: dashboardText.dailyCalories, value: `${calorieGoal.toLocaleString(locale)} kcal`, icon: <Apple size={16} />, action: () => openDashboardMetric('nutrition', onViewNutrition) },
+            { label: dashboardText.energyLevel, value: wellnessLabel(dailyCheckIn?.energy), icon: <Zap size={16} />, action: openWellnessCheckIn },
+          ].map(item => (
+            <button
+              key={item.label}
+              onClick={item.action}
+              className="min-h-[72px] rounded-2xl bg-white/[0.03] border border-white/10 p-3 text-left flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[8px] font-black uppercase tracking-widest text-text-muted truncate">{item.label}</span>
+                <span className="text-primary">{item.icon}</span>
+              </div>
+              <div className="text-sm font-black truncate">{item.value}</div>
+            </button>
+          ))}
+        </section>
+
+        <section className="border-y border-white/10 py-4 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[0.22em] text-primary">Base do dia</div>
+              <h2 className="text-lg font-black uppercase tracking-tight">Água, sono e dieta</h2>
+              <p className="text-xs text-text-secondary mt-0.5">Você está <span className="font-black text-text-primary">{recoveryScore}%</span> alinhado hoje.</p>
+            </div>
+            <div className="text-right text-[10px] font-bold text-text-muted max-w-[120px] leading-snug">{recoveryPriority}</div>
+          </div>
+
+          {[
+            {
+              label: 'Água',
+              value: `${(waterIntakeMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })}L`,
+              target: `${(dailyWaterGoalMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })}L`,
+              progress: waterProgress,
+              icon: <Droplets size={17} />,
+              color: 'text-cyan-300',
+              bar: 'bg-cyan-400',
+              action: (
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={() => updateWaterIntake(250)} className="px-2.5 min-h-[30px] rounded-lg bg-white/5 border border-white/10 text-[9px] font-black">+250</button>
+                  <button type="button" onClick={() => updateWaterIntake(500)} className="px-2.5 min-h-[30px] rounded-lg bg-cyan-400/15 border border-cyan-400/30 text-[9px] font-black text-cyan-100">+500</button>
+                </div>
+              ),
+            },
+            {
+              label: 'Sono',
+              value: dailyCheckIn ? `${dailyCheckIn.sleepHours.toLocaleString(locale, { maximumFractionDigits: 1 })}h` : '--',
+              target: `${sleepTargetHours}h`,
+              progress: sleepProgress,
+              icon: <BedDouble size={17} />,
+              color: 'text-indigo-300',
+              bar: 'bg-indigo-400',
+              action: <button type="button" onClick={openWellnessCheckIn} className="px-3 min-h-[30px] rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase">Sono</button>,
+            },
+            {
+              label: 'Dieta',
+              value: todayCalories > 0 ? todayCalories.toLocaleString(locale) : '--',
+              target: `${calorieGoal.toLocaleString(locale)} kcal`,
+              progress: dietProgress,
+              icon: <Apple size={17} />,
+              color: 'text-primary',
+              bar: 'bg-primary',
+              action: <button type="button" onClick={onViewNutrition} className="px-3 min-h-[30px] rounded-lg bg-primary text-white text-[9px] font-black uppercase">Abrir</button>,
+            },
+          ].map(item => (
+            <div key={item.label} className="space-y-1.5">
+              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center ${item.color}`}>{item.icon}</div>
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{item.label}</span>
+                    <span className="text-sm font-black">{item.value}</span>
+                    <span className="text-[10px] text-text-muted truncate">/ {item.target}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${item.progress}%` }} className={`h-full ${item.bar}`} />
+                  </div>
+                </div>
+                {item.action}
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="grid grid-cols-2 gap-2">
+          <button onClick={onViewNutrition} className="rounded-2xl bg-white/[0.03] border border-white/10 p-3 text-left min-h-[82px]">
+            <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">{dashboardText.nutrition}</div>
+            <div className="mt-2 text-lg font-black">{todayCalories > 0 ? todayCalories.toLocaleString(locale) : '—'}</div>
+            <div className="text-[10px] text-text-muted">/ {calorieGoal.toLocaleString(locale)} kcal</div>
+          </button>
+          <button onClick={onViewNutrition} className="rounded-2xl bg-white/[0.03] border border-white/10 p-3 text-left min-h-[82px]">
+            <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">{dashboardText.nextMeal}</div>
+            <div className="mt-2 text-sm font-black">{dashboardText.logMeals}</div>
+            <div className="text-[10px] text-text-muted">{dashboardText.nutritionModule}</div>
+          </button>
+        </section>
+      </div>
+
+      <div className="hidden md:block space-y-6">
       {/* Hero Section */}
       {effectivePlan === 'free' && (
         <motion.div 
@@ -4984,57 +5238,67 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
         </section>
       )}
 
-      <section className="relative overflow-hidden rounded-[32px] md:rounded-[48px] bg-surface border border-white/5 p-6 md:p-12">
-        <div className="absolute top-0 right-0 w-1/2 h-full pointer-events-none opacity-20">
-          <div className="absolute -top-1/4 -right-1/4 w-full h-full bg-primary/30 rounded-full blur-[120px]" />
-        </div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-primary/20">
+      <section className="relative overflow-hidden rounded-[28px] md:rounded-[40px] bg-surface border border-white/10 p-4 md:p-10 shadow-xl shadow-black/10">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 md:gap-8">
+          <div className="space-y-4 min-w-0 flex-1">
+            <div className="grid grid-cols-2 gap-2">
+              <span className="px-3 py-2 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.18em] rounded-2xl border border-primary/20 leading-tight">
                 {effectivePlan} {dashboardText.member}
               </span>
               {isAdmin && (
-                <span className="px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
+                <span className="px-3 py-2 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.18em] rounded-2xl border border-white/10 leading-tight">
                   {dashboardText.adminMode}
                 </span>
               )}
             </div>
-            <h1 className="text-3xl md:text-6xl font-black tracking-tighter leading-none">
+            <h1 className="text-[28px] md:text-6xl font-black tracking-tighter leading-[0.95]">
               {dashboardText.greeting}, <br />
               <span className="text-primary">{getFirstName()}!</span>
             </h1>
-            <p className="text-text-secondary text-base md:text-lg max-w-md leading-relaxed">
+            <p className="text-text-secondary text-sm md:text-lg max-w-xl leading-relaxed">
               {dashboardText.weeklyQuote} <span className="text-text-primary font-bold">{dashboardText.weeklyProgress(weeklyPercent, weeklyCount, WEEKLY_TARGET)}</span>
             </p>
+
+            <div className="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{dashboardText.weeklyGoal}</span>
+                <span className="text-sm font-black text-primary">{weeklyPercent}%</span>
+              </div>
+              <div className="h-2 bg-black/20 rounded-full overflow-hidden border border-white/5">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${weeklyPercent}%` }}
+                  className="h-full bg-primary"
+                />
+              </div>
+            </div>
             
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
               <button 
                 onClick={() => todayScheduledWorkout
                   ? onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))
                   : onStartWorkout()}
-                className="bg-primary text-text-primary px-8 py-4 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto min-h-[56px]"
+                className="bg-primary text-text-primary px-5 py-3 rounded-2xl font-black text-xs md:text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2 w-full min-h-[50px] uppercase tracking-wider"
               >
                 {dashboardText.startTodayWorkout}
                 <ArrowRight size={18} />
               </button>
-              <div className="flex items-center justify-center gap-4 px-6 py-4 bg-white/5 rounded-2xl border border-white/10 w-full sm:w-auto">
-                <div className="flex items-center gap-2">
-                  <Flame size={20} className="text-primary" />
-                  <span className="font-black text-lg">{profile.streak}</span>
+              <div className="flex items-center justify-center gap-0 bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+                <div className="flex flex-1 items-center justify-center gap-2 px-4 py-3 min-w-[88px]">
+                  <Flame size={18} className="text-primary" />
+                  <span className="font-black text-lg leading-none">{profile.streak}</span>
                 </div>
-                <div className="w-px h-4 bg-white/10" />
-                <div className="flex items-center gap-2">
-                  <Trophy size={20} className="text-primary" />
-                  <span className="font-black text-lg">{profile.points}</span>
+                <div className="w-px h-6 bg-white/10" />
+                <div className="flex flex-1 items-center justify-center gap-2 px-4 py-3 min-w-[104px]">
+                  <Trophy size={18} className="text-primary" />
+                  <span className="font-black text-lg leading-none">{profile.points}</span>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="hidden lg:block relative">
-            <div className="w-64 h-64 flex items-center justify-center relative">
+          <div className="hidden lg:block relative shrink-0">
+            <div className="w-56 h-56 flex items-center justify-center relative">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 256 256">
                 <circle cx="128" cy="128" r="112" fill="none" stroke="rgba(255,106,0,0.15)" strokeWidth="8" />
                 <circle
@@ -5055,29 +5319,29 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
         </div>
       </section>
 
-      <section className="bg-surface border border-white/10 rounded-[28px] md:rounded-[40px] p-4 sm:p-6 md:p-8 space-y-5 shadow-xl shadow-black/10">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
-              <CalendarDays size={21} />
+      <section className="bg-surface border border-white/10 rounded-2xl md:rounded-[28px] p-3 sm:p-5 md:p-6 space-y-3 shadow-xl shadow-black/10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+              <CalendarDays size={18} />
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight">{dashboardText.weeklyWorkoutsTitle}</h2>
+                <h2 className="text-base sm:text-xl font-black uppercase tracking-tight">{dashboardText.weeklyWorkoutsTitle}</h2>
                 {scheduledWorkoutDetails.length > 0 && (
                   <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-text-muted">
                     {savedWeeklyDoneIds.filter(id => scheduledWorkoutDetails.some(slot => slot.workoutId === id)).length}/{scheduledWorkoutDetails.length}
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-text-secondary mt-1 leading-relaxed">
+              <p className="text-[11px] sm:text-sm text-text-secondary mt-0.5 leading-relaxed line-clamp-2">
                 {dashboardText.weeklyWorkoutsSubtitle}
               </p>
             </div>
           </div>
           <button
             onClick={() => onStartWorkout()}
-            className="hidden sm:flex min-h-[44px] px-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-primary/30 transition-all items-center gap-2 shrink-0"
+            className="hidden sm:flex min-h-[40px] px-3 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-primary/30 transition-all items-center gap-2 shrink-0"
           >
             <SlidersHorizontal size={15} />
             {dashboardText.organize}
@@ -5086,34 +5350,34 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
 
         {scheduledWorkoutDetails.length > 0 ? (
           <>
-            <div className={`rounded-[24px] border p-4 sm:p-5 ${
+            <div className={`rounded-2xl border p-3 sm:p-4 ${
               todayScheduledWorkout && savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId)
                 ? 'bg-success/10 border-success/25'
                 : 'bg-gradient-to-br from-primary/15 to-primary/[0.04] border-primary/25'
             }`}>
               {todayScheduledWorkout ? (
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest">{dashboardText.today}</span>
+                        <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-[8px] font-black uppercase tracking-widest">{dashboardText.today}</span>
                         <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{todayName}</span>
                       </div>
-                      <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">{translateWorkoutName(todayScheduledWorkout.workout.name, language)}</h3>
-                      <p className="text-xs sm:text-sm text-text-secondary mt-1">
+                      <h3 className="text-base sm:text-xl font-black tracking-tight leading-tight">{translateWorkoutName(todayScheduledWorkout.workout.name, language)}</h3>
+                      <p className="text-[11px] sm:text-xs text-text-secondary mt-1">
                         {todayScheduledWorkout.workout.muscleGroup} • {todayScheduledWorkout.workout.duration} • {todayScheduledWorkout.workout.exercises.length} {dashboardText.exercises}
                       </p>
                     </div>
                     {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) && (
-                      <div className="w-10 h-10 rounded-2xl bg-success text-white flex items-center justify-center shrink-0">
-                        <Check size={20} />
+                      <div className="w-9 h-9 rounded-xl bg-success text-white flex items-center justify-center shrink-0">
+                        <Check size={18} />
                       </div>
                     )}
                   </div>
                   <div className="grid grid-cols-[1fr_auto] gap-2">
                     <button
                       onClick={() => onStartWorkout(todayScheduledWorkout.workoutId, getScheduledWorkoutMode(todayScheduledWorkout.workoutId))}
-                      className="min-h-[50px] rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      className="min-h-[44px] rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                       <Play size={17} />
                       {savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? dashboardText.openWorkout : dashboardText.startNow}
@@ -5121,7 +5385,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                     <button
                       onClick={() => toggleDashboardWorkoutDone(todayScheduledWorkout.workoutId)}
                       disabled={dashboardWorkoutPendingId === todayScheduledWorkout.workoutId}
-                      className={`min-w-[50px] min-h-[50px] rounded-2xl border flex items-center justify-center transition-all ${
+                      className={`min-w-[44px] min-h-[44px] rounded-xl border flex items-center justify-center transition-all ${
                         savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId)
                           ? 'bg-success/15 border-success/30 text-success'
                           : 'bg-white/5 border-white/10 text-text-secondary hover:text-success'
@@ -5129,8 +5393,8 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                       aria-label={savedWeeklyDoneIds.includes(todayScheduledWorkout.workoutId) ? dashboardText.unmarkDone : dashboardText.markDone}
                     >
                       {dashboardWorkoutPendingId === todayScheduledWorkout.workoutId
-                        ? <Loader2 size={20} className="animate-spin" />
-                        : <CheckCircle2 size={20} />}
+                        ? <Loader2 size={18} className="animate-spin" />
+                        : <CheckCircle2 size={18} />}
                     </button>
                   </div>
                 </div>
@@ -5148,7 +5412,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
               )}
             </div>
 
-            <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 -mx-1 px-1">
+            <div className="flex gap-2.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 -mx-1 px-1">
               {WEEK_DAYS.map(day => {
                 const slot = scheduledWorkoutDetails.find(item => item.day === day);
                 const isToday = day === todayName;
@@ -5158,7 +5422,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                     key={day}
                     onClick={() => slot && onStartWorkout(slot.workoutId, getScheduledWorkoutMode(slot.workoutId))}
                     disabled={!slot}
-                    className={`shrink-0 w-[138px] sm:w-[160px] min-h-[118px] rounded-2xl border p-3.5 text-left snap-start transition-all ${
+                    className={`shrink-0 w-[112px] sm:w-[140px] min-h-[90px] rounded-2xl border p-3 text-left snap-start transition-all ${
                       isDone
                         ? 'bg-success/10 border-success/25'
                         : isToday
@@ -5172,8 +5436,8 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                       <span className={`text-[9px] font-black uppercase tracking-widest ${isToday ? 'text-primary' : 'text-text-muted'}`}>{day.slice(0, 3)}</span>
                       {isDone && <CheckCircle2 size={15} className="text-success" />}
                     </div>
-                    <div className="mt-3 text-sm font-black leading-tight line-clamp-2">{slot?.workout ? translateWorkoutName(slot.workout.name, language) : dashboardText.rest}</div>
-                    <div className="mt-2 text-[9px] font-bold text-text-muted line-clamp-1">{slot ? slot.workout.muscleGroup : dashboardText.noWorkout}</div>
+                    <div className="mt-2 text-xs font-black leading-tight line-clamp-2">{slot?.workout ? translateWorkoutName(slot.workout.name, language) : dashboardText.rest}</div>
+                    <div className="mt-1.5 text-[8px] font-bold text-text-muted line-clamp-1">{slot ? slot.workout.muscleGroup : dashboardText.noWorkout}</div>
                   </button>
                 );
               })}
@@ -5181,24 +5445,26 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
 
             <button
               onClick={() => onStartWorkout()}
-              className="sm:hidden w-full min-h-[46px] rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary flex items-center justify-center gap-2"
+              className="sm:hidden w-full min-h-[42px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary flex items-center justify-center gap-2"
             >
               <SlidersHorizontal size={15} />
               {dashboardText.organizeWeek}
             </button>
           </>
         ) : (
-          <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.03] p-6 text-center space-y-4">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
-              <CalendarPlus size={25} />
-            </div>
-            <div>
-              <h3 className="text-lg font-black">{dashboardText.buildWeek}</h3>
-              <p className="text-xs sm:text-sm text-text-muted mt-1 max-w-md mx-auto leading-relaxed">{dashboardText.buildWeekText}</p>
+          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-3 text-left space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                <CalendarPlus size={20} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-black">{dashboardText.buildWeek}</h3>
+                <p className="text-[11px] sm:text-xs text-text-muted mt-0.5 leading-relaxed line-clamp-2">{dashboardText.buildWeekText}</p>
+              </div>
             </div>
             <button
               onClick={() => onStartWorkout()}
-              className="w-full sm:w-auto min-h-[50px] px-6 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all inline-flex items-center justify-center gap-2"
+              className="w-full min-h-[42px] px-4 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all inline-flex items-center justify-center gap-2"
             >
               <PlusCircle size={17} />
               {dashboardText.chooseWorkouts}
@@ -5247,29 +5513,29 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
         />
       </div>
 
-      <section className="bg-surface border border-white/10 rounded-[28px] md:rounded-[40px] p-5 sm:p-6 md:p-8 overflow-hidden relative">
+      <section className="bg-surface border border-white/10 rounded-2xl md:rounded-[28px] p-3 sm:p-5 md:p-6 overflow-hidden relative">
         <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none opacity-20 bg-[radial-gradient(circle_at_top_right,rgba(255,106,0,0.35),transparent_58%)]" />
-        <div className="relative z-10 space-y-6">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
-                <Gauge size={23} />
+        <div className="relative z-10 space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+                <Gauge size={19} />
               </div>
               <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Base do dia</div>
-                <h2 className="mt-1 text-2xl sm:text-3xl font-black uppercase tracking-tight">Água, sono e dieta</h2>
-                <p className="mt-2 text-sm text-text-secondary max-w-2xl leading-relaxed">
+                <div className="text-[9px] font-black uppercase tracking-[0.22em] text-primary">Base do dia</div>
+                <h2 className="mt-0.5 text-lg sm:text-2xl font-black uppercase tracking-tight">Água, sono e dieta</h2>
+                <p className="mt-1 text-xs text-text-secondary max-w-2xl leading-relaxed">
                   Você está <span className="font-black text-text-primary">{recoveryScore}%</span> alinhado com sua base de recuperação hoje.
                 </p>
               </div>
             </div>
-            <div className="rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
-              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">Próximo ajuste</div>
-              <div className="mt-1 text-sm font-bold text-text-primary">{recoveryPriority}</div>
+            <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2">
+              <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">Próximo ajuste</div>
+              <div className="mt-0.5 text-xs font-bold text-text-primary">{recoveryPriority}</div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {[
               {
                 label: 'Água hoje',
@@ -5284,14 +5550,14 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                     <button
                       type="button"
                       onClick={() => updateWaterIntake(250)}
-                      className="min-h-[42px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-cyan-400/30 transition-all"
+                      className="min-h-[38px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-cyan-400/30 transition-all"
                     >
                       +250ml
                     </button>
                     <button
                       type="button"
                       onClick={() => updateWaterIntake(500)}
-                      className="min-h-[42px] rounded-xl bg-cyan-400/15 border border-cyan-400/30 text-[10px] font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-100 hover:bg-cyan-400/25 transition-all"
+                      className="min-h-[38px] rounded-xl bg-cyan-400/15 border border-cyan-400/30 text-[10px] font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-100 hover:bg-cyan-400/25 transition-all"
                     >
                       +500ml
                     </button>
@@ -5310,7 +5576,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                   <button
                     type="button"
                     onClick={openWellnessCheckIn}
-                    className="w-full min-h-[42px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-indigo-400/30 transition-all"
+                    className="w-full min-h-[38px] rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-indigo-400/30 transition-all"
                   >
                     {dailyCheckIn ? 'Editar sono' : 'Registrar sono'}
                   </button>
@@ -5328,62 +5594,62 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                   <button
                     type="button"
                     onClick={onViewNutrition}
-                    className="w-full min-h-[42px] rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
+                    className="w-full min-h-[38px] rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
                   >
                     Abrir dieta
                   </button>
                 ),
               },
             ].map(item => (
-              <div key={item.label} className="bg-white/5 border border-white/10 rounded-[24px] p-4 sm:p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">{item.label}</div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-2xl font-black tracking-tight">{item.value}</span>
-                      <span className="text-xs font-bold text-text-muted">/ {item.target}</span>
-                    </div>
-                  </div>
-                  <div className={`w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 ${item.tone}`}>
+              <div key={item.label} className="bg-white/5 border border-white/10 rounded-2xl p-2.5 sm:p-4 space-y-2.5 sm:space-y-3">
+                <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5">
+                  <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shrink-0 ${item.tone}`}>
                     {item.icon}
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-text-muted">Progresso</span>
-                    <span className="text-text-primary">{item.progress}%</span>
+                  <div className="min-w-0">
+                    <div className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-text-muted truncate">{item.label}</div>
+                    <div className="mt-0.5 flex items-baseline gap-1.5 min-w-0">
+                      <span className="text-lg sm:text-xl font-black tracking-tight">{item.value}</span>
+                      <span className="text-[11px] sm:text-xs font-bold text-text-muted truncate">/ {item.target}</span>
+                    </div>
                   </div>
-                  <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${item.progress}%` }}
-                      className={`h-full rounded-full ${item.bar}`}
-                    />
+                  <div className="text-right">
+                    <div className="text-sm font-black text-text-primary">{item.progress}%</div>
+                    <div className="text-[8px] font-black uppercase tracking-widest text-text-muted">Hoje</div>
                   </div>
                 </div>
-                {item.action}
+                <div className="h-1.5 sm:h-2 rounded-full bg-white/5 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${item.progress}%` }}
+                    className={`h-full rounded-full ${item.bar}`}
+                  />
+                </div>
+                <div className="[&>button]:min-h-[34px] [&>button]:rounded-lg [&>button]:text-[9px] [&_button]:min-h-[34px] [&_button]:rounded-lg [&_button]:text-[9px]">
+                  {item.action}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Calorias da Semana */}
-        <div className="lg:col-span-2 bg-surface p-8 rounded-[40px] border border-white/5 space-y-6">
+        <div className="lg:col-span-2 bg-surface p-4 sm:p-5 rounded-2xl md:rounded-[28px] border border-white/10 space-y-4">
           <div>
-            <h3 className="text-xl font-black tracking-tight uppercase">{dashboardText.weekCalories}</h3>
-            <p className="text-sm text-text-muted">{dashboardText.dailyGoal(calorieGoal.toLocaleString(locale))}</p>
+            <h3 className="text-lg font-black tracking-tight uppercase">{dashboardText.weekCalories}</h3>
+            <p className="text-xs text-text-muted">{dashboardText.dailyGoal(calorieGoal.toLocaleString(locale))}</p>
           </div>
 
-          <div className="h-[280px] w-full relative">
+          <div className="h-[190px] sm:h-[240px] w-full relative">
             {weeklyCalData.every(d => d.calories === 0) && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <p className="text-sm text-text-muted font-bold text-center px-4">{dashboardText.logMealsForChart}</p>
               </div>
             )}
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyCalData} margin={{ top: 28, right: 4, left: -20, bottom: 0 }} barSize={36}>
+              <BarChart data={weeklyCalData} margin={{ top: 22, right: 0, left: -24, bottom: 0 }} barSize={26}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                 <XAxis
                   dataKey="day"
@@ -5442,7 +5708,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
             const avg = Math.round(daysWithData.reduce((s, d) => s + d.calories, 0) / daysWithData.length);
             const best = Math.max(...daysWithData.map(d => d.calories));
             return (
-              <div className="flex gap-8 pt-4 border-t border-white/5">
+              <div className="flex gap-5 pt-3 border-t border-white/5">
                 <div>
                   <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{dashboardText.weeklyAverage}</p>
                   <p className="text-base font-black mt-0.5">{avg.toLocaleString(locale)} <span className="text-text-muted text-xs font-bold">kcal</span></p>
@@ -5463,9 +5729,9 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
           const todayCals = todayLog?.calories ?? 0;
           const calPct = calorieGoal > 0 ? Math.min(100, Math.round((todayCals / calorieGoal) * 100)) : 0;
           return (
-            <div className="bg-surface p-8 rounded-[40px] border border-white/5 space-y-8">
+            <div className="bg-surface p-4 sm:p-5 rounded-2xl md:rounded-[28px] border border-white/10 space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black tracking-tight uppercase">{dashboardText.nutrition}</h3>
+                <h3 className="text-lg font-black tracking-tight uppercase">{dashboardText.nutrition}</h3>
                 <button
                   onClick={onViewNutrition}
                   className="text-primary text-xs font-black uppercase tracking-widest hover:text-primary-hover transition-colors"
@@ -5474,9 +5740,9 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
                     <span className="text-text-muted">{dashboardText.calories}</span>
                     <span className="text-text-primary">
                       {todayCals > 0 ? todayCals.toLocaleString(locale) : '—'} / {calorieGoal.toLocaleString(locale)} kcal
@@ -5491,24 +5757,24 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2">
                   {[
                     { label: dashboardText.proteinShort, value: todayLog?.protein ?? 0, unit: 'g' },
                     { label: dashboardText.carbsShort, value: todayLog?.carbs ?? 0, unit: 'g' },
                     { label: dashboardText.fatShort, value: todayLog?.fat ?? 0, unit: 'g' },
                   ].map(({ label, value }) => (
-                    <div key={label} className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                      <div className="text-[10px] text-text-muted font-black uppercase mb-1">{label}</div>
+                    <div key={label} className="text-center p-3 bg-white/5 rounded-xl border border-white/5">
+                      <div className="text-[9px] text-text-muted font-black uppercase mb-1">{label}</div>
                       <div className="text-sm font-black">{value > 0 ? `${value}g` : '—'}</div>
                     </div>
                   ))}
                 </div>
 
-                <div className="pt-4 space-y-4">
-                  <h4 className="text-xs font-black text-text-muted uppercase tracking-widest">{dashboardText.nextMeal}</h4>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <Utensils size={24} />
+                <div className="pt-2 space-y-3">
+                  <h4 className="text-[10px] font-black text-text-muted uppercase tracking-widest">{dashboardText.nextMeal}</h4>
+                  <div className="p-3 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Utensils size={20} />
                     </div>
                     <div>
                       <div className="text-sm font-bold text-text-muted">{dashboardText.logMeals}</div>
@@ -5520,6 +5786,7 @@ function DashboardView({ profile, language, onUpgrade, onStartWorkout, onViewNut
             </div>
           );
         })()}
+      </div>
       </div>
 
       <AnimatePresence>

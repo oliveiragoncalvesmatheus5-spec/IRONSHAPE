@@ -14,11 +14,11 @@ export function PlanSimulator({ currentPlan, onPlanChange }: { currentPlan: Plan
   const selected = plans.find(p => p.value === currentPlan);
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-fit">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[55] w-fit">
       <div className="relative">
         <button
           onClick={() => setOpen(v => !v)}
-          className="bg-surface/80 backdrop-blur-xl border border-primary/30 px-4 py-2 rounded-2xl flex items-center gap-2.5 shadow-2xl hover:border-primary/60 transition-all"
+          className="bg-surface/90 backdrop-blur-xl border border-primary/30 px-3.5 py-2 rounded-2xl flex items-center gap-2 shadow-xl hover:border-primary/60 transition-all"
         >
           <ShieldCheck size={14} className="text-primary" />
           <span className="text-[10px] font-black text-primary uppercase tracking-widest">

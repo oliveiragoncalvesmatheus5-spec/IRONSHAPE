@@ -7404,53 +7404,53 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
   };
 
   return (
-    <div className="flex flex-col gap-3 w-full md:w-56">
-      <div className={`flex items-center justify-between p-5 rounded-2xl transition-all duration-500 ${
+    <div className="w-full">
+      <div className={`relative flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl transition-all duration-300 overflow-hidden ${
         isFinished ? 'bg-success/20 border border-success/30' : 
         isActive ? 'bg-primary/20 border border-primary/30 shadow-lg shadow-primary/10' : 
         'bg-white/5 border border-white/5'
       }`}>
-        <div className="flex flex-col">
-          <span className="text-[10px] text-text-muted uppercase font-black tracking-widest mb-1">
+        {isActive && (
+          <motion.div
+            initial={{ width: '100%' }}
+            animate={{ width: `${(seconds / initialSeconds) * 100}%` }}
+            transition={{ duration: 1, ease: "linear" }}
+            className="absolute inset-x-0 bottom-0 h-0.5 bg-primary"
+          />
+        )}
+        <div className="relative z-10 flex items-center gap-2 min-w-0">
+          <Clock size={13} className={isFinished ? 'text-success' : isActive ? 'text-primary' : 'text-text-muted'} />
+          <div className="flex flex-col min-w-0">
+          <span className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-0.5">
             {isFinished ? 'Finalizado' : isActive ? 'Descansando' : 'Descanso'}
           </span>
-          <span className={`text-2xl font-black font-mono leading-none ${
+          <span className={`text-base font-black font-mono leading-none ${
             isFinished ? 'text-success' : isActive ? 'text-primary' : 'text-text-primary'
           }`}>
             {formatTime(seconds)}
           </span>
+          </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="relative z-10 flex gap-1.5">
           <button
             onClick={toggleTimer}
-            className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
               isActive ? 'bg-primary text-text-primary' : 'bg-white/10 text-text-primary hover:bg-white/20'
             }`}
             title={isActive ? 'Pausar' : 'Iniciar'}
           >
-            {isActive ? <Pause size={20} /> : <Play size={20} />}
+            {isActive ? <Pause size={14} /> : <Play size={14} />}
           </button>
           <button
             onClick={resetTimer}
-            className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 text-text-primary hover:bg-white/20 transition-all"
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-text-primary hover:bg-white/20 transition-all"
             title="Resetar"
           >
-            <RotateCcw size={20} />
+            <RotateCcw size={14} />
           </button>
         </div>
       </div>
-      
-      {isActive && (
-        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: '100%' }}
-            animate={{ width: `${(seconds / initialSeconds) * 100}%` }}
-            transition={{ duration: 1, ease: "linear" }}
-            className="h-full bg-primary"
-          />
-        </div>
-      )}
 
       {isFinished && (
         <motion.div 
@@ -7851,132 +7851,111 @@ function ExerciseCard({
   };
 
   return (
-    <div className={`bg-surface rounded-[32px] md:rounded-[40px] border transition-all duration-500 overflow-hidden group ${
+    <div className={`bg-surface rounded-2xl border transition-all duration-300 overflow-hidden group ${
       isCompleted
-        ? 'border-success/30 bg-success/5 shadow-2xl shadow-success/5'
-        : isResting ? 'border-primary/40 bg-primary/5 shadow-2xl shadow-primary/5' : 'border-white/5 hover:border-white/10'
+        ? 'border-success/30 bg-success/5 shadow-lg shadow-success/5'
+        : isResting ? 'border-primary/40 bg-primary/5 shadow-lg shadow-primary/5' : 'border-white/5 hover:border-white/10'
     }`}>
-      {/* Main card row */}
-      <div className="p-6 md:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-8">
-        <div className="flex items-start sm:items-center gap-6 md:gap-8 flex-1">
-          <div className={`w-12 h-12 md:w-16 md:h-16 rounded-[18px] md:rounded-[24px] flex items-center justify-center text-xl md:text-2xl font-black transition-all duration-500 border shrink-0 ${
-            isCompleted
-              ? 'bg-success text-white border-success/20'
-              : isResting ? 'bg-primary text-text-primary border-primary/20 scale-110' : 'bg-white/5 text-text-muted group-hover:text-primary group-hover:bg-primary/10 border-white/5'
-          }`}>
-            {isCompleted ? <CheckCircle2 size={24} /> : index + 1}
-          </div>
-          <div className="space-y-1 flex-1">
-            <div className="flex flex-wrap items-center gap-3">
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={exercise.name}
-                  onChange={(e) => onUpdate('name', e.target.value)}
-                  className="bg-transparent border-b border-primary/30 text-xl md:text-2xl font-black tracking-tight focus:outline-none w-full"
-                />
-              ) : (
-                <h4 className="text-xl md:text-2xl font-black tracking-tight">{exerciseDisplay.name}</h4>
-              )}
-              {isResting && (
-                <motion.span
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="px-3 py-1 bg-primary text-text-primary text-[8px] font-black rounded-full uppercase tracking-widest"
-                >
-                  Descansando
-                </motion.span>
-              )}
-              {isCompleted && (
-                <span className="px-3 py-1 bg-success/10 text-success text-[8px] font-black rounded-full uppercase tracking-widest border border-success/20">
-                  Concluído
-                </span>
-              )}
-            </div>
-            <p className="text-text-secondary text-sm md:text-base max-w-md leading-relaxed line-clamp-2">{exerciseDisplay.description}</p>
-
-            {!isEditing && (
-              <button
-                onClick={handleToggleDetails}
-                className="flex items-center gap-2 text-primary hover:text-primary-hover transition-colors group/btn pt-2 min-h-[44px]"
-              >
-                <div className="p-2 rounded-lg bg-primary/10 group-hover/btn:bg-primary/20 transition-all">
-                  <PlayCircle size={18} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest">
-                  {showDetails ? 'Fechar Execução' : 'Ver Execução'}
-                </span>
-              </button>
-            )}
-          </div>
+      <div className="p-2.5 flex items-center gap-2.5">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black transition-all duration-300 border shrink-0 ${
+          isCompleted
+            ? 'bg-success text-white border-success/20'
+            : isResting ? 'bg-primary text-text-primary border-primary/20' : 'bg-white/5 text-text-muted group-hover:text-primary group-hover:bg-primary/10 border-white/5'
+        }`}>
+          {isCompleted ? <CheckCircle2 size={18} /> : index + 1}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 md:gap-12 w-full lg:w-auto">
-          <div className="flex gap-8 md:gap-12 w-full sm:w-auto justify-between sm:justify-start">
-            <div className="text-center space-y-1">
-              <div className="text-[10px] text-text-muted uppercase font-black tracking-[0.2em]">Séries</div>
-              {isEditing ? (
-                <input
-                  type="number"
-                  value={exercise.series}
-                  onChange={(e) => onUpdate('series', parseInt(e.target.value))}
-                  className="bg-transparent border-b border-primary/30 text-2xl md:text-3xl font-black text-primary w-16 text-center focus:outline-none min-h-[44px]"
-                />
-              ) : (
-                <div className="text-2xl md:text-3xl font-black text-primary">{exercise.series}</div>
-              )}
-            </div>
-            <div className="text-center space-y-1">
-              <div className="text-[10px] text-text-muted uppercase font-black tracking-[0.2em]">Reps</div>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={exercise.reps}
-                  onChange={(e) => onUpdate('reps', e.target.value)}
-                  className="bg-transparent border-b border-primary/30 text-2xl md:text-3xl font-black text-primary w-20 text-center focus:outline-none min-h-[44px]"
-                />
-              ) : (
-                <div className="text-2xl md:text-3xl font-black text-primary">{exercise.reps}</div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6 w-full sm:w-auto">
-            {!isEditing && (
-              <div className="h-12 w-px bg-white/10 hidden md:block" />
-            )}
-
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
             {isEditing ? (
-              <div className="text-center space-y-1 w-full sm:w-auto">
-                <div className="text-[10px] text-text-muted uppercase font-black tracking-[0.2em]">Descanso</div>
-                <input
-                  type="text"
-                  value={exercise.restTime}
-                  onChange={(e) => onUpdate('restTime', e.target.value)}
-                  className="bg-transparent border-b border-primary/30 text-2xl md:text-3xl font-black text-text-primary w-full sm:w-24 text-center focus:outline-none min-h-[44px]"
-                />
-              </div>
+              <input
+                type="text"
+                value={exercise.name}
+                onChange={(e) => onUpdate('name', e.target.value)}
+                className="bg-transparent border-b border-primary/30 text-sm font-black tracking-tight focus:outline-none w-full min-h-[36px]"
+              />
             ) : (
-              <RestTimer restTime={exercise.restTime} timerId={String(exercise.id)} onStateChange={setIsResting} />
+              <h4 className="text-[13px] font-black tracking-tight truncate">{exerciseDisplay.name}</h4>
+            )}
+            {isResting && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="hidden sm:inline-flex px-2 py-1 bg-primary text-text-primary text-[7px] font-black rounded-full uppercase tracking-widest shrink-0"
+              >
+                Descanso
+              </motion.span>
             )}
           </div>
 
-          {!isEditing && (
+          {isEditing ? (
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              <input
+                type="number"
+                value={exercise.series}
+                onChange={(e) => onUpdate('series', parseInt(e.target.value))}
+                aria-label="Séries"
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-xs font-black text-primary text-center focus:outline-none"
+              />
+              <input
+                type="text"
+                value={exercise.reps}
+                onChange={(e) => onUpdate('reps', e.target.value)}
+                aria-label="Repetições"
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-xs font-black text-primary text-center focus:outline-none"
+              />
+              <input
+                type="text"
+                value={exercise.restTime}
+                onChange={(e) => onUpdate('restTime', e.target.value)}
+                aria-label="Descanso"
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-xs font-black text-text-primary text-center focus:outline-none"
+              />
+            </div>
+          ) : (
+            <div className="mt-0.5 flex items-center gap-2 text-[10px] text-text-muted font-bold">
+              <span className="text-primary font-black">{exercise.series}x</span>
+              <span className="truncate">{exercise.reps} reps</span>
+              <span className="flex items-center gap-1 shrink-0"><Clock size={11} />{exercise.restTime}</span>
+              {isCompleted && <span className="text-success font-black uppercase tracking-widest text-[8px]">Ok</span>}
+            </div>
+          )}
+        </div>
+
+        {!isEditing && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleToggleDetails}
+              className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${
+                showDetails
+                  ? 'bg-primary text-text-primary border-primary'
+                  : 'bg-white/5 text-primary border-white/10 hover:bg-primary/10'
+              }`}
+              title={showDetails ? 'Fechar execução' : 'Ver execução'}
+            >
+              {showDetails ? <X size={15} /> : <PlayCircle size={15} />}
+            </button>
             <button
               onClick={onToggleComplete}
               disabled={isActionPending}
-              className={`w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${
                 isCompleted
-                  ? 'bg-success/10 text-success border border-success/20 hover:bg-success hover:text-white'
-                  : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white'
+                  ? 'bg-success/15 text-success border-success/25 hover:bg-success hover:text-white'
+                  : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white'
               } disabled:opacity-70 disabled:cursor-wait`}
+              title={isCompleted ? 'Concluído' : 'Concluir'}
             >
               {isActionPending ? <Loader2 size={15} className="animate-spin" /> : isCompleted ? <CheckCircle2 size={15} /> : <Check size={15} />}
-              {isActionPending ? 'Registrando' : isCompleted ? 'Concluído' : 'Concluir'}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {!isEditing && (
+        <div className="px-2.5 pb-2.5">
+          <RestTimer restTime={exercise.restTime} timerId={String(exercise.id)} onStateChange={setIsResting} />
+        </div>
+      )}
 
       {/* Expandable demo panel */}
       <AnimatePresence>
@@ -7990,7 +7969,7 @@ function ExerciseCard({
           >
             <div className="flex flex-col lg:flex-row">
               {/* GIF / Video */}
-              <div className="lg:w-1/2 bg-black aspect-video lg:aspect-auto min-h-[220px] flex items-center justify-center relative">
+              <div className="lg:w-1/2 bg-black aspect-video lg:aspect-auto min-h-[180px] flex items-center justify-center relative">
                 {gifLoading ? (
                   <div className="flex flex-col items-center gap-4 text-text-muted">
                     <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -8033,25 +8012,25 @@ function ExerciseCard({
               </div>
 
               {/* Description */}
-              <div className="lg:w-1/2 p-8 space-y-8 overflow-y-auto max-h-[400px]">
+              <div className="lg:w-1/2 p-4 md:p-6 space-y-5 overflow-y-auto max-h-[340px]">
                 <div className="space-y-1">
-                  <h3 className="text-2xl font-black tracking-tight uppercase">{exerciseDisplay.name}</h3>
+                  <h3 className="text-lg md:text-xl font-black tracking-tight uppercase">{exerciseDisplay.name}</h3>
                   <p className="text-primary font-black text-xs uppercase tracking-[0.2em]">{exerciseDisplay.muscleGroup}</p>
                 </div>
 
                 {exercise.instructions && (
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-xl bg-primary/10 text-primary">
                         <Info size={16} />
                       </div>
                       <h4 className="text-xs font-black uppercase tracking-widest">Instruções</h4>
                     </div>
-                    <ul className="space-y-3">
+                    <ul className="space-y-2.5">
                       {exerciseDisplay.instructions.map((step, i) => (
-                        <li key={i} className="flex gap-4 text-text-secondary leading-relaxed">
+                        <li key={i} className="flex gap-3 text-text-secondary leading-relaxed">
                           <span className="text-primary font-black shrink-0">{i + 1}.</span>
-                          <span className="text-sm font-medium">{step}</span>
+                          <span className="text-xs font-medium">{step}</span>
                         </li>
                       ))}
                     </ul>
@@ -8059,7 +8038,7 @@ function ExerciseCard({
                 )}
 
                 {exercise.proTips && (
-                  <div className="p-5 bg-primary/5 rounded-2xl border border-primary/10 space-y-2">
+                  <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-2">
                     <div className="flex items-center gap-2 text-primary">
                       <Zap size={14} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Dica Pro</span>
@@ -8069,7 +8048,7 @@ function ExerciseCard({
                 )}
 
                 {exercise.commonErrors && (
-                  <div className="p-5 bg-error/5 rounded-2xl border border-error/10 space-y-2">
+                  <div className="p-4 bg-error/5 rounded-2xl border border-error/10 space-y-2">
                     <div className="flex items-center gap-2 text-error">
                       <AlertTriangle size={14} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Erro Comum</span>
@@ -8214,7 +8193,7 @@ function WorkoutDetailView({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6 pb-56 md:pb-32"
+      className="space-y-4 pb-48 md:pb-32"
     >
       <AnimatePresence>
         {selectedExerciseForVideo && (
@@ -8227,7 +8206,7 @@ function WorkoutDetailView({
       </AnimatePresence>
 
       {/* Header compacto */}
-      <header className="space-y-4">
+      <header className="space-y-3">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -8267,11 +8246,11 @@ function WorkoutDetailView({
               </span>
             )}
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">{workoutDisplay.name}</h1>
+          <h1 className="text-2xl md:text-5xl font-black tracking-tighter leading-none">{workoutDisplay.name}</h1>
         </div>
 
         {/* Métricas inline e compactas */}
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-3 text-xs">
           <span className="flex items-center gap-1.5 text-text-muted">
             <Clock size={14} className="text-primary" />
             <span className="font-bold">{workout.duration}</span>
@@ -8410,63 +8389,64 @@ function WorkoutDetailView({
         )}
       </AnimatePresence>
 
-      <section className="bg-surface border border-white/5 rounded-[28px] p-5 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Progresso do treino</div>
-            <div className="mt-1 text-lg font-black">{completedCount}/{exercises.length} exercícios concluídos</div>
+      <section className="border-y border-white/10 py-3 space-y-3">
+        <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Progresso</div>
+            <div className="mt-1 text-base font-black">{completedCount}/{exercises.length} exercícios</div>
           </div>
-          <div className="px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest">
-            {workoutProgress}%
+          <div className="text-right">
+            <div className="text-2xl font-black text-primary leading-none">{workoutProgress}%</div>
+            <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">Hoje</div>
           </div>
         </div>
-        <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
+        <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${workoutProgress}%` }}
-            className="h-full bg-primary shadow-[0_0_15px_rgba(255,106,0,0.45)]"
+            className="h-full bg-primary"
           />
         </div>
 
-        <div className="pt-4 border-t border-white/5 space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Trophy size={18} className="text-primary" />
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">Pontos</div>
-                <div className="text-sm font-black">{displayPoints.toLocaleString(locale)} pts</div>
-              </div>
+        <div className="flex items-center justify-between gap-4 rounded-xl bg-surface border border-white/10 px-3 py-2.5">
+          <div className="flex items-center gap-3 min-w-0">
+            <Trophy size={17} className="text-primary shrink-0" />
+            <div className="min-w-0">
+              <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">Pontos</div>
+              <div className="text-sm font-black">{displayPoints.toLocaleString(locale)} pts</div>
             </div>
-            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">
-              {isFreePointsPlan ? `Fase 1: ${freePointsLimit.toLocaleString(locale)} pts` : `Meta ${planPointsLimit.toLocaleString(locale)} pts`}
-            </span>
           </div>
-          <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${milestoneProgress}%` }}
-              className="h-full bg-success"
-            />
+          <div className="w-28 shrink-0 space-y-1">
+            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${milestoneProgress}%` }}
+                className="h-full bg-success"
+              />
+            </div>
+            <div className="text-[8px] font-black text-text-muted uppercase tracking-widest text-right">
+              {isFreePointsPlan ? `${freePointsLimit.toLocaleString(locale)} pts` : `${planPointsLimit.toLocaleString(locale)} pts`}
+            </div>
           </div>
-          {freeLimitReached && (
-            <button
-              onClick={onUpgrade}
-              className="w-full min-h-[44px] bg-primary/10 text-primary border border-primary/20 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
-            >
-              Continuar no Pro ou Elite
-            </button>
-          )}
         </div>
+        {freeLimitReached && (
+          <button
+            onClick={onUpgrade}
+            className="w-full min-h-[40px] bg-primary/10 text-primary border border-primary/20 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+          >
+            Continuar no Pro ou Elite
+          </button>
+        )}
       </section>
 
       {/* Exercícios — direto, sem heading extra */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-2.5">
         {exercises.map((exercise, index) => (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              language={language}
-              index={index}
+          <ExerciseCard
+            key={exercise.id}
+            exercise={exercise}
+            language={language}
+            index={index}
             isEditing={isEditing}
             isCompleted={completedExercises.includes(exercise.id)}
             onUpdate={(field, value) => updateExercise(index, field, value)}
@@ -8478,7 +8458,7 @@ function WorkoutDetailView({
       </div>
 
       {/* CTA fixo no rodapé */}
-      <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-50 md:z-40 p-4 bg-background/80 backdrop-blur-xl border-t border-white/5">
+      <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-50 md:z-40 p-3 bg-background/85 backdrop-blur-xl border-t border-white/5">
         <button
           onClick={async () => {
             if (isAwardingWorkout) return;
@@ -8496,23 +8476,23 @@ function WorkoutDetailView({
               setTimeout(() => setShowPointsNotice(false), 4500);
             }
           }}
-          className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 ${
+          className={`w-full min-h-[52px] rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 ${
             isCompleted
               ? 'bg-success text-white shadow-success/20'
-              : 'bg-primary text-white shadow-primary/30 hover:bg-orange-400'
+              : 'bg-primary text-white shadow-primary/25 hover:bg-orange-400'
           }`}
           disabled={isAwardingWorkout}
         >
           {isAwardingWorkout ? (
-            <><Loader2 size={18} className="animate-spin" /> Registrando</>
+            <><Loader2 size={17} className="animate-spin" /> Registrando</>
           ) : freeLimitReached && !hasAwardedPoints ? (
-            <><Trophy size={18} /> Fazer Upgrade</>
+            <><Trophy size={17} /> Fazer Upgrade</>
           ) : isCompleted && hasAwardedPoints ? (
-            <><CheckCircle2 size={18} /> Treino Concluído</>
+            <><CheckCircle2 size={17} /> Treino Concluído</>
           ) : isCompleted ? (
-            <><Trophy size={18} /> Concluir Treino</>
+            <><Trophy size={17} /> Concluir Treino</>
           ) : (
-            <><Play size={18} /> Concluir Treino de Hoje</>
+            <><Play size={17} /> Concluir Treino de Hoje</>
           )}
         </button>
       </div>

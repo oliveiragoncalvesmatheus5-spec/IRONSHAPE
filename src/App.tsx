@@ -9270,6 +9270,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
   const [results, setResults] = useState<MacroResults | null>(savedProtocol?.calcData?.goalFocus ? savedProtocol?.results || null : null);
   type NutritionTab = 'meta' | 'log' | 'plan' | 'settings';
   const [activeNutritionTab, setActiveNutritionTab] = useState<NutritionTab>('meta');
+  const nutritionTabsAnchorRef = useRef<HTMLDivElement | null>(null);
   const [showCoachUpgradeModal, setShowCoachUpgradeModal] = useState(false);
 
   const goalFocusOptions = nutritionText.goalFocusOptions;
@@ -9918,6 +9919,13 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
     { id: 'settings', label: 'Ajustes', icon: Settings },
   ];
 
+  const handleNutritionTabChange = (tabId: NutritionTab) => {
+    setActiveNutritionTab(tabId);
+    window.requestAnimationFrame(() => {
+      nutritionTabsAnchorRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  };
+
   if (showPrefsForm) {
     return (
       <NutritionPreferencesForm
@@ -10009,6 +10017,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
         )}
       </header>
 
+      <div ref={nutritionTabsAnchorRef} className="sm:hidden scroll-mt-3" />
       <nav className="sm:hidden sticky top-0 z-20 -mx-1 bg-background/95 backdrop-blur-xl border-y border-white/10 px-1 py-2">
         <div className="grid grid-cols-4 gap-1">
           {nutritionTabs.map((tab) => {
@@ -10020,7 +10029,8 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 key={tab.id}
                 type="button"
                 disabled={isLocked}
-                onClick={() => setActiveNutritionTab(tab.id)}
+                onClick={() => handleNutritionTabChange(tab.id)}
+                data-nutrition-tab={tab.id}
                 className={`min-h-[42px] rounded-xl border px-1.5 text-[8px] font-black uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-1 ${
                   isActive
                     ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'

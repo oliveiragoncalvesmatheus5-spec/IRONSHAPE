@@ -9908,10 +9908,6 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || effectivePlan === 'Admin';
   const hasElite = effectivePlan === 'Elite' || effectivePlan === 'Admin';
 
-  useEffect(() => {
-    if (!results && activeNutritionTab !== 'meta') setActiveNutritionTab('meta');
-  }, [results, activeNutritionTab]);
-
   const nutritionTabs: { id: NutritionTab; label: string; icon: typeof Calculator }[] = [
     { id: 'meta', label: 'Meta', icon: Calculator },
     { id: 'log', label: 'Registrar', icon: Plus },
@@ -10023,20 +10019,16 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
           {nutritionTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeNutritionTab === tab.id;
-            const isLocked = tab.id !== 'meta' && !results;
             return (
               <button
                 key={tab.id}
                 type="button"
-                disabled={isLocked}
                 onClick={() => handleNutritionTabChange(tab.id)}
                 data-nutrition-tab={tab.id}
                 className={`min-h-[42px] rounded-xl border px-1.5 text-[8px] font-black uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-1 ${
                   isActive
                     ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
-                    : isLocked
-                      ? 'bg-white/[0.025] text-text-muted/45 border-white/5'
-                      : 'bg-white/[0.04] text-text-muted border-white/10 active:scale-95'
+                    : 'bg-white/[0.04] text-text-muted border-white/10 active:scale-95'
                 }`}
               >
                 <Icon size={14} />
@@ -10354,6 +10346,26 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
           </div>
         </div>
       </section>
+
+      {!results && activeNutritionTab !== 'meta' && (
+        <section className="sm:hidden py-8 text-center border-y border-white/10">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
+            <Calculator size={21} />
+          </div>
+          <h3 className="mt-4 text-base font-black uppercase tracking-tight">Primeiro gere sua meta</h3>
+          <p className="mt-2 mx-auto max-w-[280px] text-[11px] leading-relaxed text-text-muted">
+            Para usar Registrar, Cardápio e Ajustes, calcule sua meta diária. Depois essas abas liberam seu tracker, refeições e macros manuais.
+          </p>
+          <button
+            type="button"
+            onClick={() => handleNutritionTabChange('meta')}
+            className="mt-5 w-full min-h-[42px] rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            Gerar meta agora
+            <ArrowRight size={15} />
+          </button>
+        </section>
+      )}
 
       {/* Controle Total da Nutrição - Tracker Diário */}
       {results && (

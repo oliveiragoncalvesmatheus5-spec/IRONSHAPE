@@ -8897,15 +8897,15 @@ function StepperControl({ field, step, value, onChange, onStep }: {
   onStep: (key: string, step: number) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+    <div className="space-y-1.5">
+      <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
         {field.label} <span className="text-primary/70">({field.unit})</span>
       </label>
-      <div className="flex items-center bg-background border border-white/10 rounded-2xl overflow-hidden focus-within:border-primary transition-all">
+      <div className="h-[52px] sm:h-auto flex items-center bg-white/[0.035] sm:bg-background border border-white/10 rounded-xl sm:rounded-2xl overflow-hidden focus-within:border-primary transition-all">
         <button
           type="button"
           onClick={() => onStep(field.key, -step)}
-          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
+          className="w-11 sm:w-14 h-full flex items-center justify-center text-xl sm:text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
         >
           −
         </button>
@@ -8916,14 +8916,14 @@ function StepperControl({ field, step, value, onChange, onStep }: {
             value={value}
             onChange={e => onChange(field.key, e.target.value)}
             placeholder={field.placeholder}
-            className="w-20 bg-transparent text-center text-2xl font-black outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-16 sm:w-20 bg-transparent text-center text-xl sm:text-2xl font-black outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
-          <span className="text-sm font-black text-text-muted">{field.unit}</span>
+          <span className="text-xs sm:text-sm font-black text-text-muted">{field.unit}</span>
         </div>
         <button
           type="button"
           onClick={() => onStep(field.key, step)}
-          className="w-14 flex items-center justify-center py-4 text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
+          className="w-11 sm:w-14 h-full flex items-center justify-center text-xl sm:text-2xl font-black text-text-muted hover:text-primary hover:bg-white/5 transition-all active:scale-95 select-none"
         >
           +
         </button>
@@ -8935,16 +8935,37 @@ function StepperControl({ field, step, value, onChange, onStep }: {
 function BodyProgressView({ userId, language }: { userId: string; language: LanguageCode }) {
   const locale = getLocaleCode(language);
   const storageKey = `body_measurements_${userId}`;
+  const weeklyCheckInKey = `progress_weekly_checkins_${userId}`;
   const todayKey = new Date().toISOString().split('T')[0];
 
   const readData = (): BodyMeasurement[] => {
     try { return JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch { return []; }
   };
+  type WeeklyProgressCheckIn = {
+    date: string;
+    energy: number;
+    sleep: number;
+    hunger: number;
+    training: number;
+    consistency: number;
+  };
+  const readWeeklyCheckIns = (): WeeklyProgressCheckIn[] => {
+    try { return JSON.parse(localStorage.getItem(weeklyCheckInKey) || '[]'); } catch { return []; }
+  };
 
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>(readData);
+  const [weeklyCheckIns, setWeeklyCheckIns] = useState<WeeklyProgressCheckIn[]>(readWeeklyCheckIns);
   const [saved, setSaved] = useState(false);
+  const [checkInSaved, setCheckInSaved] = useState(false);
   const [showOptional, setShowOptional] = useState(false);
   const [chartMetric, setChartMetric] = useState<keyof Omit<BodyMeasurement, 'date'>>('weight');
+  const [weeklyForm, setWeeklyForm] = useState<Omit<WeeklyProgressCheckIn, 'date'>>({
+    energy: 3,
+    sleep: 3,
+    hunger: 3,
+    training: 3,
+    consistency: 3,
+  });
 
   const lastEntry = measurements.length > 0 ? measurements[measurements.length - 1] : null;
 
@@ -9005,19 +9026,186 @@ function BodyProgressView({ userId, language }: { userId: string; language: Lang
 
   const primaryFields = MEASURE_FIELDS.filter(f => f.key === 'weight' || f.key === 'bodyFat');
   const optionalFields = MEASURE_FIELDS.filter(f => f.key !== 'weight' && f.key !== 'bodyFat');
+  const latestCheckIn = weeklyCheckIns.length > 0 ? weeklyCheckIns[weeklyCheckIns.length - 1] : null;
+  const currentCheckIn = latestCheckIn?.date === todayKey ? latestCheckIn : null;
+  const weightDiff = diff('weight');
+  const waistDiff = diff('waist');
+  const checkInAverage = currentCheckIn
+    ? (currentCheckIn.energy + currentCheckIn.sleep + currentCheckIn.training + (6 - currentCheckIn.hunger) + currentCheckIn.consistency) / 5
+    : 0;
+  const progressScore = Math.min(100, Math.round(
+    (measurements.length > 0 ? 30 : 0) +
+    (todayEntry ? 20 : 0) +
+    (currentCheckIn ? checkInAverage * 10 : 0)
+  ));
+  const statusLabel = progressScore >= 80 ? 'Evoluindo bem' : progressScore >= 55 ? 'No caminho' : currentCheckIn ? 'Ajuste necessário' : 'Faça o check-in';
+  const nextAction = !currentCheckIn
+    ? 'Faça o check-in semanal para liberar uma recomendação mais precisa.'
+    : currentCheckIn.sleep <= 2
+      ? 'Priorize sono por 3 noites antes de mexer em dieta ou treino.'
+      : currentCheckIn.energy <= 2
+        ? 'Reduza intensidade por 48h e observe energia antes do próximo ajuste.'
+        : weightDiff !== null && Math.abs(weightDiff) < 0.2 && currentCheckIn.consistency >= 4
+          ? 'Peso travou com boa consistência: mantenha por mais 7 dias ou ajuste a meta em Nutrição.'
+          : waistDiff !== null && waistDiff < 0
+            ? 'Cintura caiu: mantenha a estratégia atual e registre mais uma semana.'
+            : 'Mantenha a estratégia por 7 dias e registre medidas no mesmo horário.';
+
+  const persistWeeklyCheckIn = (form: Omit<WeeklyProgressCheckIn, 'date'>) => {
+    const entry: WeeklyProgressCheckIn = { date: todayKey, ...form };
+    setWeeklyCheckIns(prev => {
+      const updated = prev.filter(item => item.date !== todayKey);
+      updated.push(entry);
+      updated.sort((a, b) => a.date.localeCompare(b.date));
+      try { localStorage.setItem(weeklyCheckInKey, JSON.stringify(updated)); } catch { /* ignore */ }
+      return updated;
+    });
+  };
+
+  const updateWeeklyMetric = (key: keyof Omit<WeeklyProgressCheckIn, 'date'>, value: number) => {
+    setWeeklyForm(prev => {
+      const next = { ...prev, [key]: value };
+      persistWeeklyCheckIn(next);
+      return next;
+    });
+  };
+
+  const saveWeeklyCheckIn = () => {
+    persistWeeklyCheckIn(weeklyForm);
+    setCheckInSaved(true);
+    setTimeout(() => setCheckInSaved(false), 2200);
+  };
+  const handleWeeklyCheckInSubmit = () => {
+    saveWeeklyCheckIn();
+  };
+
+  const metricLabels = ['Muito baixo', 'Baixo', 'Moderado', 'Bom', 'Excelente'];
+  const hungerLabels = ['Sem fome', 'Controlada', 'Normal', 'Alta', 'Muito alta'];
+  const getMetricStatus = (key: keyof Omit<WeeklyProgressCheckIn, 'date'>, value: number) => {
+    const labels = key === 'hunger' ? hungerLabels : metricLabels;
+    return labels[Math.max(0, Math.min(4, value - 1))];
+  };
+
+  useEffect(() => {
+    if (!currentCheckIn) return;
+    setWeeklyForm({
+      energy: currentCheckIn.energy,
+      sleep: currentCheckIn.sleep,
+      hunger: currentCheckIn.hunger,
+      training: currentCheckIn.training,
+      consistency: currentCheckIn.consistency,
+    });
+  }, [currentCheckIn?.date]);
 
   return (
-    <div className="space-y-8 pb-12">
-      <header className="flex flex-col gap-2">
+    <div className="space-y-4 sm:space-y-8 pb-12">
+      <header className="flex flex-col gap-2 px-1 sm:px-0 pb-3 sm:pb-0 border-b border-white/10 sm:border-b-0">
         <div className="flex items-center gap-3">
-          <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
-          <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase">Progresso Corporal</h1>
+          <div className="w-1 h-6 sm:h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
+          <h1 className="text-[24px] md:text-5xl font-black tracking-tighter uppercase leading-[0.95]">Progresso Corporal</h1>
         </div>
-        <p className="text-text-secondary text-base ml-4">Acompanhe suas medidas e evolução ao longo do tempo.</p>
+        <p className="text-text-secondary text-[13px] sm:text-base ml-4 leading-relaxed">Veja se está evoluindo e saiba o próximo passo.</p>
       </header>
 
+      <section className="space-y-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+          <div className="col-span-2 sm:col-span-1 border-y sm:border border-white/10 sm:rounded-2xl py-3 sm:p-4">
+            <div className="flex items-end justify-between sm:block">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Score da semana</p>
+                <div className="mt-1 text-4xl sm:text-3xl font-black text-primary leading-none">{progressScore}<span className="text-sm text-text-muted">/100</span></div>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[8px] font-black uppercase tracking-widest">
+                {statusLabel}
+              </span>
+            </div>
+          </div>
+          <div className="bg-surface sm:bg-white/[0.035] border border-white/10 rounded-2xl p-3 sm:p-4">
+            <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Medições</p>
+            <div className="mt-1 text-xl font-black">{measurements.length}</div>
+            <p className="text-[10px] text-text-muted">registros</p>
+          </div>
+          <div className="bg-surface sm:bg-white/[0.035] border border-white/10 rounded-2xl p-3 sm:p-4">
+            <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Peso</p>
+            <div className="mt-1 text-xl font-black">{latest?.weight ?? '--'}<span className="text-[10px] text-text-muted"> kg</span></div>
+            <p className={`text-[10px] font-black ${weightDiff !== null && weightDiff <= 0 ? 'text-green-400' : 'text-text-muted'}`}>
+              {weightDiff !== null ? `${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} kg` : 'sem base'}
+            </p>
+          </div>
+          <div className="col-span-2 bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-4">
+            <p className="text-[9px] font-black uppercase tracking-widest text-primary">Próxima ação</p>
+            <p className="mt-1 text-[12px] sm:text-sm text-text-secondary leading-relaxed font-bold">{nextAction}</p>
+          </div>
+        </div>
+
+        <div className="border-y sm:border border-white/10 sm:rounded-2xl py-3 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">Check-in semanal</p>
+              <p className="text-[11px] text-text-muted mt-1">Toque na barra para marcar seu nível da semana.</p>
+            </div>
+            <span className="text-[9px] font-black text-primary uppercase tracking-widest">{currentCheckIn ? 'feito hoje' : 'pendente'}</span>
+          </div>
+          {[
+            ['energy', 'Energia'],
+            ['sleep', 'Sono'],
+            ['hunger', 'Fome'],
+            ['training', 'Treino'],
+            ['consistency', 'Consistência'],
+          ].map(([key, label]) => {
+            const metricKey = key as keyof Omit<WeeklyProgressCheckIn, 'date'>;
+            const selectedValue = weeklyForm[metricKey];
+            const selectedPercent = selectedValue * 20;
+            const selectedStatus = getMetricStatus(metricKey, selectedValue);
+            return (
+              <div key={key} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{label}</span>
+                  <span key={`${metricKey}-${selectedPercent}`} className="text-[9px] font-black uppercase tracking-widest text-primary">
+                    {selectedPercent}% · {selectedStatus}
+                  </span>
+                </div>
+                <div className="grid grid-cols-5 gap-1">
+                  {[1, 2, 3, 4, 5].map(value => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-label={`${label}: ${value * 20}%`}
+                      aria-pressed={selectedValue === value}
+                      onClick={() => updateWeeklyMetric(metricKey, value)}
+                      onPointerUp={(event) => {
+                        if (event.pointerType === 'touch') updateWeeklyMetric(metricKey, value);
+                      }}
+                      className={`h-9 rounded-xl border transition-all ${
+                        value <= selectedValue
+                          ? 'bg-primary border-primary shadow-[0_0_12px_rgba(255,106,0,0.28)]'
+                          : 'bg-white/[0.035] border-white/10'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-text-muted/70">
+                  <span>{metricKey === 'hunger' ? 'Baixa' : 'Baixo'}</span>
+                  <span>{metricKey === 'hunger' ? 'Alta' : 'Alto'}</span>
+                </div>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={handleWeeklyCheckInSubmit}
+            onPointerUp={(event) => {
+              if (event.pointerType === 'touch') handleWeeklyCheckInSubmit();
+            }}
+            className="w-full min-h-[40px] rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            {checkInSaved ? <><Check size={14} /> Check-in salvo</> : <><Gauge size={14} /> Salvar check-in</>}
+          </button>
+        </div>
+      </section>
+
       {/* Register today */}
-      <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
+      <div className="bg-transparent sm:bg-surface rounded-none sm:rounded-[32px] border-y sm:border border-white/10 sm:border-white/5 py-3 sm:p-6 space-y-3 sm:space-y-5">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
             {todayEntry ? 'Atualizar medidas de hoje' : 'Registrar medidas de hoje'}
@@ -9028,7 +9216,7 @@ function BodyProgressView({ userId, language }: { userId: string; language: Lang
         </div>
 
         {/* Primary fields - Peso e % Gordura com stepper */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {primaryFields.map(f => (
             <StepperControl key={f.key} field={f} step={f.key === 'weight' ? 0.1 : 0.5} value={form[f.key] || ''} onChange={updateField} onStep={stepField} />
           ))}
@@ -9054,14 +9242,14 @@ function BodyProgressView({ userId, language }: { userId: string; language: Lang
 
         <button
           onClick={saveMeasurement}
-          className="w-full py-3.5 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+          className="w-full min-h-[42px] sm:min-h-[48px] bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
         >
           {saved ? <><Check size={14} /> Medidas Salvas!</> : <><Scale size={14} /> Salvar Medidas</>}
         </button>
       </div>
 
       {/* Sua evolução */}
-      <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-4">
+      <div className="bg-transparent sm:bg-surface rounded-none sm:rounded-[32px] border-y sm:border border-white/10 sm:border-white/5 py-3 sm:p-6 space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">Sua evolução</p>
@@ -9106,14 +9294,16 @@ function BodyProgressView({ userId, language }: { userId: string; language: Lang
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex flex-col items-center justify-center py-14 text-center space-y-3">
-            <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center text-text-muted">
-              <Ruler size={28} />
+          <div className="flex items-center gap-3 py-4 sm:py-14 sm:flex-col sm:text-center sm:space-y-3">
+            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-white/5 rounded-xl sm:rounded-full flex items-center justify-center text-text-muted shrink-0">
+              <Ruler size={22} className="sm:w-7 sm:h-7" />
             </div>
-            <p className="text-sm font-bold text-text-secondary">
-              {measurements.length === 0 ? 'Nenhuma medida registrada ainda' : 'Registre pelo menos 2 datas para ver o gráfico'}
-            </p>
-            <p className="text-[11px] text-text-muted">Registre suas medidas acima para acompanhar sua evolução.</p>
+            <div className="space-y-0.5 sm:space-y-3">
+              <p className="text-[13px] sm:text-sm font-bold text-text-secondary">
+                {measurements.length === 0 ? 'Nenhuma medida registrada ainda' : 'Registre pelo menos 2 datas para ver o gráfico'}
+              </p>
+              <p className="text-[11px] text-text-muted">Salve peso e gordura hoje para começar sua linha de evolução.</p>
+            </div>
           </div>
         )}
       </div>

@@ -491,17 +491,17 @@ const APP_TRANSLATIONS: Record<LanguageCode, {
       priority: 'Sua prioridade',
       priorityHelp: 'Qual resultado é mais importante para você agora?',
       localizedFatNote: 'O protocolo favorece a redução de gordura corporal total; não existe perda de gordura localizada.',
-      calculateFor: (goal, focus) => `CALCULAR PARA ${goal} ${focus}`,
-      choosePriority: 'ESCOLHA SUA PRIORIDADE',
+      calculateFor: (goal, focus) => `GERAR META PARA ${goal} ${focus}`,
+      choosePriority: 'DEFINA SUA PRIORIDADE',
       waitingTitle: 'Aguardando Parâmetros',
       waitingText: 'Preencha suas informações biométricas para gerar seu protocolo nutricional.',
-      estimatedDailyGoal: 'META DIÁRIA ESTIMADA',
+      estimatedDailyGoal: 'META DO DIA',
       bmr: 'TMB',
       tdee: 'GET',
       proteins: 'Proteínas',
       carbs: 'Carboidratos',
       fats: 'Gorduras',
-      protocolAnalysis: 'Análise do Protocolo',
+      protocolAnalysis: 'O que fazer?',
       goalFocusOptions: {
         lose: [
           { value: 'body_fat', label: 'Gordura corporal' },
@@ -8836,6 +8836,36 @@ function CustomSelect({
   );
 }
 
+function CompactNutritionSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full h-[48px] sm:h-auto appearance-none bg-surface sm:bg-white/5 border border-white/10 rounded-2xl px-3 pr-9 sm:px-6 sm:pr-11 sm:py-4 text-[13px] sm:text-sm font-black sm:font-bold text-text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner leading-tight"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value} className="bg-zinc-900 text-text-primary">
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronRight
+        size={16}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-text-muted"
+      />
+    </div>
+  );
+}
+
 // ─── Body Progress ───────────────────────────────────────────────────────────
 
 interface BodyMeasurement {
@@ -9238,6 +9268,8 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
     goalFocus: savedProtocol?.calcData?.goalFocus || '',
   }));
   const [results, setResults] = useState<MacroResults | null>(savedProtocol?.calcData?.goalFocus ? savedProtocol?.results || null : null);
+  type NutritionTab = 'meta' | 'log' | 'plan' | 'settings';
+  const [activeNutritionTab, setActiveNutritionTab] = useState<NutritionTab>('meta');
   const [showCoachUpgradeModal, setShowCoachUpgradeModal] = useState(false);
 
   const goalFocusOptions = nutritionText.goalFocusOptions;
@@ -9440,13 +9472,13 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
   }[language];
   const nutritionCoachCardText = {
     'pt-BR': {
-      title: 'Ficou com alguma dúvida?',
+      title: 'Quer ajustar sem adivinhar?',
       proBadge: 'Recurso Pro',
-      description: 'O Iron Coach explica suas calorias e macros e ajuda a aplicar este protocolo na rotina.',
-      talk: 'Conversar com o Iron Coach',
+      description: 'O Iron Coach transforma esses números em ação: refeições, ajustes e próximos passos para você não travar.',
+      talk: 'Montar estratégia com o Iron Coach',
       unlock: 'Desbloquear Iron Coach',
       disclaimer: 'Orientações educativas. Para diagnóstico, condições clínicas ou plano alimentar individual, consulte um nutricionista.',
-      analysisIntro: 'Analise meu protocolo nutricional e explique de forma simples.',
+      analysisIntro: 'Transforme meu protocolo nutricional em um plano prático e direto.',
       professionalNote: 'Trate como orientação educativa e recomende acompanhamento profissional em caso de condição clínica.',
     },
     en: {
@@ -9875,6 +9907,17 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
   const hasPro = effectivePlan === 'Pro' || effectivePlan === 'Elite' || effectivePlan === 'Admin';
   const hasElite = effectivePlan === 'Elite' || effectivePlan === 'Admin';
 
+  useEffect(() => {
+    if (!results && activeNutritionTab !== 'meta') setActiveNutritionTab('meta');
+  }, [results, activeNutritionTab]);
+
+  const nutritionTabs: { id: NutritionTab; label: string; icon: typeof Calculator }[] = [
+    { id: 'meta', label: 'Meta', icon: Calculator },
+    { id: 'log', label: 'Registrar', icon: Plus },
+    { id: 'plan', label: 'Cardápio', icon: Utensils },
+    { id: 'settings', label: 'Ajustes', icon: Settings },
+  ];
+
   if (showPrefsForm) {
     return (
       <NutritionPreferencesForm
@@ -9903,7 +9946,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
   }
 
   return (
-    <div className="space-y-12 sm:space-y-16 pb-32">
+    <div className="space-y-4 sm:space-y-16 pb-32">
       {savePrefsError && (
         <MigrationBanner
           onDismiss={() => setSavePrefsError('')}
@@ -9915,15 +9958,30 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
         />
       )}
 
-      <header className="space-y-4 px-2 sm:px-0">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase">{nutritionText.title}</h1>
+      <header className="px-1 sm:px-0 pb-3 sm:pb-0 border-b border-white/10 sm:border-b-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="w-1 h-6 sm:h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,106,0,0.5)]" />
+              <h1 className="min-w-0 text-[24px] sm:text-4xl md:text-5xl font-black tracking-tighter uppercase leading-[0.95] break-words">{nutritionText.title}</h1>
+            </div>
+            <p className="text-text-secondary text-[13px] sm:text-lg max-w-2xl leading-relaxed sm:leading-relaxed line-clamp-2 sm:line-clamp-none">
+              {nutritionText.subtitle}
+            </p>
+          </div>
+          {localNutritionPrefs && (
+            <button
+              onClick={() => setShowPrefsForm(true)}
+              className="sm:hidden shrink-0 w-11 h-11 rounded-2xl bg-white/5 text-text-muted border border-white/10 hover:bg-white/10 hover:text-text-primary transition-all flex items-center justify-center"
+              aria-label={nutritionText.editPreferences}
+              title={nutritionText.editPreferences}
+            >
+              <Edit3 size={16} />
+            </button>
+          )}
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <p className="text-text-secondary text-base sm:text-lg max-w-2xl leading-relaxed">
-            {nutritionText.subtitle}
-          </p>
+        <div className="hidden sm:flex sm:items-center justify-between gap-4 mt-4">
+          <div />
           {localNutritionPrefs && (
             <button
               onClick={() => setShowPrefsForm(true)}
@@ -9935,15 +9993,15 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
           )}
         </div>
         {localNutritionPrefs && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            <span className="px-3 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-lg border border-primary/20 uppercase tracking-widest">
+          <div className="flex flex-wrap gap-2 mt-3 sm:mt-2">
+            <span className="px-2.5 py-1 bg-primary/10 text-primary text-[8px] sm:text-[9px] font-black rounded-lg border border-primary/20 uppercase tracking-widest">
               {nutritionText.mealsPerDay(localNutritionPrefs.mealsPerDay)}
             </span>
-            <span className="px-3 py-1 bg-white/5 text-text-muted text-[9px] font-black rounded-lg border border-white/10 uppercase tracking-widest">
+            <span className="px-2.5 py-1 bg-white/5 text-text-muted text-[8px] sm:text-[9px] font-black rounded-lg border border-white/10 uppercase tracking-widest">
               {localNutritionPrefs.budget}
             </span>
             {localNutritionPrefs.restrictions !== 'Nenhuma' && (
-              <span className="px-3 py-1 bg-white/5 text-text-muted text-[9px] font-black rounded-lg border border-white/10 uppercase tracking-widest">
+              <span className="px-2.5 py-1 bg-white/5 text-text-muted text-[8px] sm:text-[9px] font-black rounded-lg border border-white/10 uppercase tracking-widest">
                 {localNutritionPrefs.restrictions}
               </span>
             )}
@@ -9951,56 +10009,89 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
         )}
       </header>
 
+      <nav className="sm:hidden sticky top-0 z-20 -mx-1 bg-background/95 backdrop-blur-xl border-y border-white/10 px-1 py-2">
+        <div className="grid grid-cols-4 gap-1">
+          {nutritionTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeNutritionTab === tab.id;
+            const isLocked = tab.id !== 'meta' && !results;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                disabled={isLocked}
+                onClick={() => setActiveNutritionTab(tab.id)}
+                className={`min-h-[42px] rounded-xl border px-1.5 text-[8px] font-black uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-1 ${
+                  isActive
+                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                    : isLocked
+                      ? 'bg-white/[0.025] text-text-muted/45 border-white/5'
+                      : 'bg-white/[0.04] text-text-muted border-white/10 active:scale-95'
+                }`}
+              >
+                <Icon size={14} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
       {/* Calculadora de Macros */}
-      <section className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 sm:px-0">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
-              <Calculator size={24} />
+      <section className={`${activeNutritionTab === 'meta' ? 'space-y-3 sm:space-y-8' : 'hidden sm:block space-y-3 sm:space-y-8'}`}>
+        <div className="flex items-center justify-between gap-3 px-1 sm:px-0">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
+              <Calculator size={18} className="sm:w-6 sm:h-6" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionText.metabolicCalculator}</h2>
+            <div className="min-w-0">
+              <h2 className="text-[16px] sm:text-2xl font-black tracking-tight uppercase leading-[1.05] break-words">{nutritionText.metabolicCalculator}</h2>
+              <span className="sm:hidden text-[9px] font-black uppercase tracking-[0.2em] text-text-muted">
+                {nutritionText.beginnerModule}
+              </span>
+            </div>
           </div>
-          <span className="self-start sm:self-auto px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
+          <span className="hidden sm:inline-flex self-start sm:self-auto px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
             {nutritionText.beginnerModule}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10">
-          <div className="lg:col-span-5 bg-surface p-6 sm:p-10 rounded-[32px] sm:rounded-[48px] border border-white/5 space-y-6 sm:space-y-8 shadow-2xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.weight}</label>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-10">
+          <div className="lg:col-span-5 bg-transparent sm:bg-surface p-0 sm:p-10 rounded-none sm:rounded-[48px] border-0 sm:border sm:border-white/5 space-y-3 sm:space-y-8 shadow-none sm:shadow-2xl">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-6">
+              <div className="space-y-1.5 sm:space-y-3">
+                <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.weight}</label>
                 <input 
                   type="number" 
                   value={calcData.weight}
                   onChange={(e) => setCalcData({...calcData, weight: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner"
+                  className="w-full h-[44px] sm:h-auto bg-surface sm:bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-3 sm:px-6 py-0 sm:py-4 text-sm font-black sm:font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner"
                 />
               </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.height}</label>
+              <div className="space-y-1.5 sm:space-y-3">
+                <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.height}</label>
                 <input 
                   type="number" 
                   value={calcData.height}
                   onChange={(e) => setCalcData({...calcData, height: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner"
+                  className="w-full h-[44px] sm:h-auto bg-surface sm:bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-3 sm:px-6 py-0 sm:py-4 text-sm font-black sm:font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.age}</label>
+              <div className="space-y-1.5 sm:space-y-3">
+                <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.age}</label>
                 <input 
                   type="number" 
                   value={calcData.age}
                   onChange={(e) => setCalcData({...calcData, age: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner"
+                  className="w-full h-[44px] sm:h-auto bg-surface sm:bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-3 sm:px-6 py-0 sm:py-4 text-sm font-black sm:font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all shadow-inner"
                 />
               </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.gender}</label>
-                <CustomSelect 
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:gap-6">
+              <div className="space-y-1.5 sm:space-y-3">
+                <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.gender}</label>
+                <CompactNutritionSelect
                   value={calcData.gender}
                   onChange={(val) => setCalcData({...calcData, gender: val as any})}
                   options={[
@@ -10011,9 +10102,9 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.activityLevel}</label>
-              <CustomSelect 
+            <div className="space-y-1.5 sm:space-y-3">
+              <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.activityLevel}</label>
+              <CompactNutritionSelect
                 value={calcData.activityLevel}
                 onChange={(val) => setCalcData({...calcData, activityLevel: val})}
                 options={[
@@ -10026,12 +10117,12 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               />
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-4">
               <div className="space-y-1 ml-1">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.mainGoal}</label>
-                <p className="text-xs text-text-muted">{nutritionText.mainGoalHelp}</p>
+                <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.mainGoal}</label>
+                <p className="hidden sm:block text-xs text-text-muted">{nutritionText.mainGoalHelp}</p>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                 {(['lose', 'maintain', 'gain'] as const).map((g) => (
                   <button
                     type="button"
@@ -10041,7 +10132,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                       setCalcData({...calcData, goal: g, goalFocus: ''});
                       setResults(null);
                     }}
-                    className={`py-4 rounded-2xl text-[10px] font-black transition-all border duration-500 ${
+                    className={`min-h-[38px] sm:min-h-0 py-2 sm:py-4 rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black transition-all border duration-500 ${
                       calcData.goal === g 
                         ? 'bg-primary border-primary text-text-primary shadow-xl shadow-primary/20' 
                         : 'bg-white/5 border-white/10 text-text-muted hover:border-white/20'
@@ -10052,17 +10143,32 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 ))}
               </div>
 
+              <div className="sm:hidden space-y-1.5">
+                <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em] ml-1">{nutritionText.priority}</label>
+                <CompactNutritionSelect
+                  value={calcData.goalFocus}
+                  onChange={(val) => {
+                    setCalcData({...calcData, goalFocus: val});
+                    setResults(null);
+                  }}
+                  options={[
+                    { value: '', label: nutritionText.choosePriority },
+                    ...goalFocusOptions[calcData.goal],
+                  ]}
+                />
+              </div>
+
               <motion.div
                 key={calcData.goal}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-[24px] border border-white/10 bg-white/[0.025] p-4 sm:p-5 space-y-4"
+                className="hidden sm:block rounded-[24px] border border-white/10 bg-white/[0.025] p-5 space-y-4"
               >
                 <div className="space-y-1">
-                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.priority}</div>
-                  <p className="text-xs text-text-secondary">{nutritionText.priorityHelp}</p>
+                  <div className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">{nutritionText.priority}</div>
+                  <p className="hidden sm:block text-xs text-text-secondary">{nutritionText.priorityHelp}</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2">
                   {goalFocusOptions[calcData.goal].map((option, index) => {
                     const isSelected = calcData.goalFocus === option.value;
                     const isLastOddOption = index === goalFocusOptions[calcData.goal].length - 1 && goalFocusOptions[calcData.goal].length % 2 !== 0;
@@ -10102,7 +10208,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
             <button 
               onClick={calculateMacros}
               disabled={!calcData.goalFocus}
-              className="w-full min-h-[56px] px-4 py-3 bg-primary text-text-primary rounded-[24px] font-black text-sm sm:text-base leading-tight text-center shadow-2xl shadow-primary/30 hover:bg-primary-hover hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
+              className="w-full min-h-[44px] sm:min-h-[56px] px-3 sm:px-4 py-2 sm:py-3 bg-primary text-text-primary rounded-xl sm:rounded-[24px] font-black text-[10px] sm:text-base leading-tight text-center shadow-xl sm:shadow-2xl shadow-primary/20 sm:shadow-primary/30 hover:bg-primary-hover hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2 sm:gap-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
             >
               {calcData.goalFocus
                 ? nutritionText.calculateFor(goalLabels[calcData.goal], selectedGoalFocusLabel.toUpperCase())
@@ -10111,78 +10217,93 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
             </button>
           </div>
 
-          <div className="lg:col-span-7 bg-surface p-6 sm:p-10 rounded-[32px] sm:rounded-[48px] border border-white/5 flex flex-col justify-center relative overflow-hidden shadow-2xl min-h-[400px]">
-            <div className="absolute top-0 right-0 w-full h-full pointer-events-none opacity-10">
+          <div className={`${!results ? 'hidden sm:flex' : 'flex'} lg:col-span-7 bg-transparent sm:bg-surface p-0 sm:p-10 rounded-none sm:rounded-[48px] border-0 sm:border sm:border-white/5 flex-col justify-center relative overflow-visible sm:overflow-hidden shadow-none sm:shadow-2xl min-h-0 sm:min-h-[400px]`}>
+            <div className="hidden sm:block absolute top-0 right-0 w-full h-full pointer-events-none opacity-10">
               <div className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-primary rounded-full blur-[120px]" />
             </div>
 
             {!results ? (
-              <div className="relative z-10 text-center space-y-6 py-12 sm:py-20">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/5 rounded-[24px] sm:rounded-[32px] flex items-center justify-center mx-auto text-text-muted border border-white/5 shadow-inner">
-                  <Info className="w-8 h-8 sm:w-10 sm:h-10" />
+              <div className="relative z-10 text-center space-y-4 sm:space-y-6 py-6 sm:py-20">
+                <div className="w-14 h-14 sm:w-24 sm:h-24 bg-white/5 rounded-2xl sm:rounded-[32px] flex items-center justify-center mx-auto text-text-muted border border-white/5 shadow-inner">
+                  <Info className="w-6 h-6 sm:w-10 sm:h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionText.waitingTitle}</h3>
-                  <p className="text-text-secondary max-w-xs mx-auto text-base sm:text-lg leading-relaxed">
+                  <h3 className="text-base sm:text-2xl font-black tracking-tight uppercase">{nutritionText.waitingTitle}</h3>
+                  <p className="text-text-secondary max-w-xs mx-auto text-sm sm:text-lg leading-relaxed">
                     {nutritionText.waitingText}
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="relative z-10 space-y-8 sm:space-y-10">
-                <div className="text-center space-y-4">
-                  <div className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">{nutritionText.estimatedDailyGoal}</div>
-                  <div className="text-5xl sm:text-7xl md:text-8xl font-black text-primary tracking-tighter leading-none break-words">
-                    {results.calories} 
-                    <span className="text-xl sm:text-2xl text-text-muted font-black ml-2 uppercase tracking-widest">kcal</span>
+              <div className="relative z-10 space-y-3 sm:space-y-10">
+                <div className="border-y border-white/10 sm:border-0 py-3 sm:py-0 text-left sm:text-center space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between gap-3 sm:block">
+                    <div className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-[0.24em] sm:tracking-[0.3em]">{nutritionText.estimatedDailyGoal}</div>
+                    <div className="sm:hidden px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 text-[8px] font-black uppercase tracking-widest text-primary">{selectedGoalFocusLabel}</div>
+                  </div>
+                  <div className="flex items-end justify-between gap-3 sm:block">
+                    <div className="text-[44px] sm:text-7xl md:text-8xl font-black text-primary tracking-tighter leading-none break-words">
+                      {results.calories}
+                      <span className="text-sm sm:text-2xl text-text-muted font-black ml-1 sm:ml-2 uppercase tracking-widest">kcal</span>
+                    </div>
+                    <div className="hidden min-[380px]:grid sm:hidden grid-cols-2 gap-1.5 shrink-0 w-[130px]">
+                      <div className="rounded-lg bg-white/[0.04] border border-white/10 px-2 py-1.5">
+                        <div className="text-[7px] text-text-muted uppercase font-black tracking-widest">{nutritionText.bmr}</div>
+                        <div className="text-[11px] font-black text-text-primary">{results.bmr}</div>
+                      </div>
+                      <div className="rounded-lg bg-white/[0.04] border border-white/10 px-2 py-1.5">
+                        <div className="text-[7px] text-text-muted uppercase font-black tracking-widest">{nutritionText.tdee}</div>
+                        <div className="text-[11px] font-black text-text-primary">{results.tdee}</div>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto pt-4">
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-sm sm:mx-auto pt-1 sm:pt-4 min-[380px]:hidden sm:grid">
+                    <div className="bg-white/[0.04] sm:bg-white/5 px-3 py-2 sm:p-4 rounded-xl sm:rounded-2xl border border-white/10 sm:border-white/5 text-left sm:text-center">
                       <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{nutritionText.bmr}</div>
-                      <div className="text-lg font-black text-text-primary">{results.bmr} <span className="text-[10px] opacity-50">kcal</span></div>
+                      <div className="text-sm sm:text-lg font-black text-text-primary">{results.bmr} <span className="text-[9px] sm:text-[10px] opacity-50">kcal</span></div>
                     </div>
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                    <div className="bg-white/[0.04] sm:bg-white/5 px-3 py-2 sm:p-4 rounded-xl sm:rounded-2xl border border-white/10 sm:border-white/5 text-left sm:text-center">
                       <div className="text-[8px] text-text-muted uppercase font-black tracking-widest mb-1">{nutritionText.tdee}</div>
-                      <div className="text-lg font-black text-text-primary">{results.tdee} <span className="text-[10px] opacity-50">kcal</span></div>
+                      <div className="text-sm sm:text-lg font-black text-text-primary">{results.tdee} <span className="text-[9px] sm:text-[10px] opacity-50">kcal</span></div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-6">
                   <MacroResultCard label={nutritionText.proteins} value={results.protein} unit="g" color="bg-primary" icon="🥩" />
                   <MacroResultCard label={nutritionText.carbs} value={results.carbs} unit="g" color="bg-white/10" icon="🍚" />
                   <MacroResultCard label={nutritionText.fats} value={results.fat} unit="g" color="bg-white/10" icon="🥑" />
                 </div>
 
-                <div className="p-6 sm:p-8 bg-white/5 rounded-[24px] sm:rounded-[32px] border border-white/10 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 backdrop-blur-md">
-                  <div className="p-4 bg-primary/10 rounded-2xl text-primary border border-primary/20 shrink-0">
-                    <Zap className="w-6 h-6 sm:w-7 sm:h-7" />
+                <div className="py-3 sm:p-8 bg-transparent sm:bg-white/5 rounded-none sm:rounded-[32px] border-y sm:border border-white/10 flex items-start gap-3 sm:gap-6 backdrop-blur-md">
+                  <div className="p-2 sm:p-4 bg-primary/10 rounded-xl sm:rounded-2xl text-primary border border-primary/20 shrink-0">
+                    <Zap className="w-4 h-4 sm:w-7 sm:h-7" />
                   </div>
-                  <div className="space-y-2">
-                    <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">{nutritionText.protocolAnalysis}</h4>
-                    <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
-                      Este protocolo foi otimizado para <span className="text-text-primary font-black uppercase">{calcData.goal === 'lose' ? 'Déficit Calórico' : calcData.goal === 'gain' ? 'Superávit Calórico' : 'Manutenção'}</span>, com prioridade em <span className="text-primary font-black">{selectedGoalFocusLabel.toLowerCase()}</span>.
-                      Mantenha a consistência por pelo menos 14 dias para observar as primeiras adaptações metabólicas.
+                  <div className="space-y-1 sm:space-y-2">
+                    <h4 className="text-xs sm:text-lg font-black uppercase tracking-tight">{nutritionText.protocolAnalysis}</h4>
+                    <p className="text-text-secondary text-[11px] sm:text-base leading-relaxed">
+                      Use a <span className="text-text-primary font-black">meta do dia</span> como alvo: registre suas refeições e tente fechar calorias, proteínas, carboidratos e gorduras no tracker.
+                      <span className="block sm:inline mt-1 sm:mt-0"> Se passar ou faltar muito, ajuste a próxima refeição antes de mudar a estratégia.</span>
                     </p>
                   </div>
                 </div>
 
-                <div className="p-5 sm:p-7 rounded-[24px] sm:rounded-[32px] border border-primary/20 bg-gradient-to-br from-primary/10 via-white/[0.03] to-transparent shadow-xl shadow-primary/5">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-                    <div className="p-4 bg-primary/10 rounded-2xl text-primary border border-primary/20 shrink-0 self-start">
+                <div className="py-3 sm:p-7 rounded-none sm:rounded-[32px] border-y sm:border border-primary/20 bg-transparent sm:bg-gradient-to-br sm:from-primary/10 sm:via-white/[0.03] sm:to-transparent shadow-none sm:shadow-xl sm:shadow-primary/5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-5">
+                    <div className="hidden sm:block p-4 bg-primary/10 rounded-2xl text-primary border border-primary/20 shrink-0 self-start">
                       {hasIronCoachAccess ? <Zap size={26} /> : <Lock size={26} />}
                     </div>
-                    <div className="min-w-0 flex-1 space-y-2">
+                    <div className="min-w-0 flex-1 space-y-1 sm:space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="text-base sm:text-lg font-black uppercase tracking-tight">{nutritionCoachCardText.title}</h4>
+                        <h4 className="text-xs sm:text-lg font-black uppercase tracking-tight">{nutritionCoachCardText.title}</h4>
                         {!hasIronCoachAccess && (
                           <span className="px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">
                             {nutritionCoachCardText.proBadge}
                           </span>
                         )}
                       </div>
-                      <p className="text-text-secondary text-sm leading-relaxed">
+                      <p className="text-text-secondary text-[11px] sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-none">
                         {nutritionCoachCardText.description}
                       </p>
                     </div>
@@ -10208,13 +10329,13 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                           nutritionCoachCardText.professionalNote
                         );
                       }}
-                      className="w-full sm:w-auto min-h-[50px] px-5 rounded-2xl bg-primary text-text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover active:scale-[0.98] transition-all flex items-center justify-center gap-2 shrink-0"
+                      className="w-full sm:w-auto min-h-[36px] sm:min-h-[50px] px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-primary text-text-primary text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover active:scale-[0.98] transition-all flex items-center justify-center gap-2 shrink-0"
                     >
                       {hasIronCoachAccess ? nutritionCoachCardText.talk : nutritionCoachCardText.unlock}
                       <ArrowRight size={16} />
                     </button>
                   </div>
-                  <p className="mt-4 text-[10px] sm:text-xs text-text-muted leading-relaxed border-t border-white/5 pt-4">
+                  <p className="hidden sm:block mt-4 text-xs text-text-muted leading-relaxed border-t border-white/5 pt-4">
                     {nutritionCoachCardText.disclaimer}
                   </p>
                 </div>
@@ -10226,31 +10347,31 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
       {/* Controle Total da Nutrição - Tracker Diário */}
       {results && (
-        <section className="space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 sm:px-0">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
-                <Activity size={24} />
+        <section className={`${activeNutritionTab === 'log' ? 'space-y-3 sm:space-y-8' : 'hidden sm:block space-y-3 sm:space-y-8'}`}>
+          <div className="flex items-center justify-between gap-3 px-1 sm:px-0">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
+                <Activity size={18} className="sm:w-6 sm:h-6" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Analisador de Alimentos</h2>
+              <h2 className="text-[16px] sm:text-2xl font-black tracking-tight uppercase leading-[1.05]">Analisador de Alimentos</h2>
             </div>
-            <span className="self-start sm:self-auto px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
+            <span className="hidden sm:inline-flex self-start sm:self-auto px-3 py-1 bg-white/5 text-text-muted text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10">
               CONTROLE DIÁRIO
             </span>
           </div>
 
-          <div className="bg-surface p-4 sm:p-10 rounded-[28px] sm:rounded-[48px] border border-white/5 shadow-2xl space-y-8 sm:space-y-10 relative z-10 h-auto overflow-visible">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="bg-transparent sm:bg-surface p-0 sm:p-10 rounded-none sm:rounded-[48px] border-0 sm:border sm:border-white/5 shadow-none sm:shadow-2xl space-y-4 sm:space-y-10 relative z-10 h-auto overflow-visible">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-8">
               {/* Calorias */}
-              <div className="space-y-4">
+              <div className="bg-surface sm:bg-transparent border border-white/10 sm:border-0 rounded-2xl sm:rounded-none p-3 sm:p-0 space-y-2 sm:space-y-4">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Calorias</span>
-                    <div className="text-2xl font-black text-primary">{dailyTracker.calories} <span className="text-xs text-text-muted">/ {results.calories}</span></div>
+                    <div className="text-lg sm:text-2xl font-black text-primary">{dailyTracker.calories} <span className="text-[10px] sm:text-xs text-text-muted">/ {results.calories}</span></div>
                   </div>
                   <div className="text-[10px] font-black text-text-muted">{Math.round((dailyTracker.calories / results.calories) * 100)}%</div>
                 </div>
-                <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div className="h-1.5 sm:h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (dailyTracker.calories / results.calories) * 100)}%` }}
@@ -10260,15 +10381,15 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               </div>
 
               {/* Proteínas */}
-              <div className="space-y-4">
+              <div className="bg-surface sm:bg-transparent border border-white/10 sm:border-0 rounded-2xl sm:rounded-none p-3 sm:p-0 space-y-2 sm:space-y-4">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Proteínas 🥩</span>
-                    <div className="text-2xl font-black text-text-primary">{dailyTracker.protein}g <span className="text-xs text-text-muted">/ {results.protein}g</span></div>
+                    <div className="text-lg sm:text-2xl font-black text-text-primary">{dailyTracker.protein}g <span className="text-[10px] sm:text-xs text-text-muted">/ {results.protein}g</span></div>
                   </div>
                   <div className="text-[10px] font-black text-text-muted">{Math.round((dailyTracker.protein / results.protein) * 100)}%</div>
                 </div>
-                <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div className="h-1.5 sm:h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (dailyTracker.protein / results.protein) * 100)}%` }}
@@ -10278,15 +10399,15 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               </div>
 
               {/* Carboidratos */}
-              <div className="space-y-4">
+              <div className="bg-surface sm:bg-transparent border border-white/10 sm:border-0 rounded-2xl sm:rounded-none p-3 sm:p-0 space-y-2 sm:space-y-4">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Carbos 🍚</span>
-                    <div className="text-2xl font-black text-text-primary">{dailyTracker.carbs}g <span className="text-xs text-text-muted">/ {results.carbs}g</span></div>
+                    <div className="text-lg sm:text-2xl font-black text-text-primary">{dailyTracker.carbs}g <span className="text-[10px] sm:text-xs text-text-muted">/ {results.carbs}g</span></div>
                   </div>
                   <div className="text-[10px] font-black text-text-muted">{Math.round((dailyTracker.carbs / results.carbs) * 100)}%</div>
                 </div>
-                <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div className="h-1.5 sm:h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (dailyTracker.carbs / results.carbs) * 100)}%` }}
@@ -10296,15 +10417,15 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               </div>
 
               {/* Gorduras */}
-              <div className="space-y-4">
+              <div className="bg-surface sm:bg-transparent border border-white/10 sm:border-0 rounded-2xl sm:rounded-none p-3 sm:p-0 space-y-2 sm:space-y-4">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Gorduras 🥑</span>
-                    <div className="text-2xl font-black text-text-primary">{dailyTracker.fat}g <span className="text-xs text-text-muted">/ {results.fat}g</span></div>
+                    <div className="text-lg sm:text-2xl font-black text-text-primary">{dailyTracker.fat}g <span className="text-[10px] sm:text-xs text-text-muted">/ {results.fat}g</span></div>
                   </div>
                   <div className="text-[10px] font-black text-text-muted">{Math.round((dailyTracker.fat / results.fat) * 100)}%</div>
                 </div>
-                <div className="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div className="h-1.5 sm:h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (dailyTracker.fat / results.fat) * 100)}%` }}
@@ -10314,28 +10435,28 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
               {[
                 { label: nutritionTrackerText.calories, value: macroRemaining(dailyTracker.calories, results.calories, ' kcal'), color: dailyTracker.calories > results.calories ? 'text-error' : 'text-primary' },
                 { label: nutritionTrackerText.protein, value: macroRemaining(dailyTracker.protein, results.protein, 'g'), color: dailyTracker.protein >= results.protein ? 'text-success' : 'text-primary' },
                 { label: nutritionTrackerText.carbs, value: macroRemaining(dailyTracker.carbs, results.carbs, 'g'), color: dailyTracker.carbs > results.carbs ? 'text-error' : 'text-text-primary' },
                 { label: nutritionTrackerText.fat, value: macroRemaining(dailyTracker.fat, results.fat, 'g'), color: dailyTracker.fat > results.fat ? 'text-error' : 'text-text-primary' },
               ].map(item => (
-                <div key={item.label} className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
+                <div key={item.label} className="bg-surface sm:bg-white/5 border border-white/10 sm:border-white/5 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-3">
                   <div className="text-[9px] font-black uppercase tracking-widest text-text-muted">{item.label}</div>
                   <div className={`text-sm font-black mt-1 ${item.color}`}>{item.value}</div>
                 </div>
               ))}
             </div>
 
-            <div className="pt-5 sm:pt-6 border-t border-white/5">
-              <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-3 mb-5 sm:mb-6">
+            <div className="pt-3 sm:pt-6 border-t border-white/5">
+              <div className="flex items-center justify-between gap-3 mb-3 sm:mb-6">
                 <h4 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-text-muted">{nutritionTrackerText.registeredToday}</h4>
                 <button
                   onClick={() => setIsAddMealModalOpen(true)}
-                  className="w-full min-[380px]:w-auto min-h-[42px] flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
+                  className="min-h-[32px] sm:min-h-[42px] flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all active:scale-95"
                 >
-                  <Plus size={14} />
+                  <Plus size={13} />
                   {nutritionTrackerText.addMeal}
                 </button>
               </div>
@@ -10368,24 +10489,24 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               )}
 
               {/* AI Food Analyzer — always visible */}
-              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-                      <Zap size={16} />
+              <div className="border-y sm:border border-primary/20 bg-transparent sm:bg-primary/5 rounded-none sm:rounded-2xl py-3 sm:p-6 space-y-3 sm:space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                      <Zap size={15} className="sm:w-4 sm:h-4" />
                     </div>
-                    <div>
-                      <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-primary leading-relaxed">
+                    <div className="min-w-0">
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-primary leading-tight">
                         {isFreePlan ? nutritionTrackerText.aiFreeTitle : nutritionTrackerText.aiProTitle}
                       </span>
-                      <p className="text-[9px] sm:text-[10px] text-text-muted mt-1 leading-relaxed">
+                      <p className="text-[10px] sm:text-[10px] text-text-muted mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
                         {isFreePlan
                           ? nutritionTrackerText.aiFreeHelp
                           : nutritionTrackerText.aiProHelp}
                       </p>
                     </div>
                   </div>
-                  <div className={`self-start px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-[0.2em] ${
+                  <div className={`shrink-0 px-2.5 sm:px-3 py-1 rounded-lg sm:rounded-full border text-[8px] sm:text-[9px] font-black uppercase tracking-widest sm:tracking-[0.2em] ${
                     isFreePlan ? 'bg-white/5 border-white/10 text-text-muted' : 'bg-primary/10 border-primary/20 text-primary'
                   }`}>
                     {isFreePlan ? nutritionTrackerText.simpleMode : nutritionTrackerText.preciseMode}
@@ -10393,23 +10514,23 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                 </div>
 
                 {isFreePlan && (
-                  <div className="bg-background/70 border border-white/10 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-text-primary">{nutritionTrackerText.gramsPrompt}</div>
-                      <p className="text-[10px] text-text-muted mt-1">{nutritionTrackerText.gramsHelp}</p>
+                  <div className="bg-white/[0.035] sm:bg-background/70 border border-white/10 rounded-xl sm:rounded-2xl px-3 py-2.5 sm:p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-text-primary">{nutritionTrackerText.gramsPrompt}</div>
+                      <p className="hidden sm:block text-[10px] text-text-muted mt-1">{nutritionTrackerText.gramsHelp}</p>
                     </div>
                     <button
                       onClick={onUpgrade}
-                      className="w-full sm:w-auto min-h-[42px] px-4 py-2 bg-white/5 text-primary border border-primary/20 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all"
+                      className="shrink-0 min-h-[30px] sm:min-h-[42px] px-3 sm:px-4 py-1.5 sm:py-2 bg-white/5 text-primary border border-primary/20 rounded-lg sm:rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest hover:bg-primary hover:text-text-primary transition-all"
                     >
                       {nutritionTrackerText.unlockPrecision}
                     </button>
                   </div>
                 )}
 
-                <div className={isFreePlan ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-3'}>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+                <div className={isFreePlan ? 'space-y-3 sm:space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 gap-3'}>
+                  <div className="space-y-1.5 sm:space-y-1">
+                    <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
                       {isFreePlan ? nutritionTrackerText.foodLabelFree : nutritionTrackerText.foodLabelPro}
                     </label>
                     <input
@@ -10418,27 +10539,27 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                       value={aiFood}
                       onChange={(e) => { setAiFood(e.target.value); setAiResult(null); }}
                       onKeyDown={(e) => e.key === 'Enter' && analyzeWithAI()}
-                      className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
+                      className="w-full h-[44px] sm:h-auto bg-surface sm:bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-3 text-[13px] sm:text-sm font-bold focus:border-primary outline-none transition-all"
                     />
                   </div>
 
                   {isFreePlan ? (
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.portionSize}</label>
-                      <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">{nutritionTrackerText.portionSize}</label>
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                         {AI_PORTION_OPTIONS.map((option) => (
                           <button
                             key={option.value}
                             type="button"
                             onClick={() => { setAiPortionSize(option.value); setAiResult(null); }}
-                            className={`min-h-[68px] rounded-xl border px-3 py-2 text-left transition-all ${
+                            className={`min-h-[48px] sm:min-h-[68px] rounded-xl border px-2 sm:px-3 py-2 text-left transition-all ${
                               aiPortionSize === option.value
                                 ? 'bg-primary text-text-primary border-primary shadow-lg shadow-primary/20'
-                                : 'bg-background border-white/10 text-text-muted hover:border-primary/30'
+                                : 'bg-surface sm:bg-background border-white/10 text-text-muted hover:border-primary/30'
                             }`}
                           >
-                            <div className="text-[11px] font-black uppercase tracking-widest">{option.label}</div>
-                            <div className={`text-[9px] mt-1 font-bold leading-snug ${aiPortionSize === option.value ? 'text-text-primary/80' : 'text-text-muted'}`}>
+                            <div className="text-[9px] sm:text-[11px] font-black uppercase tracking-widest">{option.label}</div>
+                            <div className={`text-[8px] sm:text-[9px] mt-0.5 sm:mt-1 font-bold leading-snug line-clamp-1 sm:line-clamp-none ${aiPortionSize === option.value ? 'text-text-primary/80' : 'text-text-muted'}`}>
                               {option.detail}
                             </div>
                           </button>
@@ -10454,7 +10575,7 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                         value={aiQty}
                         onChange={(e) => { setAiQty(e.target.value); setAiResult(null); }}
                         onKeyDown={(e) => e.key === 'Enter' && analyzeWithAI()}
-                        className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
+                        className="w-full h-[44px] sm:h-auto bg-surface sm:bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-3 text-sm font-bold focus:border-primary outline-none transition-all"
                       />
                     </div>
                   )}
@@ -10522,17 +10643,17 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {isFreePlan && (
                       <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">{nutritionTrackerText.analysesToday}</span>
+                        <span className="text-[9px] sm:text-[10px] text-text-muted font-black uppercase tracking-widest">{nutritionTrackerText.analysesToday}</span>
                         <span className="text-[10px] font-black text-text-muted">{aiAnalysesUsed}/{AI_FREE_LIMIT}</span>
                       </div>
                     )}
                     <button
                       onClick={analyzeWithAI}
                       disabled={aiAnalyzing || !canAnalyzeFood}
-                      className="w-full py-3 bg-primary text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full min-h-[40px] sm:min-h-0 py-2 sm:py-3 bg-primary text-text-primary rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {aiAnalyzing ? (
                         <>
@@ -10739,29 +10860,34 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
       {/* Dieta Personalizada */}
       {results && (
-        <section className="space-y-8 relative">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 sm:px-0">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
-                <Utensils size={24} />
+        <section className={`${activeNutritionTab === 'plan' ? 'space-y-3 sm:space-y-8' : 'hidden sm:block space-y-3 sm:space-y-8'} relative`}>
+          <div className="flex items-center justify-between gap-3 px-1 sm:px-0">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
+                <Utensils size={18} className="sm:w-6 sm:h-6" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionTrackerText.customDiet}</h2>
+              <h2 className="text-[16px] sm:text-2xl font-black tracking-tight uppercase leading-[1.05]">{nutritionTrackerText.customDiet}</h2>
             </div>
-            <span className="self-start sm:self-auto px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-primary/20">
+            <span className="hidden sm:inline-flex self-start sm:self-auto px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-primary/20">
               {nutritionTrackerText.strategicPlan}
             </span>
           </div>
 
-          <div className="bg-surface rounded-[32px] sm:rounded-[48px] border border-white/5 overflow-visible shadow-2xl relative z-10 h-auto">
-            <div className="p-6 sm:p-10 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5">
-              <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight uppercase">{nutritionTrackerText.menuSuggestion}</h3>
-                <p className="text-text-secondary text-sm sm:text-base font-medium">{nutritionTrackerText.personalizedFor} <span className="text-primary font-black">{profile.name.split(' ')[0]}</span> • {nutritionTrackerText.goal}: <span className="font-bold">{profile.goal || nutritionTrackerText.conditioning}</span> • <span className="font-bold">{results?.calories} {nutritionTrackerText.dailyKcal}</span></p>
+          <div className="bg-transparent sm:bg-surface rounded-none sm:rounded-[48px] border-0 sm:border sm:border-white/5 overflow-visible shadow-none sm:shadow-2xl relative z-10 h-auto">
+            <div className="py-3 sm:p-10 border-y sm:border-b sm:border-x-0 sm:border-t-0 border-white/10 sm:border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-transparent sm:bg-white/5">
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-2xl font-black tracking-tight uppercase">{nutritionTrackerText.menuSuggestion}</h3>
+                  <span className="sm:hidden px-2 py-1 bg-primary/10 text-primary text-[8px] font-black uppercase tracking-widest rounded-lg border border-primary/20">
+                    {nutritionTrackerText.strategicPlan}
+                  </span>
+                </div>
+                <p className="text-text-secondary text-[11px] sm:text-base font-medium leading-relaxed">{nutritionTrackerText.personalizedFor} <span className="text-primary font-black">{profile.name.split(' ')[0]}</span> • {nutritionTrackerText.goal}: <span className="font-bold">{profile.goal || nutritionTrackerText.conditioning}</span> • <span className="font-bold">{results?.calories} {nutritionTrackerText.dailyKcal}</span></p>
               </div>
               <button
                 onClick={() => generateMealPlan(results.calories, results.protein, results.carbs, results.fat)}
                 disabled={generatingPlan}
-                className="flex items-center justify-center gap-2 w-full sm:w-auto px-8 min-h-[52px] bg-primary text-text-primary rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 sm:px-8 min-h-[42px] sm:min-h-[52px] bg-primary text-text-primary rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-sm uppercase tracking-widest hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <motion.div animate={generatingPlan ? { rotate: 360 } : { rotate: 0 }} transition={{ repeat: generatingPlan ? Infinity : 0, duration: 1, ease: 'linear' }}>
                   <RefreshCw size={18} />
@@ -10770,17 +10896,17 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               </button>
             </div>
             {planError && (
-              <div className="mx-6 sm:mx-10 mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+              <div className="mt-3 sm:mx-10 sm:mt-4 p-3 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-xl sm:rounded-2xl">
                 <p className="text-[10px] text-red-400 font-black uppercase tracking-widest">{planError}</p>
               </div>
             )}
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-white/10 sm:divide-white/5">
               {generatingPlan ? (
-                <div className="p-20 flex flex-col items-center gap-4 text-text-muted">
+                <div className="py-10 sm:p-20 flex flex-col items-center gap-4 text-text-muted">
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}>
-                    <RefreshCw size={32} className="text-primary" />
+                    <RefreshCw size={26} className="text-primary sm:w-8 sm:h-8" />
                   </motion.div>
-                  <span className="font-black text-xs uppercase tracking-widest">{nutritionTrackerText.generatingMealPlan}</span>
+                  <span className="font-black text-[10px] sm:text-xs uppercase tracking-widest text-center">{nutritionTrackerText.generatingMealPlan}</span>
                 </div>
               ) : mealPlan.length > 0 ? (
                 mealPlan.map((meal, idx) => (
@@ -10810,8 +10936,16 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
                   />
                 ))
               ) : (
-                <div className="p-20 text-center text-text-muted font-bold uppercase tracking-widest">
-                  Calcule seu protocolo para gerar a dieta
+                <div className="py-8 sm:p-20 text-center text-text-muted">
+                  <div className="mx-auto w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
+                    <Utensils size={20} />
+                  </div>
+                  <div className="mt-3 text-[11px] sm:text-sm font-black uppercase tracking-widest">
+                    Gere seu cardápio
+                  </div>
+                  <p className="mt-2 mx-auto max-w-[280px] text-[11px] sm:text-xs leading-relaxed normal-case tracking-normal font-medium">
+                    Toque em gerar dieta para criar refeições por horário usando sua meta de calorias e macros.
+                  </p>
                 </div>
               )}
             </div>
@@ -10822,60 +10956,65 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
 
       {/* Ajustes Avançados */}
       {results && (
-        <section className="space-y-8 relative">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 sm:px-0">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
-                <ChefHat size={24} />
+        <section className={`${activeNutritionTab === 'settings' ? 'space-y-3 sm:space-y-8' : 'hidden sm:block space-y-3 sm:space-y-8'} relative`}>
+          <div className="flex items-center justify-between gap-3 px-1 sm:px-0">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xl shadow-primary/5">
+                <ChefHat size={18} className="sm:w-6 sm:h-6" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Ajustes de Alta Performance</h2>
+              <h2 className="text-[16px] sm:text-2xl font-black tracking-tight uppercase leading-[1.05]">Ajustes de Alta Performance</h2>
             </div>
-            <span className="self-start sm:self-auto px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-primary/20">
+            <span className="hidden sm:inline-flex self-start sm:self-auto px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-primary/20">
               MÓDULO AVANÇADO
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 relative z-10 h-auto overflow-visible">
-            <div className="bg-surface p-6 sm:p-10 rounded-[32px] sm:rounded-[48px] border border-white/5 space-y-6 sm:space-y-8 shadow-2xl">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                  <Settings size={20} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-10 relative z-10 h-auto overflow-visible">
+            <div className="bg-transparent sm:bg-surface p-0 sm:p-10 rounded-none sm:rounded-[48px] border-0 sm:border sm:border-white/5 space-y-3 sm:space-y-8 shadow-none sm:shadow-2xl">
+              <div className="py-3 sm:py-0 border-y sm:border-y-0 border-white/10 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                  <Settings size={17} className="sm:w-5 sm:h-5" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-black tracking-tight uppercase">Ajuste Manual de Macros</h3>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-xl font-black tracking-tight uppercase">Ajuste Manual de Macros</h3>
+                  <p className="mt-1 text-[11px] sm:text-sm text-text-muted leading-relaxed">
+                    Use quando quiser mudar calorias ou macros sem recalcular tudo. Salve para atualizar sua meta.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
-                  <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Calorias Totais</span>
+              <div className="grid grid-cols-2 gap-2 sm:block sm:space-y-6">
+                <div className="space-y-1.5 sm:flex sm:justify-between sm:items-center sm:p-4 sm:bg-white/5 sm:rounded-2xl sm:border sm:border-white/5 sm:gap-2">
+                  <span className="text-[9px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Calorias</span>
                   <input
                     type="number"
-                    className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
+                    className="h-[44px] sm:h-auto bg-surface sm:bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
                     value={manualMacros.calories || ''}
                     onChange={(e) => setManualMacros({...manualMacros, calories: parseInt(e.target.value) || 0})}
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
-                  <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Proteínas (g)</span>
+                <div className="space-y-1.5 sm:flex sm:justify-between sm:items-center sm:p-4 sm:bg-white/5 sm:rounded-2xl sm:border sm:border-white/5 sm:gap-2">
+                  <span className="text-[9px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Proteínas</span>
                   <input
                     type="number"
-                    className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
+                    className="h-[44px] sm:h-auto bg-surface sm:bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
                     value={manualMacros.protein || ''}
                     onChange={(e) => setManualMacros({...manualMacros, protein: parseInt(e.target.value) || 0})}
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
-                  <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Carboidratos (g)</span>
+                <div className="space-y-1.5 sm:flex sm:justify-between sm:items-center sm:p-4 sm:bg-white/5 sm:rounded-2xl sm:border sm:border-white/5 sm:gap-2">
+                  <span className="text-[9px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Carbos</span>
                   <input
                     type="number"
-                    className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
+                    className="h-[44px] sm:h-auto bg-surface sm:bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
                     value={manualMacros.carbs || ''}
                     onChange={(e) => setManualMacros({...manualMacros, carbs: parseInt(e.target.value) || 0})}
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 bg-white/5 rounded-2xl border border-white/5 gap-2">
-                  <span className="text-[10px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Gorduras (g)</span>
+                <div className="space-y-1.5 sm:flex sm:justify-between sm:items-center sm:p-4 sm:bg-white/5 sm:rounded-2xl sm:border sm:border-white/5 sm:gap-2">
+                  <span className="text-[9px] sm:text-sm font-black text-text-secondary uppercase tracking-widest">Gorduras</span>
                   <input
                     type="number"
-                    className="bg-background border border-white/10 rounded-xl px-4 py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
+                    className="h-[44px] sm:h-auto bg-surface sm:bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-2 w-full sm:w-28 text-left sm:text-right text-base sm:text-lg font-black text-primary outline-none focus:border-primary transition-all"
                     value={manualMacros.fat || ''}
                     onChange={(e) => setManualMacros({...manualMacros, fat: parseInt(e.target.value) || 0})}
                   />
@@ -10883,36 +11022,36 @@ function NutritionView({ profile, language, onUpgrade, updateProfile, onOpenIron
               </div>
               <button 
                 onClick={saveManualMacros}
-                className="w-full py-5 bg-white/5 border border-white/10 rounded-[24px] font-black text-[10px] sm:text-xs tracking-widest uppercase hover:bg-white/10 transition-all active:scale-95"
+                className="w-full min-h-[42px] sm:min-h-0 py-2.5 sm:py-5 bg-primary/10 sm:bg-white/5 text-primary sm:text-text-primary border border-primary/20 sm:border-white/10 rounded-xl sm:rounded-[24px] font-black text-[9px] sm:text-xs tracking-widest uppercase hover:bg-primary hover:text-white sm:hover:bg-white/10 transition-all active:scale-95"
               >
-                SALVAR PROTOCOLO PERSONALIZADO
+                Salvar ajuste manual
               </button>
             </div>
 
-            <div className="bg-surface p-6 sm:p-8 rounded-[32px] sm:rounded-[48px] border border-white/5 flex flex-col gap-6 shadow-2xl relative overflow-hidden min-h-[300px]">
-              <div className="absolute -right-10 -bottom-10 opacity-5">
+            <div className="bg-transparent sm:bg-surface py-3 sm:p-8 rounded-none sm:rounded-[48px] border-y sm:border border-white/10 sm:border-white/5 flex flex-col gap-3 sm:gap-6 shadow-none sm:shadow-2xl relative overflow-hidden min-h-0 sm:min-h-[300px]">
+              <div className="hidden sm:block absolute -right-10 -bottom-10 opacity-5">
                 <Stethoscope size={200} />
               </div>
               {/* Header */}
               <div className="relative z-10 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-                  <Stethoscope size={20} />
+                <div className="p-2 sm:p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 flex-shrink-0">
+                  <Stethoscope size={17} className="sm:w-5 sm:h-5" />
                 </div>
-                <h3 className="text-base font-black tracking-tight uppercase leading-tight">
-                  Acompanhamento<br />Profissional
+                <h3 className="text-sm sm:text-base font-black tracking-tight uppercase leading-tight">
+                  Acompanhamento Profissional
                 </h3>
               </div>
               {/* Content */}
-              <div className="relative z-10 flex-1 flex flex-col gap-4 bg-primary/5 rounded-[24px] border border-primary/10 p-5">
+              <div className="relative z-10 flex-1 flex flex-col gap-3 sm:gap-4 bg-white/[0.035] sm:bg-primary/5 rounded-xl sm:rounded-[24px] border border-white/10 sm:border-primary/10 p-3 sm:p-5">
                 <div className="inline-flex">
-                  <span className="px-3 py-1 bg-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-[0.25em]">
+                  <span className="px-2.5 sm:px-3 py-1 bg-primary/20 text-primary rounded-lg sm:rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-widest sm:tracking-[0.25em]">
                     Em Breve
                   </span>
                 </div>
-                <p className="text-text-secondary text-sm leading-relaxed">
+                <p className="text-text-secondary text-[11px] sm:text-sm leading-relaxed">
                   Integração direta com nutricionistas parceiros para ajustes em tempo real e consultoria personalizada via chat.
                 </p>
-                <button className="mt-auto w-full py-3 bg-primary/10 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed opacity-50">
+                <button className="mt-auto w-full min-h-[36px] sm:min-h-0 py-2 sm:py-3 bg-primary/10 text-primary rounded-xl sm:rounded-2xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest cursor-not-allowed opacity-50">
                   Notificar-me no Lançamento
                 </button>
               </div>
@@ -11316,13 +11455,13 @@ function NutritionPreferencesForm({
 
 function MacroResultCard({ label, value, unit, color, icon }: { label: string, value: number, unit: string, color: string, icon?: string }) {
   return (
-    <div className="bg-white/5 p-4 sm:p-8 rounded-[24px] sm:rounded-[32px] border border-white/5 text-center space-y-2 sm:space-y-3 group hover:border-primary/30 transition-all duration-500">
-      <div className="flex flex-col items-center gap-2">
-        {icon && <span className="text-2xl mb-1">{icon}</span>}
-        <div className="text-[8px] sm:text-[10px] text-text-muted uppercase font-black tracking-[0.2em]">{label}</div>
+    <div className="bg-white/[0.035] sm:bg-white/5 px-2 py-2.5 sm:p-8 rounded-xl sm:rounded-[32px] border border-white/10 sm:border-white/5 text-center space-y-1 sm:space-y-3 group hover:border-primary/30 transition-all duration-500">
+      <div className="flex flex-col items-center gap-1 sm:gap-2">
+        {icon && <span className="text-sm sm:text-2xl sm:mb-1">{icon}</span>}
+        <div className="text-[6.5px] sm:text-[10px] text-text-muted uppercase font-black tracking-widest sm:tracking-[0.2em] leading-tight">{label}</div>
       </div>
-      <div className="text-2xl sm:text-4xl font-black group-hover:text-primary transition-colors duration-500">{value}{unit}</div>
-      <div className={`h-1 sm:h-1.5 w-8 sm:w-12 mx-auto rounded-full ${color} shadow-[0_0_10px_rgba(255,106,0,0.3)]`} />
+      <div className="text-base sm:text-4xl font-black group-hover:text-primary transition-colors duration-500">{value}{unit}</div>
+      <div className={`h-0.5 sm:h-1.5 w-6 sm:w-12 mx-auto rounded-full ${color} shadow-[0_0_10px_rgba(255,106,0,0.3)]`} />
     </div>
   );
 }
@@ -11354,36 +11493,36 @@ function FoodItemCard({
   isFavorite?: boolean;
 }) {
   return (
-    <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-2 hover:border-white/10 transition-all">
+    <div className="bg-white/[0.035] sm:bg-white/5 border border-white/10 sm:border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 space-y-2 hover:border-white/10 transition-all">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-black text-sm text-text-primary truncate">{item.name}</span>
-        <span className="shrink-0 px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded-lg border border-primary/20">{item.quantity}</span>
+        <span className="font-black text-xs sm:text-sm text-text-primary truncate">{item.name}</span>
+        <span className="shrink-0 px-2 py-0.5 bg-primary/10 text-primary text-[9px] sm:text-[10px] font-black rounded-lg border border-primary/20">{item.quantity}</span>
       </div>
       <div className="text-[10px] text-text-muted font-bold">{item.calories} kcal</div>
       <div className="flex gap-1.5 flex-wrap">
-        <span className="px-2 py-0.5 bg-orange-500/10 text-orange-400 text-[9px] font-black rounded-md border border-orange-500/20">Prot. {item.protein}g</span>
-        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[9px] font-black rounded-md border border-blue-500/20">Carb. {item.carbs}g</span>
-        <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 text-[9px] font-black rounded-md border border-yellow-500/20">Gord. {item.fat}g</span>
+        <span className="px-1.5 sm:px-2 py-0.5 bg-orange-500/10 text-orange-400 text-[8px] sm:text-[9px] font-black rounded-md border border-orange-500/20">P {item.protein}g</span>
+        <span className="px-1.5 sm:px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[8px] sm:text-[9px] font-black rounded-md border border-blue-500/20">C {item.carbs}g</span>
+        <span className="px-1.5 sm:px-2 py-0.5 bg-yellow-500/10 text-yellow-400 text-[8px] sm:text-[9px] font-black rounded-md border border-yellow-500/20">G {item.fat}g</span>
       </div>
       {(onEdit || onRemove || onAddToTracker || onToggleFavorite) && (
-        <div className="flex items-center gap-2 pt-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-1 sm:pt-2 flex-wrap">
           {onAddToTracker && (
-            <button onClick={onAddToTracker} className="flex-[1_1_88px] min-h-[36px] rounded-xl bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all">
+            <button onClick={onAddToTracker} className="flex-[1_1_76px] min-h-[30px] sm:min-h-[36px] rounded-lg sm:rounded-xl bg-primary/10 text-primary border border-primary/20 text-[8px] sm:text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all">
               Lançar
             </button>
           )}
           {onToggleFavorite && (
-            <button onClick={onToggleFavorite} className={`min-h-[34px] min-w-[34px] rounded-xl border text-[9px] font-black transition-all ${isFavorite ? 'bg-primary text-text-primary border-primary' : 'bg-white/5 text-text-muted border-white/10 hover:text-primary'}`} title="Favorito">
+            <button onClick={onToggleFavorite} className={`min-h-[30px] sm:min-h-[34px] min-w-[30px] sm:min-w-[34px] rounded-lg sm:rounded-xl border text-[9px] font-black transition-all ${isFavorite ? 'bg-primary text-text-primary border-primary' : 'bg-white/5 text-text-muted border-white/10 hover:text-primary'}`} title="Favorito">
               <Check size={13} className="mx-auto" />
             </button>
           )}
           {onEdit && (
-            <button onClick={onEdit} className="min-h-[34px] min-w-[34px] rounded-xl bg-white/5 text-text-muted border border-white/10 hover:text-primary transition-all" title="Editar">
+            <button onClick={onEdit} className="min-h-[30px] sm:min-h-[34px] min-w-[30px] sm:min-w-[34px] rounded-lg sm:rounded-xl bg-white/5 text-text-muted border border-white/10 hover:text-primary transition-all" title="Editar">
               <Edit3 size={13} className="mx-auto" />
             </button>
           )}
           {onRemove && (
-            <button onClick={onRemove} className="min-h-[34px] min-w-[34px] rounded-xl bg-white/5 text-text-muted border border-white/10 hover:text-error transition-all" title="Remover">
+            <button onClick={onRemove} className="min-h-[30px] sm:min-h-[34px] min-w-[30px] sm:min-w-[34px] rounded-lg sm:rounded-xl bg-white/5 text-text-muted border border-white/10 hover:text-error transition-all" title="Remover">
               <X size={13} className="mx-auto" />
             </button>
           )}
@@ -11462,38 +11601,38 @@ function MealRow({ time, name, items, onAddItem, onUpdateItem, onRemoveItem, onA
   };
 
   return (
-    <div className="p-6 sm:p-8 flex flex-col md:flex-row gap-6 group hover:bg-white/[0.02] transition-colors duration-500">
+    <div className="py-3 sm:p-8 flex flex-col md:flex-row gap-3 sm:gap-6 group hover:bg-white/[0.02] transition-colors duration-500">
       {/* Left column: time + add button */}
-      <div className="md:w-28 flex md:flex-col justify-between items-center md:items-start gap-4 shrink-0">
-        <div className="space-y-1 text-center md:text-left">
-          <div className="inline-block px-3 py-1.5 bg-white/5 rounded-xl text-text-primary font-black text-sm border border-white/10">
+      <div className="md:w-28 flex md:flex-col justify-between items-center md:items-start gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 md:block md:space-y-1 text-left">
+          <div className="inline-block px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/5 rounded-lg sm:rounded-xl text-text-primary font-black text-xs sm:text-sm border border-white/10">
             {time}
           </div>
-          <div className="text-[10px] text-text-muted font-black uppercase tracking-widest">{totalCals} kcal</div>
+          <div className="text-[9px] sm:text-[10px] text-text-muted font-black uppercase tracking-widest">{totalCals} kcal</div>
         </div>
         {onAddItem && (
           <button
             onClick={() => setShowForm(v => !v)}
-            className={`p-3 rounded-xl transition-all border active:scale-90 min-h-[44px] min-w-[44px] flex items-center justify-center ${
+            className={`p-2 sm:p-3 rounded-xl transition-all border active:scale-90 min-h-[34px] sm:min-h-[44px] min-w-[34px] sm:min-w-[44px] flex items-center justify-center ${
               showForm
                 ? 'bg-white/10 text-text-muted border-white/10'
                 : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-text-primary'
             }`}
             title="Adicionar alimento"
           >
-            {showForm ? <X size={18} /> : <Plus size={20} />}
+            {showForm ? <X size={16} /> : <Plus size={17} />}
           </button>
         )}
       </div>
 
       {/* Right column: meal content */}
-      <div className="flex-1 space-y-4">
-        <h4 className="text-lg sm:text-xl font-black tracking-tight group-hover:text-primary transition-colors duration-500 uppercase">{name}</h4>
+      <div className="flex-1 space-y-3 sm:space-y-4 min-w-0">
+        <h4 className="text-sm sm:text-xl font-black tracking-tight group-hover:text-primary transition-colors duration-500 uppercase leading-tight">{name}</h4>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           {items.map((item, i) => (
             editingIndex === i && editDraft ? (
-              <div key={i} className="bg-background border border-primary/20 rounded-2xl p-4 space-y-3">
+              <div key={i} className="bg-background border border-primary/20 rounded-2xl p-3 sm:p-4 space-y-3">
                 <input
                   value={editDraft.name}
                   onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
@@ -11548,33 +11687,33 @@ function MealRow({ time, name, items, onAddItem, onUpdateItem, onRemoveItem, onA
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 space-y-4 mt-2">
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3 sm:p-5 space-y-3 sm:space-y-4 mt-2">
                 <div className="flex items-center gap-2">
                   <Zap size={14} className="text-primary" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary">Adicionar Alimento com IA</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Alimento</label>
+                    <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Alimento</label>
                     <input
                       type="text"
                       placeholder="Ex: Frango grelhado"
                       value={foodInput}
                       onChange={(e) => { setFoodInput(e.target.value); setPreview(null); }}
                       onKeyDown={(e) => e.key === 'Enter' && analyze()}
-                      className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
+                      className="w-full h-[40px] sm:h-auto bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-3 text-xs sm:text-sm font-bold focus:border-primary outline-none transition-all"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Quantidade (g ou ml)</label>
+                    <label className="text-[9px] sm:text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Qtd.</label>
                     <input
                       type="number"
                       placeholder="Ex: 150"
                       value={qtyInput}
                       onChange={(e) => { setQtyInput(e.target.value); setPreview(null); }}
                       onKeyDown={(e) => e.key === 'Enter' && analyze()}
-                      className="w-full bg-background border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:border-primary outline-none transition-all"
+                      className="w-full h-[40px] sm:h-auto bg-background border border-white/10 rounded-xl px-3 sm:px-4 py-0 sm:py-3 text-xs sm:text-sm font-bold focus:border-primary outline-none transition-all"
                     />
                   </div>
                 </div>

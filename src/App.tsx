@@ -12,6 +12,7 @@ import { getExerciseDisplay, getWorkoutDisplay, translateMuscleGroup, translateW
 import { installUiAutoTranslate } from './utils/uiAutoTranslate';
 import AIChat from './AIChat';
 import ironShopHeroBanner from './assets/ironshop-hero-banner.png';
+import ironshapeLogo from './assets/ironshape-logo.jpeg';
 import { DashboardMetricCard } from './components/dashboardCards';
 import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
 import { MobileNavItem, NavItem } from './components/navigation';
@@ -3708,29 +3709,93 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 overflow-hidden relative">
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-primary/40 rounded-full blur-[120px]" />
-        <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-primary/20 rounded-full blur-[120px]" />
-      </div>
+  const isSignupMode = mode === 'signup';
+  const authIntro = isSignupMode
+    ? {
+        eyebrow: 'Primeiro acesso',
+        title: 'Monte seu shape com direção.',
+        subtitle: 'Crie sua conta e entre em uma rotina guiada por treino, dieta e progresso real.',
+      }
+    : {
+        eyebrow: 'Bem-vindo de volta',
+        title: 'Pronto pra evoluir?',
+        subtitle: 'Continue de onde parou e mantenha treino, dieta e medidas no mesmo ritmo.',
+      };
+  const experienceSteps = [
+    { label: 'Treino', value: 'Hoje', icon: Dumbbell },
+    { label: 'Dieta', value: 'Meta', icon: Apple },
+    { label: 'Progresso', value: 'Check-in', icon: TrendingUp },
+  ];
 
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 py-5 sm:p-6 overflow-hidden relative">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="z-10 max-w-md w-full"
       >
-        <div className="text-center mb-8">
-          <div className="mb-4 inline-flex p-4 rounded-3xl bg-primary/10 border border-primary/20">
-            <Dumbbell className="text-primary" size={40} />
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-black border border-primary/20 flex items-center justify-center shadow-[0_0_28px_rgba(255,106,0,0.18)] shrink-0 overflow-hidden">
+                <img
+                  src={ironshapeLogo}
+                  alt="IronShape"
+                  className="w-full h-full object-cover scale-[1.18]"
+                />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-[26px] sm:text-4xl font-black tracking-tighter bg-gradient-to-b from-text-primary to-text-muted bg-clip-text text-transparent leading-none">
+                  IRONSHAPE
+                </h1>
+                <p className="text-[11px] sm:text-sm text-text-muted font-bold mt-1">Treino, dieta e evolução no mesmo fluxo.</p>
+              </div>
+            </div>
+            <div className="hidden sm:flex px-3 py-2 rounded-xl border border-primary/20 bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">
+              Beta
+            </div>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter mb-2 bg-gradient-to-b from-text-primary to-text-muted bg-clip-text text-transparent">
-            IRONSHAPE
-          </h1>
-          <p className="text-text-muted text-sm">A evolução definitiva do seu treino.</p>
+
+          <div key={`intro-${mode}`} className="mt-4 border-y border-white/10 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-primary">{authIntro.eyebrow}</p>
+                <h2 className="mt-1 text-xl sm:text-2xl font-black tracking-tight leading-none">{authIntro.title}</h2>
+              </div>
+              <div className="relative w-14 h-14 rounded-2xl bg-white/[0.035] border border-white/10 overflow-hidden shrink-0">
+                <motion.div
+                  animate={{ y: ['100%', '-100%'] }}
+                  transition={{ duration: 2.8, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-x-0 h-1/2 bg-primary/25"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Target className="text-primary" size={24} />
+                </div>
+              </div>
+            </div>
+            <p className="mt-2 text-[12px] sm:text-sm text-text-secondary leading-relaxed">{authIntro.subtitle}</p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {experienceSteps.map((step, index) => {
+                const StepIcon = step.icon;
+                return (
+                  <motion.div
+                    key={step.label}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.08 * index }}
+                    className="rounded-xl border border-white/10 bg-white/[0.035] p-2.5"
+                  >
+                    <StepIcon size={15} className="text-primary mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest text-text-muted">{step.label}</p>
+                    <p className="text-[11px] font-black text-text-primary leading-tight">{step.value}</p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        <div className="bg-surface p-8 rounded-[40px] border border-white/5 shadow-2xl">
+        <div className="bg-surface/95 p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] border border-white/10 sm:border-white/5 shadow-2xl">
           {mode === 'email-sent' ? (
             <div className="text-center py-2">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-primary/20">
@@ -3778,29 +3843,31 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
             </div>
           ) : (
           <>
-          <div className="flex gap-4 mb-8 p-1 bg-white/5 rounded-2xl">
+          <div className="flex gap-2 mb-5 sm:mb-8 p-1 bg-white/5 rounded-2xl">
             <button
+              type="button"
               onClick={() => setMode('login')}
-              className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mode === 'login' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-secondary'}`}
+              className={`flex-1 min-h-[42px] rounded-xl text-sm font-bold transition-all ${mode === 'login' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-secondary'}`}
             >
               Entrar
             </button>
             <button
+              type="button"
               onClick={() => setMode('signup')}
-              className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${mode === 'signup' ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-secondary'}`}
+              className={`flex-1 min-h-[42px] rounded-xl text-sm font-bold transition-all ${isSignupMode ? 'bg-primary text-text-primary shadow-lg shadow-primary/20' : 'text-text-muted hover:text-text-secondary'}`}
             >
               Criar Conta
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
+          <form key={`auth-form-${mode}`} onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
+            {isSignupMode && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="space-y-2"
+                className="space-y-1.5 sm:space-y-2"
               >
-                <label className="text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Nome</label>
+                <label className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Nome</label>
                 <div className="relative">
                   <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                   <input 
@@ -3808,14 +3875,14 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
                     placeholder="Digite seu nome"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-text-primary outline-none focus:border-primary transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 pl-11 sm:pl-12 pr-4 text-text-primary outline-none focus:border-primary transition-all"
                   />
                 </div>
               </motion.div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Email</label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Email</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                 <input 
@@ -3823,14 +3890,14 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
                   placeholder="Digite seu email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-text-primary text-base outline-none focus:border-primary transition-all min-h-[56px]"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 pl-11 sm:pl-12 pr-4 text-text-primary text-base outline-none focus:border-primary transition-all min-h-[50px] sm:min-h-[56px]"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex justify-between items-center px-1">
-                <label className="text-xs font-bold text-text-muted uppercase tracking-widest">{mode === 'signup' ? 'Criar Senha' : 'Senha'}</label>
+                <label className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-widest">{isSignupMode ? 'Criar Senha' : 'Senha'}</label>
                 {mode === 'login' && (
                   <button 
                     type="button" 
@@ -3845,10 +3912,10 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                 <input 
                   type={showPassword ? "text" : "password"} 
-                  placeholder={mode === 'signup' ? "Crie sua senha" : "Digite sua senha"}
+                  placeholder={isSignupMode ? "Crie sua senha" : "Digite sua senha"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-12 text-text-primary text-base outline-none focus:border-primary transition-all min-h-[56px]"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 pl-11 sm:pl-12 pr-12 text-text-primary text-base outline-none focus:border-primary transition-all min-h-[50px] sm:min-h-[56px]"
                 />
                 <button 
                   type="button"
@@ -3903,20 +3970,20 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-text-primary font-black py-4 rounded-2xl hover:bg-primary-hover transition-all shadow-xl shadow-primary/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-primary text-text-primary font-black min-h-[50px] sm:min-h-[56px] rounded-xl sm:rounded-2xl hover:bg-primary-hover transition-all shadow-xl shadow-primary/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? 'Entrar' : 'Criar Conta'}
+                  {isSignupMode ? 'Criar Conta' : 'Entrar'}
                   <ArrowRight size={18} />
                 </>
               )}
             </button>
           </form>
 
-          <div className="relative my-8">
+          <div className="relative my-5 sm:my-8">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/5"></div>
             </div>
@@ -3928,7 +3995,7 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
           <button
             onClick={handleGoogleLogin}
             disabled={loading || googleLoading}
-            className="w-full bg-white/5 text-text-primary font-bold py-4 px-8 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all border border-white/5 disabled:opacity-50"
+            className="w-full bg-white/5 text-text-primary font-bold min-h-[50px] px-8 rounded-xl sm:rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all border border-white/5 disabled:opacity-50"
           >
             {googleLoading ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

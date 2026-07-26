@@ -7856,12 +7856,44 @@ const CHEST_EXERCISE_GIFS: Record<string, string> = {
   'triceps no banco': 'peito na paralela.gif',
 };
 
+const BACK_EXERCISE_GIFS: Record<string, string> = {
+  'barra fixa pegada larga': 'Barra Livre pegada aberta.gif',
+  'good morning com barra': 'banco romano sem peso.gif',
+  'hiperextensao com anilha': 'banco romano.gif',
+  'levantamento terra convencional': 'levantamento terra no smith.gif',
+  'levantamento terra romeno': 'levantamento terra no smith.gif',
+  'pullover com halter': 'Dumbbell covers com halteres.gif',
+  'puxada alta lat pulldown': 'pulley pegada aberta.gif',
+  'puxada pronada carga progressiva': 'pulley pegada aberta pronada.gif',
+  'puxada pronada com carga alta': 'pulley costa maquina.gif',
+  'puxada supinada': 'pulley frente pegada supinada.gif',
+  'puxada supinada pegada invertida': 'puxada maquina pegada supinada.gif',
+  'remada baixa com barra reta': 'Remo com barra no punho.gif',
+  'remada baixa com triangulo': 'remada beixa no pulley triangulo.gif',
+  'remada curvada com barra': 'Remanda Curvada Barra.gif',
+  'remada curvada com barra carga maxima': 'Remanda Curvada Barra.gif',
+  'remada curvada com barra pegada pronada': 'remada com barra.gif',
+  'remada curvada com halteres': 'remada livre  com halteres.gif',
+  'remada pendlay': 'remada com barra.gif',
+  'remada t bar': 'remada cavalinha pegada aberta.gif',
+  'remada unilateral com halter': 'remada serrote.gif',
+  'remada unilateral com halter apoiado': 'Remanda unil com apoio banco.gif',
+  'remada unilateral com halter carga maxima': 'remada serrote.gif',
+  'remada unilateral com halter pausa 2s': 'remada serrote.gif',
+  'remada com elastico postura': 'remada baixa unilateral pegada neutra.gif',
+};
+
+const FIXED_EXERCISE_GIFS: Record<string, string> = {
+  ...CHEST_EXERCISE_GIFS,
+  ...BACK_EXERCISE_GIFS,
+};
+
 function buildPublicGifUrl(fileName: string) {
   return `${LOCAL_EXERCISE_GIF_BASE}${fileName.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 function getFixedExerciseGifUrl(exerciseName: string) {
-  const localFile = CHEST_EXERCISE_GIFS[normalizeExerciseKey(exerciseName).replace(/[^a-z0-9]+/g, ' ').trim()];
+  const localFile = FIXED_EXERCISE_GIFS[normalizeExerciseKey(exerciseName).replace(/[^a-z0-9]+/g, ' ').trim()];
   return localFile ? buildPublicGifUrl(localFile) : null;
 }
 

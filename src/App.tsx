@@ -5,9 +5,8 @@ import { withTimeout } from './lib/utils';
 import { UserProfile, SocialProfile, NutritionPreferences, NutritionLog, Workout, WorkoutLog, ProgressLog, Post, Plan, Level, MuscleGroup, Exercise, RankingEntry, WeeklySchedule, Affiliate, AffiliateStatus, AffiliateConversion, IronShopAccessState, IronShopAuditEntry, IronShopAvailabilityMode, IronShopProduct, IronShopSettings } from './types';
 import { ALL_WORKOUTS } from './data/workouts';
 import { dataService } from './services/dataService';
-import { searchExercisesByName } from './services/exerciseMediaApi';
 import { getAnalyticsClientId, initAnalytics, trackEvent, trackPlanEvent } from './services/analytics';
-import { getLocalExerciseMedia, translateExerciseName } from './utils/exerciseTranslations';
+import { getLocalExerciseMedia } from './utils/exerciseTranslations';
 import { getExerciseDisplay, getWorkoutDisplay, translateMuscleGroup, translateWorkoutName } from './utils/workoutDataI18n';
 import { installUiAutoTranslate } from './utils/uiAutoTranslate';
 import AIChat from './AIChat';
@@ -7801,12 +7800,6 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
 }
 
 type ExerciseAnimationType = 'press' | 'fly' | 'row' | 'pull' | 'squat' | 'lunge' | 'hinge' | 'bridge' | 'shoulder' | 'curl' | 'triceps' | 'core' | 'mobility' | 'stretch';
-const EXERCISE_MEDIA_PLAYBACK_RATE = 1.75;
-
-function setExerciseVideoSpeed(video: HTMLVideoElement) {
-  video.defaultPlaybackRate = EXERCISE_MEDIA_PLAYBACK_RATE;
-  video.playbackRate = EXERCISE_MEDIA_PLAYBACK_RATE;
-}
 
 function normalizeExerciseKey(value: string) {
   return value
@@ -7832,6 +7825,48 @@ function getExerciseAnimationType(name: string): ExerciseAnimationType | null {
   if (/crucifixo|fly|abertura|cross over/.test(key)) return 'fly';
   if (/supino|flexao|pressao|peito|push|bench|chest/.test(key)) return 'press';
   return null;
+}
+
+const LOCAL_EXERCISE_GIF_BASE = '/exercise-gifs/';
+
+const CHEST_EXERCISE_GIFS: Record<string, string> = {
+  'cross over': 'crucifixo no cross em pé.gif',
+  'cross over polias na altura do peito': 'crucifixo no cross em pé.gif',
+  'cross over de cima para baixo': 'crucifixo no cross polia alta.gif',
+  'cross over de cima para baixo drop set': 'crucifixo no cross polia alta.gif',
+  'crucifixo inclinado com cabos polias baixas': 'crucifixo beixo no croos em pe.gif',
+  'crucifixo inclinado com halteres': 'crucifixo inclinado banco com halteres.gif',
+  'crucifixo reto': 'Dumbbell fly • uitvoering en uitleg • Men_sPower.gif',
+  'crucifixo reto com halteres': 'supino crucifixo com halteres.gif',
+  'crucifixo reto com halteres cadencia lenta': 'supino crucifixo com halteres.gif',
+  'flexao com pes elevados drop set': 'flex de cotovelo declinado utilizando o banco.gif',
+  'flexao de bracos joelhos no chao': 'Apoio de frente de joelhos.gif',
+  'flexao de bracos completa': 'flex de cotovelo completa.gif',
+  'mergulho entre bancos dips': 'peito na paralela.gif',
+  'mergulho entre barras paralelas dips': 'peito na paralela.gif',
+  'supino declinado com barra carga maxima': 'supino declinado barra.gif',
+  'supino declinado com halteres': 'supino declinado com halteres.gif',
+  'supino inclinado com barra': 'supino inclinado banco.gif',
+  'supino inclinado com barra carga maxima': 'supino inclinado banco.gif',
+  'supino inclinado com halteres': 'Supino inclinado com halteres.gif',
+  'supino reto com barra': 'supindo reto barra.gif',
+  'supino reto com barra carga maxima': 'supindo reto barra.gif',
+  'supino reto com halteres': 'supino reto com halteres.gif',
+  'supino reto com halteres pausa 2s': 'Supino reto com halteres (2).gif',
+  'triceps no banco': 'peito na paralela.gif',
+};
+
+function buildPublicGifUrl(fileName: string) {
+  return `${LOCAL_EXERCISE_GIF_BASE}${fileName.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function getFixedExerciseGifUrl(exerciseName: string) {
+  const localFile = CHEST_EXERCISE_GIFS[normalizeExerciseKey(exerciseName).replace(/[^a-z0-9]+/g, ' ').trim()];
+  return localFile ? buildPublicGifUrl(localFile) : null;
+}
+
+function getExerciseMediaUrl(exerciseName: string) {
+  return getFixedExerciseGifUrl(exerciseName) || getLocalExerciseMedia(exerciseName);
 }
 
 function ExerciseAnimation({ type, label }: { type: ExerciseAnimationType, label: string }) {
@@ -7950,43 +7985,12 @@ function ExecutionModal({
   onClose: () => void
 }) {
   const [gifUrl, setGifUrl] = useState<string | null>(null);
-  const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
-  const [gifLoading, setGifLoading] = useState(true);
   const exerciseDisplay = getExerciseDisplay(exercise, language);
   const fallbackAnimationType = getExerciseAnimationType(exercise.name);
 
   useEffect(() => {
-    let cancelled = false;
-    setGifUrl(null);
-    setApiVideoUrl(null);
-    setGifLoading(true);
-    const localMedia = getLocalExerciseMedia(exercise.name);
-    if (localMedia) {
-      setGifUrl(localMedia);
-      setGifLoading(false);
-      return () => { cancelled = true; };
-    }
-    const searchName = translateExerciseName(exercise.name);
-    searchExercisesByName(exercise.name)
-      .then((results: any) => {
-        if (cancelled) return;
-        const list = Array.isArray(results) ? results : results?.data;
-        if (Array.isArray(list) && list.length > 0) {
-          const nextGifUrl = list[0].gifUrl ?? list[0].gif_url ?? null;
-          setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? (!nextGifUrl ? exercise.videoUrl : null) ?? null);
-          setGifUrl(nextGifUrl);
-        } else {
-          setApiVideoUrl(exercise.videoUrl || null);
-          console.warn('[ExerciseModal] No GIF found for:', exercise.name, 'query:', searchName, results);
-        }
-      })
-      .catch((err: any) => {
-        if (!cancelled) setApiVideoUrl(exercise.videoUrl || null);
-        console.error('[ExerciseModal] GIF fetch error:', err?.message);
-      })
-      .finally(() => { if (!cancelled) setGifLoading(false); });
-    return () => { cancelled = true; };
-  }, [exercise.name, exercise.videoUrl]);
+    setGifUrl(getExerciseMediaUrl(exercise.name));
+  }, [exercise.name]);
 
   return (
     <motion.div
@@ -8003,23 +8007,7 @@ function ExecutionModal({
       >
         {/* Video Area */}
         <div className="lg:flex-1 bg-black relative aspect-video lg:aspect-auto">
-          {gifLoading ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </div>
-          ) : apiVideoUrl ? (
-            <video
-              src={apiVideoUrl}
-              autoPlay
-              loop
-              muted
-              playsInline
-              controls
-              onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
-              onError={() => setApiVideoUrl(null)}
-              className="w-full h-full object-contain"
-            />
-          ) : gifUrl ? (
+          {gifUrl ? (
             <img src={gifUrl} alt={exerciseDisplay.name} onError={() => setGifUrl(null)} className="w-full h-full object-contain" />
           ) : fallbackAnimationType ? (
             <ExerciseAnimation type={fallbackAnimationType} label={exerciseDisplay.name} />
@@ -8031,7 +8019,7 @@ function ExecutionModal({
               <div>
                 <p className="font-black uppercase tracking-widest text-xs text-text-primary">Guia de execução</p>
                 <p className="text-xs mt-2 max-w-xs leading-relaxed">
-                  A API não retornou GIF para este exercício. Use as instruções ao lado para executar com segurança.
+                  GIF de execução ainda não cadastrado. Use as instruções ao lado para executar com segurança.
                 </p>
               </div>
             </div>
@@ -8136,38 +8124,8 @@ function ExerciseCard({
   const [isResting, setIsResting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [gifUrl, setGifUrl] = useState<string | null>(null);
-  const [apiVideoUrl, setApiVideoUrl] = useState<string | null>(null);
-  const [gifLoading, setGifLoading] = useState(false);
   const exerciseDisplay = getExerciseDisplay(exercise, language);
   const fallbackAnimationType = getExerciseAnimationType(exercise.name);
-
-  const fetchApiExerciseMedia = async () => {
-    if (gifUrl || apiVideoUrl) return;
-    const localMedia = getLocalExerciseMedia(exercise.name);
-    if (localMedia) {
-      setGifUrl(localMedia);
-      return;
-    }
-    const searchName = translateExerciseName(exercise.name);
-    setGifLoading(true);
-    try {
-      const results = await searchExercisesByName(exercise.name);
-      const list = Array.isArray(results) ? results : results?.data;
-      if (Array.isArray(list) && list.length > 0) {
-        const nextGifUrl = list[0].gifUrl ?? list[0].gif_url ?? null;
-        setApiVideoUrl(list[0].videoUrl ?? list[0].video_url ?? (!nextGifUrl ? exercise.videoUrl : null) ?? null);
-        setGifUrl(nextGifUrl);
-      } else {
-        setApiVideoUrl(exercise.videoUrl || null);
-        console.warn('[ActiveExercise] No GIF found for:', exercise.name, 'query:', searchName, results);
-      }
-    } catch (err: any) {
-      setApiVideoUrl(exercise.videoUrl || null);
-      console.error('[ActiveExercise] GIF fetch error:', err?.message);
-    } finally {
-      setGifLoading(false);
-    }
-  };
 
   const handleToggleDetails = async () => {
     if (showDetails) {
@@ -8175,13 +8133,7 @@ function ExerciseCard({
       return;
     }
     setShowDetails(true);
-    if (gifUrl || apiVideoUrl) return;
-    const localMedia = getLocalExerciseMedia(exercise.name);
-    if (localMedia) {
-      setGifUrl(localMedia);
-      return;
-    }
-    await fetchApiExerciseMedia();
+    if (!gifUrl) setGifUrl(getExerciseMediaUrl(exercise.name));
   };
 
   return (
@@ -8304,24 +8256,7 @@ function ExerciseCard({
             <div className="flex flex-col lg:flex-row">
               {/* GIF / Video */}
               <div className="lg:w-1/2 bg-black aspect-video lg:aspect-auto min-h-[180px] flex items-center justify-center relative">
-                {gifLoading ? (
-                  <div className="flex flex-col items-center gap-4 text-text-muted">
-                    <span className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Carregando...</p>
-                  </div>
-                ) : apiVideoUrl ? (
-                  <video
-                    src={apiVideoUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    controls
-                    onLoadedMetadata={(event) => setExerciseVideoSpeed(event.currentTarget)}
-                    onError={() => setApiVideoUrl(null)}
-                    className="w-full h-full object-contain"
-                  />
-                ) : gifUrl ? (
+                {gifUrl ? (
                   <img
                     src={gifUrl}
                     alt={exerciseDisplay.name}
@@ -8338,7 +8273,7 @@ function ExerciseCard({
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-text-primary">Guia de execução</p>
                       <p className="text-xs mt-2 max-w-xs leading-relaxed opacity-70">
-                        GIF não encontrado na API. Siga as instruções deste exercício.
+                        GIF de execução ainda não cadastrado. Siga as instruções deste exercício.
                       </p>
                     </div>
                   </div>

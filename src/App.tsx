@@ -7918,10 +7918,22 @@ const LEG_EXERCISE_GIFS: Record<string, string> = {
   'stiff com halteres': 'Stiff com Halteres.gif',
 };
 
+const SHOULDER_EXERCISE_GIFS: Record<string, string> = {
+  'crucifixo inverso com halteres': 'crucifixo inverso.gif',
+  'elevacao posterior com halteres voador invertido': 'crucifixo inverso.gif',
+  'crucifixo inverso com halteres inclinado 90': 'crucifixo inverso.gif',
+  'crucifixo inverso com halteres tronco a 90 drop set': 'crucifixo inverso.gif',
+  'voador invertido na maquina': 'voador invertido.gif',
+  'crucifixo inverso na maquina peck deck invertido': 'voador invertido.gif',
+  'peck deck inverso': 'voador invertido.gif',
+  'peck deck inverso cadencia lenta': 'voador invertido.gif',
+};
+
 const FIXED_EXERCISE_GIFS: Record<string, string> = {
   ...CHEST_EXERCISE_GIFS,
   ...BACK_EXERCISE_GIFS,
   ...LEG_EXERCISE_GIFS,
+  ...SHOULDER_EXERCISE_GIFS,
 };
 
 function buildPublicGifUrl(fileName: string) {

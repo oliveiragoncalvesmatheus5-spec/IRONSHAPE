@@ -1,4 +1,4 @@
-import { Workout } from '../types';
+import { Exercise, Workout } from '../types';
 
 export const BEGINNER_WORKOUTS: Workout[] = [
   {
@@ -4713,4 +4713,114 @@ export const ELITE_WORKOUTS: Workout[] = [
   }
 ];
 
-export const ALL_WORKOUTS = [...BEGINNER_WORKOUTS, ...INTERMEDIATE_WORKOUTS, ...ELITE_WORKOUTS];
+const SHOULDER_REAR_DELT_WORKOUT_COPY: Record<string, Pick<Workout, 'name' | 'description'>> = {
+  'ombros-iniciante-1': {
+    name: 'Posterior de Ombro Base',
+    description: 'Movimentos simples para aprender a ativar o deltoide posterior com controle.',
+  },
+  'ombros-iniciante-2': {
+    name: 'Deltoide Posterior',
+    description: 'A cabeça mais esquecida do ombro, essencial para postura e saúde articular.',
+  },
+  'ombros-pro-1': {
+    name: 'Posterior de Ombro Pro',
+    description: 'Volume e técnica para fortalecer a parte de trás dos ombros com execução limpa.',
+  },
+  'ombros-pro-2': {
+    name: 'Deltoide Posterior Pro',
+    description: 'Foco total na cabeça posterior do deltoide para estética, postura e estabilidade.',
+  },
+  'ombros-pro-3': {
+    name: 'Ombro Posterior 360',
+    description: 'Variações de crucifixo e voador para criar controle, contração e resistência.',
+  },
+  'elite-ombros-1': {
+    name: 'Posterior de Ombro Força',
+    description: 'Protocolo avançado para treinar o deltoide posterior com mais carga e precisão.',
+  },
+  'elite-ombros-2': {
+    name: 'Posterior de Ombro Volume',
+    description: 'Mais séries e tempo sob tensão para desenvolver ombros mais estáveis e completos.',
+  },
+  'elite-ombros-3': {
+    name: 'Deltoide Posterior Elite',
+    description: 'Protocolo completo para posterior de ombro, postura e saúde articular.',
+  },
+};
+
+const SHOULDER_REAR_DELT_VARIANTS: Array<Pick<Exercise, 'name' | 'description' | 'instructions' | 'proTips' | 'commonErrors'>> = [
+  {
+    name: 'Crucifixo Inverso com Halteres',
+    description: 'Incline o tronco e abra os braços para ativar o deltoide posterior.',
+    instructions: [
+      'Incline o tronco para frente com a coluna neutra e os halteres abaixo do peito.',
+      'Mantenha uma leve flexão nos cotovelos e o pescoço alinhado.',
+      'Abra os braços para os lados até sentir a contração na parte de trás dos ombros.',
+      'Desça controlando o peso, sem deixar o tronco balançar.',
+    ],
+    proTips: [
+      'Use carga leve e pense em afastar os cotovelos, não as mãos.',
+      'Segure 1 segundo no topo para sentir o posterior de ombro trabalhar de verdade.',
+    ],
+    commonErrors: [
+      'Usar impulso do tronco para levantar os halteres.',
+      'Subir com trapézio em vez de abrir com o deltoide posterior.',
+    ],
+  },
+  {
+    name: 'Voador Invertido na Máquina',
+    description: 'Abra os braços na máquina para isolar o deltoide posterior com mais estabilidade.',
+    instructions: [
+      'Sente-se de frente para o encosto e ajuste os pegadores na altura dos ombros.',
+      'Segure os apoios com os braços à frente e cotovelos levemente flexionados.',
+      'Abra os braços até a linha do corpo, contraindo a parte de trás dos ombros.',
+      'Volte devagar mantendo a tensão, sem deixar o peso bater.',
+    ],
+    proTips: [
+      'A máquina ajuda a manter a técnica, então foque em amplitude e controle.',
+      'Evite carga exagerada; o objetivo é sentir o posterior, não puxar com as costas.',
+    ],
+    commonErrors: [
+      'Encolher os ombros durante a abertura.',
+      'Fazer meia amplitude por usar peso demais.',
+    ],
+  },
+  {
+    name: 'Peck Deck Inverso',
+    description: 'Variação guiada do voador invertido para trabalhar posterior de ombro com cadência.',
+    instructions: [
+      'Ajuste o banco para que os braços fiquem alinhados aos ombros.',
+      'Mantenha o peito apoiado e as escápulas controladas.',
+      'Abra os braços em arco até contrair o deltoide posterior.',
+      'Retorne em 2 a 3 segundos, mantendo o movimento limpo.',
+    ],
+    proTips: [
+      'Faça a volta devagar; é nela que o músculo continua trabalhando.',
+      'Pare a série se sentir mais trapézio do que posterior de ombro.',
+    ],
+    commonErrors: [
+      'Puxar com os braços muito dobrados.',
+      'Perder contato do peito com o apoio da máquina.',
+    ],
+  },
+];
+
+function normalizeShoulderWorkout(workout: Workout): Workout {
+  if (workout.muscleGroup !== 'Ombros') return workout;
+
+  const copy = SHOULDER_REAR_DELT_WORKOUT_COPY[workout.id] ?? {
+    name: workout.name,
+    description: 'Treino de ombro ajustado para os GIFs disponíveis de posterior de ombro.',
+  };
+
+  return {
+    ...workout,
+    ...copy,
+    exercises: workout.exercises.map((exercise, index) => ({
+      ...exercise,
+      ...SHOULDER_REAR_DELT_VARIANTS[index % SHOULDER_REAR_DELT_VARIANTS.length],
+    })),
+  };
+}
+
+export const ALL_WORKOUTS = [...BEGINNER_WORKOUTS, ...INTERMEDIATE_WORKOUTS, ...ELITE_WORKOUTS].map(normalizeShoulderWorkout);

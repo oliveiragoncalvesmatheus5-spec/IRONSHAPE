@@ -7929,11 +7929,26 @@ const SHOULDER_EXERCISE_GIFS: Record<string, string> = {
   'peck deck inverso cadencia lenta': 'voador invertido.gif',
 };
 
+const BICEPS_EXERCISE_GIFS: Record<string, string> = {
+  'martelo alternado': 'rosca alternada pegada neutra.gif',
+  'rosca 21s com barra ez': 'rosca direta barra W.gif',
+  'rosca concentrada': 'Rosca Concentrada.gif',
+  'rosca direta com barra': 'rosca direta barra W.gif',
+  'rosca direta com barra carga maxima': 'rosca dierta pegada fechada.gif',
+  'rosca direta com halteres': 'rosca alternada com giro.gif',
+  'rosca inclinada com halteres cadencia lenta': 'rosca consentrada unilateral  no banco declinado.gif',
+  'rosca martelo': 'rosca neutra com halteres.gif',
+  'rosca martelo com corda cabo': 'biceps polia alta dupla.gif',
+  'rosca no cabo com drop set': 'rosca direta no cross barra W.gif',
+  'rosca scott com halter': 'Rosca Scott Unil com Halteres.gif',
+};
+
 const FIXED_EXERCISE_GIFS: Record<string, string> = {
   ...CHEST_EXERCISE_GIFS,
   ...BACK_EXERCISE_GIFS,
   ...LEG_EXERCISE_GIFS,
   ...SHOULDER_EXERCISE_GIFS,
+  ...BICEPS_EXERCISE_GIFS,
 };
 
 function buildPublicGifUrl(fileName: string) {

@@ -7883,9 +7883,45 @@ const BACK_EXERCISE_GIFS: Record<string, string> = {
   'remada com elastico postura': 'remada baixa unilateral pegada neutra.gif',
 };
 
+const LEG_EXERCISE_GIFS: Record<string, string> = {
+  'abducao de quadril na polia': 'Abduçao de quadril em pé.gif',
+  'agachamento bulgaro': 'agachamento bulgaro.gif',
+  'agachamento bulgaro com halteres': 'Agachamento com halteres com uma perna.gif',
+  'agachamento goblet': 'agachamento sumo com halteres.gif',
+  'agachamento livre': 'Agachamento livre com barra.gif',
+  'agachamento sumo com halter': 'agachamento sumo com halteres.gif',
+  'agachamento com barra carga maxima': 'agachamento barra.gif',
+  'cadeira abdutora': 'Abduçao de quadril em pé.gif',
+  'cadeira extensora': 'cadeira extensora.gif',
+  'cadeira flexora': 'cadeira flex.gif',
+  'cadeira flexora drop set': 'cadeira flex.gif',
+  'coice na polia': 'Extensão de quadril em pé na polia.gif',
+  'elevacao pelvica hip thrust com peso corporal': 'elevação pelvica livre.gif',
+  'elevacao pelvica unilateral': 'elevação pelvica livre.gif',
+  'flexora unilateral': 'mesa flex unilateral.gif',
+  'good morning com barra': 'banco romano sem peso.gif',
+  'gemeos sentado soleo': 'Flexão Plantar com peso corporal.gif',
+  'gemeos unilateral com halter': 'Flexão Plantar com peso corporal.gif',
+  'gemeos em pe carga alta': 'Flexão Plantar com peso corporal.gif',
+  'gemeos no leg press': 'panturrinha no leg press.gif',
+  'hip thrust com barra': 'elevação pelvica livre.gif',
+  'hip thrust com barra carga maxima': 'elevação pelvica livre.gif',
+  'leg press 45': 'leg press.gif',
+  'leg press 45 alta carga': 'leg press pés afastados.gif',
+  'leg press horizontal': 'leg press.gif',
+  'levantamento terra romeno carga maxima': 'stiff com barra.gif',
+  'levantamento terra romeno com halteres': 'Stiff com Halteres.gif',
+  'mesa flexora': 'mesa flex.gif',
+  'passada caminhando': 'passada a frente com halteres.gif',
+  'passada com halteres lunge avancado': 'passada com halteres.gif',
+  'stiff com barra': 'stiff com barra.gif',
+  'stiff com halteres': 'Stiff com Halteres.gif',
+};
+
 const FIXED_EXERCISE_GIFS: Record<string, string> = {
   ...CHEST_EXERCISE_GIFS,
   ...BACK_EXERCISE_GIFS,
+  ...LEG_EXERCISE_GIFS,
 };
 
 function buildPublicGifUrl(fileName: string) {

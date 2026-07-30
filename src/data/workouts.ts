@@ -4786,21 +4786,21 @@ const SHOULDER_REAR_DELT_VARIANTS: Array<Pick<Exercise, 'name' | 'description' |
     ],
   },
   {
-    name: 'Peck Deck Inverso',
-    description: 'Variação guiada do voador invertido para trabalhar posterior de ombro com cadência.',
+    name: 'Crucifixo Inverso com Halteres (Pausa no Topo)',
+    description: 'Variação com pausa para reforçar a contração do deltoide posterior.',
     instructions: [
-      'Ajuste o banco para que os braços fiquem alinhados aos ombros.',
-      'Mantenha o peito apoiado e as escápulas controladas.',
-      'Abra os braços em arco até contrair o deltoide posterior.',
-      'Retorne em 2 a 3 segundos, mantendo o movimento limpo.',
+      'Incline o tronco para frente com os halteres abaixo do peito.',
+      'Abra os braços para os lados mantendo os cotovelos levemente flexionados.',
+      'Segure 1 a 2 segundos no topo sentindo a parte de trás dos ombros.',
+      'Desça devagar sem relaxar totalmente no final.',
     ],
     proTips: [
-      'Faça a volta devagar; é nela que o músculo continua trabalhando.',
-      'Pare a série se sentir mais trapézio do que posterior de ombro.',
+      'A pausa tira o impulso e obriga o posterior de ombro a trabalhar.',
+      'Use carga menor do que no crucifixo inverso normal para manter controle.',
     ],
     commonErrors: [
-      'Puxar com os braços muito dobrados.',
-      'Perder contato do peito com o apoio da máquina.',
+      'Fazer a pausa com o trapézio encolhido.',
+      'Balançar o tronco para conseguir subir os halteres.',
     ],
   },
 ];
@@ -4823,4 +4823,112 @@ function normalizeShoulderWorkout(workout: Workout): Workout {
   };
 }
 
-export const ALL_WORKOUTS = [...BEGINNER_WORKOUTS, ...INTERMEDIATE_WORKOUTS, ...ELITE_WORKOUTS].map(normalizeShoulderWorkout);
+const ABS_WORKOUT_COPY: Record<string, Pick<Workout, 'name' | 'description'>> = {
+  'abdomen-iniciante-1': {
+    name: 'Abdômen Concentrado',
+    description: 'Movimentos diretos para aprender a contrair o abdômen sem pressa e sem impulso.',
+  },
+  'abdomen-iniciante-2': {
+    name: 'Core Concentrado',
+    description: 'Variações simples para reforçar controle, respiração e estabilidade do tronco.',
+  },
+  'abdomen-pro-1': {
+    name: 'Abdômen com Carga',
+    description: 'Contração forte com controle para evoluir o abdômen além das repetições livres.',
+  },
+  'abdomen-pro-2': {
+    name: 'Core Pro',
+    description: 'Volume moderado com abdominais concentrados e polia para mais intensidade.',
+  },
+  'abdomen-pro-3': {
+    name: 'Abdômen Forte',
+    description: 'Sequência compacta para gerar tensão, controle e progressão no abdômen.',
+  },
+  'elite-abdomen-1': {
+    name: 'Abdômen com Carga Elite',
+    description: 'Protocolo avançado usando carga e controle para maximizar a contração abdominal.',
+  },
+  'elite-abdomen-2': {
+    name: 'Core Concentrado Elite',
+    description: 'Mais volume nos movimentos que você tem em GIF, mantendo execução clara e repetível.',
+  },
+};
+
+const ABS_EXERCISE_VARIANTS: Array<Pick<Exercise, 'name' | 'description' | 'instructions' | 'proTips' | 'commonErrors'>> = [
+  {
+    name: 'Abdominal Concentrado',
+    description: 'Crunch no solo para contrair o abdômen com movimento curto e controlado.',
+    instructions: [
+      'Deite-se no chão com joelhos flexionados e braços estendidos acima da cabeça.',
+      'Expire e tire as escápulas do chão contraindo o abdômen.',
+      'Suba apenas o suficiente para sentir o abdômen fechar, sem puxar o pescoço.',
+      'Desça devagar até encostar as costas no chão novamente.',
+    ],
+    proTips: [
+      'Pense em aproximar as costelas do quadril, não em sentar completamente.',
+      'Solte o ar na subida para aumentar a contração.',
+    ],
+    commonErrors: [
+      'Usar impulso dos braços para subir.',
+      'Forçar o pescoço em vez de contrair o abdômen.',
+    ],
+  },
+  {
+    name: 'Abd Concentrado Braços estendidos',
+    description: 'Variação com braços longos para aumentar o controle e a amplitude do abdominal.',
+    instructions: [
+      'Deite-se com os braços estendidos atrás da cabeça e pernas flexionadas.',
+      'Mantenha a lombar estável e inicie a subida contraindo o abdômen.',
+      'Eleve tronco e braços juntos, sem jogar o corpo para frente.',
+      'Volte lentamente mantendo o abdômen ativo até o final.',
+    ],
+    proTips: [
+      'Braços estendidos aumentam a dificuldade; reduza a amplitude se perder controle.',
+      'Mantenha o olhar para cima para não fechar demais o pescoço.',
+    ],
+    commonErrors: [
+      'Transformar o movimento em balanço.',
+      'Relaxar completamente no chão entre as repetições.',
+    ],
+  },
+  {
+    name: 'Abdominal com Carga',
+    description: 'Abdominal na polia para aplicar sobrecarga e progredir o core com mais precisão.',
+    instructions: [
+      'Fique de frente para a polia alta segurando a corda ao lado da cabeça.',
+      'Trave o quadril e flexione o tronco levando as costelas em direção ao abdômen.',
+      'Contraia forte no final do movimento sem puxar apenas com os braços.',
+      'Retorne controlando a carga até alongar o abdômen.',
+    ],
+    proTips: [
+      'A carga deve permitir contração limpa, não roubar com quadril e braços.',
+      'Faça uma pausa curta no ponto de maior contração.',
+    ],
+    commonErrors: [
+      'Puxar a corda com os braços em vez de flexionar o tronco.',
+      'Usar carga alta demais e perder a amplitude.',
+    ],
+  },
+];
+
+function normalizeAbsWorkout(workout: Workout): Workout {
+  if (workout.muscleGroup !== 'Abdômen') return workout;
+
+  const copy = ABS_WORKOUT_COPY[workout.id] ?? {
+    name: workout.name,
+    description: 'Treino de abdômen ajustado para os GIFs disponíveis.',
+  };
+
+  return {
+    ...workout,
+    ...copy,
+    exercises: workout.exercises.map((exercise, index) => ({
+      ...exercise,
+      ...ABS_EXERCISE_VARIANTS[index % ABS_EXERCISE_VARIANTS.length],
+    })),
+  };
+}
+
+export const ALL_WORKOUTS = [...BEGINNER_WORKOUTS, ...INTERMEDIATE_WORKOUTS, ...ELITE_WORKOUTS]
+  .map(normalizeShoulderWorkout)
+  .map(normalizeAbsWorkout);

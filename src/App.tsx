@@ -7920,6 +7920,7 @@ const LEG_EXERCISE_GIFS: Record<string, string> = {
 
 const SHOULDER_EXERCISE_GIFS: Record<string, string> = {
   'crucifixo inverso com halteres': 'crucifixo inverso.gif',
+  'crucifixo inverso com halteres pausa no topo': 'crucifixo inverso.gif',
   'elevacao posterior com halteres voador invertido': 'crucifixo inverso.gif',
   'crucifixo inverso com halteres inclinado 90': 'crucifixo inverso.gif',
   'crucifixo inverso com halteres tronco a 90 drop set': 'crucifixo inverso.gif',
@@ -7943,12 +7944,19 @@ const BICEPS_EXERCISE_GIFS: Record<string, string> = {
   'rosca scott com halter': 'Rosca Scott Unil com Halteres.gif',
 };
 
+const ABS_EXERCISE_GIFS: Record<string, string> = {
+  'abdominal concentrado': 'Abdominal Concentrado.gif',
+  'abd concentrado bracos estendidos': 'Abd Concentrado Braços estendidos.gif',
+  'abdominal com carga': 'Abdominal com Carga.gif',
+};
+
 const FIXED_EXERCISE_GIFS: Record<string, string> = {
   ...CHEST_EXERCISE_GIFS,
   ...BACK_EXERCISE_GIFS,
   ...LEG_EXERCISE_GIFS,
   ...SHOULDER_EXERCISE_GIFS,
   ...BICEPS_EXERCISE_GIFS,
+  ...ABS_EXERCISE_GIFS,
 };
 
 function buildPublicGifUrl(fileName: string) {

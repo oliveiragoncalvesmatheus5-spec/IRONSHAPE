@@ -716,7 +716,7 @@ export const BEGINNER_WORKOUTS: Workout[] = [
   {
     id: "bracos-iniciante-1",
     name: "Bíceps",
-    muscleGroup: "Braços",
+    muscleGroup: "Bíceps",
     level: "Iniciante",
     duration: "25 min",
     carga: "Baixa",
@@ -730,7 +730,7 @@ export const BEGINNER_WORKOUTS: Workout[] = [
         series: 3,
         reps: "12",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Mantenha os cotovelos fixos ao lado do corpo.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -756,7 +756,7 @@ export const BEGINNER_WORKOUTS: Workout[] = [
         series: 3,
         reps: "12",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Ativa o braquial e o braquiorradial além do bíceps — mais espessura no braço.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -781,7 +781,7 @@ export const BEGINNER_WORKOUTS: Workout[] = [
         series: 3,
         reps: "10",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Banco Scott elimina qualquer trapaça — isolamento total do bíceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -803,9 +803,97 @@ export const BEGINNER_WORKOUTS: Workout[] = [
     ]
   },
   {
+    id: "bracos-iniciante-3",
+    name: "Bíceps Controle",
+    muscleGroup: "Bíceps",
+    level: "Iniciante",
+    duration: "25 min",
+    carga: "Baixa",
+    description: "Mais três variações para completar o treino iniciante de bíceps com controle e contração.",
+    planRequired: "Iniciante",
+    authorUid: "system",
+    exercises: [
+      {
+        id: "ex-ini-b2-1",
+        name: "Rosca Concentrada",
+        series: 3,
+        reps: "12 cada lado",
+        restTime: "60s",
+        muscleGroup: "Bíceps",
+        description: "Isolamento para sentir o bíceps trabalhar sem impulso.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Sente-se no banco e apoie o cotovelo na parte interna da coxa.",
+          "Mantenha o braço quase estendido e o punho firme.",
+          "Flexione o cotovelo levando o halter em direção ao ombro.",
+          "Desça devagar até sentir o bíceps alongar novamente."
+        ],
+        proTips: [
+          "Segure 1 segundo no topo para aumentar a contração.",
+          "Use carga moderada; esse exercício funciona melhor com controle."
+        ],
+        commonErrors: [
+          "Tirar o cotovelo da coxa para ajudar na subida.",
+          "Descer rápido demais e perder tensão no bíceps."
+        ]
+      },
+      {
+        id: "ex-ini-b2-2",
+        name: "Martelo Alternado",
+        series: 3,
+        reps: "12 cada",
+        restTime: "60s",
+        muscleGroup: "Bíceps",
+        description: "Pegada neutra para dar mais espessura ao braço e reforçar o antebraço.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Fique em pé com os halteres nas laterais do corpo.",
+          "Mantenha as palmas voltadas uma para a outra durante todo o movimento.",
+          "Suba um halter por vez sem balançar o tronco.",
+          "Desça com controle antes de alternar o braço."
+        ],
+        proTips: [
+          "Cotovelos colados ao corpo deixam o movimento mais limpo.",
+          "Faça a subida forte e a descida lenta."
+        ],
+        commonErrors: [
+          "Transformar o movimento em rosca tradicional girando o punho.",
+          "Usar impulso do tronco quando a carga fica pesada."
+        ]
+      },
+      {
+        id: "ex-ini-b2-3",
+        name: "Rosca Direta com Barra",
+        series: 3,
+        reps: "10-12",
+        restTime: "75s",
+        muscleGroup: "Bíceps",
+        description: "Movimento base para aprender força e controle no bíceps.",
+        videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
+        thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        instructions: [
+          "Segure a barra com as palmas voltadas para cima.",
+          "Mantenha os cotovelos fixos ao lado do corpo.",
+          "Suba a barra até perto dos ombros sem inclinar o tronco.",
+          "Volte devagar até quase estender totalmente os braços."
+        ],
+        proTips: [
+          "A barra ajuda a criar base de força para evoluir nos outros exercícios.",
+          "Pare a série se começar a roubar com as costas."
+        ],
+        commonErrors: [
+          "Jogar o corpo para trás para levantar a barra.",
+          "Subir só pela metade e perder amplitude."
+        ]
+      }
+    ]
+  },
+  {
     id: "bracos-iniciante-2",
     name: "Tríceps",
-    muscleGroup: "Braços",
+    muscleGroup: "Tríceps",
     level: "Iniciante",
     duration: "25 min",
     carga: "Baixa",
@@ -819,7 +907,7 @@ export const BEGINNER_WORKOUTS: Workout[] = [
         series: 3,
         reps: "12",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Estenda totalmente os braços para baixo.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -845,7 +933,7 @@ export const BEGINNER_WORKOUTS: Workout[] = [
         series: 3,
         reps: "12",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Ativa a cabeça longa do tríceps com braços elevados.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -870,7 +958,7 @@ export const BEGINNER_WORKOUTS: Workout[] = [
         series: 3,
         reps: "Máximo",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Peso corporal para o tríceps — mantenha o tronco reto para foco no tríceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-push-ups-23444-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2223,7 +2311,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
   {
     id: "bracos-pro-1",
     name: "Bíceps",
-    muscleGroup: "Braços",
+    muscleGroup: "Bíceps",
     level: "Intermediário",
     duration: "40 min",
     carga: "Média",
@@ -2237,7 +2325,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "10",
         restTime: "75s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Maior carga que os halteres — força máxima nos bíceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2262,7 +2350,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 3,
         reps: "10 cada lado",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Pico de contração máximo — isolamento total do bíceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2287,7 +2375,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 3,
         reps: "12",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Tensão constante no bíceps e braquial com a corda no cabo.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164766/pexels-photo-4164766.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2311,7 +2399,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
   {
     id: "bracos-pro-2",
     name: "Tríceps",
-    muscleGroup: "Braços",
+    muscleGroup: "Tríceps",
     level: "Intermediário",
     duration: "40 min",
     carga: "Média",
@@ -2325,7 +2413,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "10",
         restTime: "75s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Ativa especialmente a cabeça longa do tríceps com carga alta.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2350,7 +2438,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "12",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "A corda permite rotação do punho no final — maior contração.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2375,7 +2463,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 3,
         reps: "10-12",
         restTime: "75s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Adicione peso sobre as coxas para sobrecarga progressiva.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-push-ups-23444-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2913,12 +3001,12 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
   },
   {
     id: "bracos-pro-3",
-    name: "Braços de Ferro",
-    muscleGroup: "Braços",
+    name: "Bíceps de Ferro",
+    muscleGroup: "Bíceps",
     level: "Intermediário",
     duration: "45 min",
     carga: "Média",
-    description: "Superset de bíceps e tríceps para máximo pump e volume.",
+    description: "Superset de bíceps para máximo pump e volume sem aumentar a quantidade de exercícios do plano.",
     planRequired: "Pro",
     authorUid: "system",
     exercises: [
@@ -2928,7 +3016,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "12",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Isolamento máximo do bíceps com pico de contração.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-curling-dumbbells-23432-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4162514/pexels-photo-4162514.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -2949,27 +3037,27 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
       },
       {
         id: "ex-pro-bf-2",
-        name: "Tríceps Testa com Barra EZ",
+        name: "Rosca Direta com Barra",
         series: 4,
         reps: "10",
         restTime: "75s",
-        muscleGroup: "Braços",
-        description: "Extensão de tríceps em decúbito — máxima ativação da cabeça longa.",
+        muscleGroup: "Bíceps",
+        description: "Base pesada para força e volume nos bíceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-curling-dumbbells-23432-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4162514/pexels-photo-4162514.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         instructions: [
-          "Deite-se no banco plano segurando a barra EZ acima do peito com braços estendidos.",
-          "Flexione apenas os cotovelos abaixando a barra em direção à testa.",
-          "Mantenha os cotovelos apontados para o teto — não os abra.",
-          "Estenda os braços de volta à posição inicial contraindo os tríceps."
+          "Segure a barra com pegada supinada na largura dos ombros.",
+          "Mantenha os cotovelos fixos ao lado do tronco.",
+          "Flexione os cotovelos trazendo a barra até próximo dos ombros.",
+          "Desça em ritmo controlado até quase estender totalmente os braços."
         ],
         proTips: [
-          "Cotovelos levemente inclinados para trás ativa mais a cabeça longa do tríceps.",
-          "Movimento controlado — não deixe a barra 'cair' em direção à testa."
+          "Use esse movimento como exercício pesado do card.",
+          "A barra EZ pode aliviar os punhos mantendo boa ativação."
         ],
         commonErrors: [
-          "Abrir os cotovelos durante o movimento, perdendo o isolamento.",
-          "Usar carga excessiva que compromete o controle do movimento."
+          "Balançar o tronco para vencer a carga.",
+          "Levar os cotovelos para frente e tirar tensão do bíceps."
         ]
       },
       {
@@ -2978,7 +3066,7 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         series: 3,
         reps: "12 cada",
         restTime: "60s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Ativa o braquial e braquiorradial além do bíceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-curling-dumbbells-23432-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4162514/pexels-photo-4162514.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4449,7 +4537,7 @@ export const ELITE_WORKOUTS: Workout[] = [
   {
     id: "elite-bracos-1",
     name: "Bíceps",
-    muscleGroup: "Braços",
+    muscleGroup: "Bíceps",
     level: "Avançado",
     duration: "60 min",
     carga: "Alta",
@@ -4463,7 +4551,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 5,
         reps: "5-6",
         restTime: "150s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Força máxima nos bíceps com barra e carga progressiva.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4162587/pexels-photo-4162587.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4488,7 +4576,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "8",
         restTime: "120s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Estira a cabeça longa do bíceps em amplitude máxima — pico de hipertrofia.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4513,7 +4601,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "21",
         restTime: "90s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Método de 21 repetições para exaustão completa do bíceps em três amplitudes.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4538,7 +4626,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 3,
         reps: "12+10+8",
         restTime: "90s",
-        muscleGroup: "Braços",
+        muscleGroup: "Bíceps",
         description: "Drop-set triplo para exaustão total do bíceps com tensão constante do cabo.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-bicep-curls-23433-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4562,7 +4650,7 @@ export const ELITE_WORKOUTS: Workout[] = [
   {
     id: "elite-bracos-2",
     name: "Tríceps",
-    muscleGroup: "Braços",
+    muscleGroup: "Tríceps",
     level: "Avançado",
     duration: "60 min",
     carga: "Alta",
@@ -4576,7 +4664,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 5,
         reps: "6-8",
         restTime: "150s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Força máxima na cabeça longa do tríceps com pausa para eliminar o impulso.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4162587/pexels-photo-4162587.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4601,7 +4689,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "10-12",
         restTime: "90s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Posição acima da cabeça — máxima ativação da cabeça longa do tríceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4626,7 +4714,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "8",
         restTime: "120s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Força máxima no tríceps com movimento composto — permite carga muito alta.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
         thumbnail: "https://images.pexels.com/photos/3837799/pexels-photo-3837799.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -4651,7 +4739,7 @@ export const ELITE_WORKOUTS: Workout[] = [
         series: 4,
         reps: "8-10",
         restTime: "120s",
-        muscleGroup: "Braços",
+        muscleGroup: "Tríceps",
         description: "Dips pesados com cadência 3-1-1 para força e hipertrofia máximas no tríceps.",
         videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-push-ups-23444-large.mp4",
         thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",

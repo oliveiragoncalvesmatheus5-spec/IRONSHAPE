@@ -1,6 +1,6 @@
 export type Plan = 'Iniciante' | 'Pro' | 'Elite' | 'free' | 'Admin';
 export type Level = 'Iniciante' | 'Intermediário' | 'Avançado';
-export type MuscleGroup = 'Peito' | 'Costas' | 'Pernas' | 'Ombros' | 'Braços' | 'Abdômen' | 'Full Body';
+export type MuscleGroup = 'Peito' | 'Costas' | 'Pernas' | 'Ombros' | 'Bíceps' | 'Tríceps' | 'Braços' | 'Abdômen' | 'Full Body';
 
 export interface NutritionLog {
   id: string;

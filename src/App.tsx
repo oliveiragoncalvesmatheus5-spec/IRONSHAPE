@@ -1038,6 +1038,16 @@ const HOME_PRO_WORKOUTS: Record<MuscleGroup, HomeWorkoutTemplate[]> = {
     { name: 'Tríceps em Casa', exercises: ['Extensão acima da cabeça', 'Tríceps para trás', 'Pressão de tríceps na parede'] },
     { name: 'Braços Completos', exercises: ['Rosca alternada', 'Extensão de tríceps sentado', 'Aperto de toalha'] },
   ],
+  Bíceps: [
+    { name: 'Bíceps em Casa', exercises: ['Rosca com garrafas', 'Rosca martelo com garrafas', 'Contração de bíceps com toalha'] },
+    { name: 'Bíceps Alternado', exercises: ['Rosca alternada', 'Rosca lenta com garrafas', 'Rosca sentada'] },
+    { name: 'Bíceps com Controle', exercises: ['Rosca direta com garrafas', 'Rosca martelo', 'Contração com toalha'] },
+  ],
+  Tríceps: [
+    { name: 'Tríceps em Casa', exercises: ['Extensão acima da cabeça', 'Tríceps para trás', 'Pressão de tríceps na parede'] },
+    { name: 'Tríceps com Apoio', exercises: ['Extensão de tríceps sentado', 'Supino fechado no chão', 'Tríceps com pausa'] },
+    { name: 'Tríceps Controle', exercises: ['Pressão na parede', 'Extensão unilateral', 'Tríceps para trás'] },
+  ],
   Abdômen: [
     { name: 'Abdômen na Cadeira', exercises: ['Elevação alternada dos joelhos', 'Inclinação lateral sentada', 'Contração abdominal sentada'] },
     { name: 'Abdômen no Chão', exercises: ['Inseto morto', 'Elevação pélvica no chão', 'Toque alternado nos calcanhares'] },
@@ -1081,6 +1091,18 @@ const HOME_ELITE_WORKOUTS: Record<MuscleGroup, HomeWorkoutTemplate[]> = {
     { name: 'Braços Alternados', exercises: ['Rosca com garrafas', 'Extensão de tríceps', 'Rosca martelo', 'Aperto de toalha'] },
     { name: 'Braços com Controle', exercises: ['Rosca lenta', 'Tríceps com pausa', 'Rosca sentada', 'Extensão unilateral'] },
   ],
+  Bíceps: [
+    { name: 'Bíceps Completo', exercises: ['Rosca direta com garrafas', 'Rosca alternada', 'Rosca martelo', 'Contração com toalha'] },
+    { name: 'Bíceps Alternado', exercises: ['Rosca com garrafas', 'Rosca lenta', 'Rosca sentada', 'Rosca martelo'] },
+    { name: 'Bíceps com Controle', exercises: ['Rosca alternada lenta', 'Contração com toalha', 'Rosca direta com garrafas', 'Rosca martelo'] },
+    { name: 'Bíceps Resistência', exercises: ['Rosca direta', 'Rosca alternada', 'Rosca isométrica', 'Rosca sentada'] },
+  ],
+  Tríceps: [
+    { name: 'Tríceps Completo', exercises: ['Extensão acima da cabeça', 'Tríceps para trás', 'Supino fechado no chão', 'Pressão na parede'] },
+    { name: 'Tríceps com Controle', exercises: ['Tríceps com pausa', 'Extensão unilateral', 'Pressão de tríceps na parede', 'Supino fechado no chão'] },
+    { name: 'Tríceps Alternado', exercises: ['Extensão de tríceps', 'Tríceps para trás', 'Pressão na parede', 'Extensão sentado'] },
+    { name: 'Tríceps Resistência', exercises: ['Supino fechado no chão', 'Extensão acima da cabeça', 'Tríceps com pausa', 'Pressão de tríceps'] },
+  ],
   Abdômen: [
     { name: 'Centro do Corpo', exercises: ['Inseto morto', 'Prancha na parede', 'Elevação pélvica', 'Contração abdominal'] },
     { name: 'Abdômen Sentado', exercises: ['Joelhos alternados sentado', 'Inclinação lateral sentada', 'Rotação controlada', 'Contração com respiração'] },
@@ -1109,7 +1131,7 @@ function buildHomeWorkouts(
   const reps = level === 'Avançado' ? '12-15 reps' : level === 'Intermediário' ? '10-12 reps' : '8-10 reps';
   const rest = level === 'Avançado' ? '40s' : '60s';
   const planRequired = plan === 'free' ? 'Iniciante' : plan;
-  const groups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen', 'Full Body'];
+  const groups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Full Body'];
   const beginnerTemplates: Record<MuscleGroup, HomeWorkoutTemplate[]> = Object.fromEntries(
     groups.map(group => [group, HOME_PRO_WORKOUTS[group].slice(0, 1)])
   ) as Record<MuscleGroup, HomeWorkoutTemplate[]>;
@@ -4375,7 +4397,7 @@ function OnboardingView({ user, profile, onComplete }: { user: any, profile: Use
               <div>
                 <label className="block text-xs uppercase tracking-widest text-text-muted mb-3 font-bold">Quais grupos quer priorizar?</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen'].map(item => (
+                  {['Peito', 'Costas', 'Pernas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen'].map(item => (
                     <button key={item} onClick={() => toggleListValue('gymFocus', item, 3)} className={`min-h-[54px] rounded-2xl border px-3 text-xs font-black uppercase tracking-widest transition-all ${formData.gymFocus.includes(item) ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}>
                       {item}
                     </button>
@@ -6336,7 +6358,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
     });
   }, [user?.id, completedWorkouts, awardedWorkoutPoints, profile.points, planPointsLimit, updateProfile]);
 
-  const muscleGroups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Braços', 'Abdômen', 'Full Body'];
+  const muscleGroups: MuscleGroup[] = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Full Body'];
   const trainingPlace = trainingOnboarding?.trainingPlace;
   const usesHomeProtocol = trainingPlace === 'home';
   const usesHybridProtocol = trainingPlace === 'hybrid';
@@ -16853,7 +16875,7 @@ function AthleteSpreadsheetView({ language: _language, onSelectWorkout }: { lang
       { day: 'Terça', workoutId: 'costas-pro-1', workoutName: 'Costas Pro', muscleGroup: 'Costas' },
       { day: 'Quarta', workoutId: 'pernas-pro-1', workoutName: 'Leg Day Pro', muscleGroup: 'Pernas' },
       { day: 'Quinta', workoutId: 'ombros-pro-1', workoutName: 'Ombros Pro', muscleGroup: 'Ombros' },
-      { day: 'Sexta', workoutId: 'bracos-iniciante-1', workoutName: 'Bíceps e Tríceps', muscleGroup: 'Braços' },
+      { day: 'Sexta', workoutId: 'bracos-iniciante-1', workoutName: 'Bíceps Base', muscleGroup: 'Bíceps' },
     ],
     Elite: [
       { day: 'Segunda', workoutId: 'elite-peito-1', workoutName: 'Protocolo Peito Elite', muscleGroup: 'Peito' },

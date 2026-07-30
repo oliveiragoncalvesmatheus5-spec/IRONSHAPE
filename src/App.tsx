@@ -7640,10 +7640,24 @@ function HomeRoutineCard({
   );
 }
 
+function parseRestTimeToSeconds(restTime: string) {
+  const value = String(restTime || '').toLowerCase().trim();
+  const timeParts = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (timeParts) return Math.max(1, (Number(timeParts[1]) * 60) + Number(timeParts[2]));
+
+  const minutes = value.match(/(\d+(?:[.,]\d+)?)\s*(?:m|min|minuto|minutos)\b/);
+  const seconds = value.match(/(\d+)\s*(?:s|seg|segundo|segundos|sec)\b/);
+  const total = (minutes ? Number(minutes[1].replace(',', '.')) * 60 : 0) + (seconds ? Number(seconds[1]) : 0);
+  if (total > 0) return Math.max(1, Math.round(total));
+
+  const numeric = Number(value.replace(/[^\d.,]/g, '').replace(',', '.'));
+  return Number.isFinite(numeric) && numeric > 0 ? Math.round(numeric) : 60;
+}
+
 function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, timerId: string, onStateChange?: (isActive: boolean) => void }) {
-  const initialSeconds = parseInt(restTime.replace('s', '')) || 60;
+  const initialSeconds = parseRestTimeToSeconds(restTime);
   const storageKey = `ironshape_rest_timer_${timerId}`;
-  const restoredTimer = (() => {
+  const readStoredTimer = () => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null') as {
         endAt?: number | null;
@@ -7670,7 +7684,8 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
     } catch {
       return null;
     }
-  })();
+  };
+  const restoredTimer = readStoredTimer();
   const [seconds, setSeconds] = useState(restoredTimer?.remainingSeconds ?? initialSeconds);
   const [endAt, setEndAt] = useState<number | null>(restoredTimer?.endAt ?? null);
   const [isActive, setIsActive] = useState(restoredTimer?.isActive ?? false);
@@ -7687,6 +7702,14 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
       // O cronômetro continua funcionando mesmo quando o armazenamento está indisponível.
     }
   };
+
+  useEffect(() => {
+    if (isActive) return;
+    const stored = readStoredTimer();
+    const nextSeconds = stored?.remainingSeconds ?? initialSeconds;
+    setSeconds(nextSeconds > 0 ? nextSeconds : initialSeconds);
+    setIsFinished(!!stored?.isFinished && nextSeconds === 0);
+  }, [initialSeconds, storageKey]);
 
   useEffect(() => {
     if (!isActive || !endAt) return;
@@ -7721,7 +7744,10 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
     };
   }, [isActive, endAt, storageKey, onStateChange]);
 
-  const toggleTimer = () => {
+  const toggleTimer = (event?: React.MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
     if (isActive && endAt) {
       const remainingSeconds = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
       setSeconds(remainingSeconds);
@@ -7743,7 +7769,10 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
     onStateChange?.(true);
   };
 
-  const resetTimer = () => {
+  const resetTimer = (event?: React.MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
     setSeconds(initialSeconds);
     setEndAt(null);
     setIsActive(false);
@@ -7789,6 +7818,7 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
         
         <div className="relative z-10 flex gap-1.5">
           <button
+            type="button"
             onClick={toggleTimer}
             className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
               isActive ? 'bg-primary text-text-primary' : 'bg-white/10 text-text-primary hover:bg-white/20'
@@ -7798,6 +7828,7 @@ function RestTimer({ restTime, timerId, onStateChange }: { restTime: string, tim
             {isActive ? <Pause size={14} /> : <Play size={14} />}
           </button>
           <button
+            type="button"
             onClick={resetTimer}
             className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-text-primary hover:bg-white/20 transition-all"
             title="Resetar"

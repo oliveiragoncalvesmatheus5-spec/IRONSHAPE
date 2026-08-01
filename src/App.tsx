@@ -15,6 +15,7 @@ import ironshapeLogo from './assets/ironshape-logo.jpeg';
 import { DashboardMetricCard } from './components/dashboardCards';
 import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
 import { MobileNavItem, NavItem } from './components/navigation';
+import { OnboardingPreviewExperience } from './components/OnboardingPreviewExperience';
 import { PlanSimulator } from './components/PlanSimulator';
 import { PHYSICAL_LIMITATION_OPTIONS } from './data/physicalLimitations';
 import { ironshopService } from './services/ironshopService';
@@ -951,6 +952,13 @@ function getInitialLanguage(): LanguageCode {
   return 'pt-BR';
 }
 
+function getInitialTab() {
+  if (typeof window === 'undefined') return 'dashboard';
+  const requestedTab = new URLSearchParams(window.location.search).get('tab');
+  const allowedTabs = new Set(['dashboard', 'workouts', 'nutrition', 'progress', 'shop', 'affiliates', 'settings']);
+  return requestedTab && allowedTabs.has(requestedTab) ? requestedTab : 'dashboard';
+}
+
 function isAuthNavigationUrl() {
   if (typeof window === 'undefined') return false;
   const search = new URLSearchParams(window.location.search);
@@ -1554,7 +1562,7 @@ function buildHomeRecoveryWorkouts(
 
 export default function App() {
   const { user, profile, loading, profileLoading, authError, initSession, signInWithGoogle, logout, isAdmin, simulatedPlan, setSimulatedPlan, updatePlan, updateProfile, refreshProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [showPricing, setShowPricing] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
   const [initTimeout, setInitTimeout] = useState(false);
@@ -1564,6 +1572,7 @@ export default function App() {
   const [language, setLanguage] = useState<LanguageCode>(getInitialLanguage);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const authHistoryGuardedRef = useRef(false);
+  const newUserPreviewHandledRef = useRef(false);
   const [ironShopAccess, setIronShopAccess] = useState<IronShopAccessState>({
     enabled: false,
     mode: 'blocked',
@@ -1588,6 +1597,20 @@ export default function App() {
     document.documentElement.lang = language;
     localStorage.setItem('ironshape_language', language);
   }, [language]);
+
+  useEffect(() => {
+    if (!isNewUserPreviewMode() || newUserPreviewHandledRef.current) return;
+    newUserPreviewHandledRef.current = true;
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // Ignore storage failures in preview-only mode.
+    }
+    supabase.auth.signOut().catch(err => {
+      console.warn('New user preview sign-out failed:', err?.message || err);
+    });
+  }, []);
 
   useEffect(() => {
     return installUiAutoTranslate(language);
@@ -1775,6 +1798,10 @@ export default function App() {
 
   if (isAuthCallback) {
     return <AuthCallback />;
+  }
+
+  if (isOnboardingPreviewMode()) {
+    return <OnboardingPreviewExperience />;
   }
 
   if (!isSupabaseConfigured) {
@@ -3621,9 +3648,21 @@ function AuthCallback() {
   );
 }
 
+function isNewUserPreviewMode() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('newUser') === '1' || params.get('new_user') === '1';
+}
+
+function isOnboardingPreviewMode() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('onboardingPreview') === '1' || params.get('leadPreview') === '1';
+}
+
 function LoginView({ onLogin }: { onLogin: () => void }) {
   const { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, resendConfirmationEmail } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup' | 'email-sent'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'email-sent'>(() => isNewUserPreviewMode() ? 'signup' : 'login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -4126,6 +4165,16 @@ function LoginView({ onLogin }: { onLogin: () => void }) {
 
 function OnboardingView({ user, profile, onComplete }: { user: any, profile: UserProfile | null, onComplete?: (plan: Plan) => void }) {
   const { updateProfile } = useAuth();
+  return (
+    <OnboardingPreviewExperience
+      user={user}
+      profile={profile}
+      persist
+      updateProfile={updateProfile}
+      onComplete={onComplete}
+    />
+  );
+
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

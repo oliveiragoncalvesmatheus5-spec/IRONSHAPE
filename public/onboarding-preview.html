@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>IronShape - Preview Onboarding</title>
+    <style>
+      :root {
+        --bg: #050505;
+        --surface: #111111;
+        --surface-2: #1d1d1d;
+        --line: rgba(255, 255, 255, 0.1);
+        --line-strong: rgba(255, 106, 0, 0.36);
+        --text: #f7f7f7;
+        --muted: #8b8b8b;
+        --soft: #c8c8c8;
+        --primary: #ff6a00;
+        --primary-2: #ff8a24;
+        --error: #ff4d4d;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button, input, select {
+        font: inherit;
+      }
+
+      .screen {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        background:
+          radial-gradient(circle at 50% -8%, rgba(255, 106, 0, 0.28), transparent 36%),
+          linear-gradient(180deg, #090909 0%, #050505 100%);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100%, 430px);
+        min-height: 100vh;
+        padding: calc(12px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom));
+        overflow: hidden;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 12px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .mark {
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(255, 106, 0, 0.25);
+        border-radius: 14px;
+        background: #000;
+        display: grid;
+        place-items: center;
+        color: var(--primary);
+        font-weight: 950;
+        box-shadow: 0 0 24px rgba(255, 106, 0, 0.16);
+        overflow: hidden;
+      }
+
+      .mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .eyebrow {
+        margin: 0;
+        font-size: 10px;
+        line-height: 1;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--primary);
+        font-weight: 950;
+      }
+
+      .subtle {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .step-pill {
+        min-width: 62px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255,255,255,0.045);
+        padding: 7px 10px;
+        text-align: right;
+      }
+
+      .step-number {
+        margin: 3px 0 0;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        color: var(--primary);
+        font-weight: 950;
+        font-size: 14px;
+      }
+
+      .progress {
+        height: 6px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255,255,255,0.07);
+        margin-bottom: 12px;
+      }
+
+      .progress span {
+        display: block;
+        height: 100%;
+        width: 12.5%;
+        border-radius: inherit;
+        background: var(--primary);
+        transition: width 220ms ease;
+      }
+
+      .context {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: rgba(17, 17, 17, 0.78);
+        padding: 12px;
+        margin-bottom: 18px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+      }
+
+      .context-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .target {
+        min-width: 36px;
+        height: 36px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 106, 0, 0.1);
+        color: var(--primary);
+        font-weight: 950;
+        padding: 0 8px;
+        font-size: 11px;
+      }
+
+      .slide {
+        animation: enter 220ms ease both;
+      }
+
+      @keyframes enter {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 27px;
+        line-height: 1.04;
+        letter-spacing: 0;
+        font-weight: 950;
+      }
+
+      .lead {
+        margin: 10px 0 0;
+        color: var(--soft);
+        font-size: 14px;
+        line-height: 1.42;
+      }
+
+      .section {
+        margin-top: 18px;
+      }
+
+      .insight {
+        margin-top: 18px;
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 22px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+        padding: 14px;
+      }
+
+      .insight-title {
+        margin: 0;
+        color: var(--primary);
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .insight-copy {
+        margin: 7px 0 0;
+        color: var(--soft);
+        font-size: 13px;
+        line-height: 1.38;
+        font-weight: 750;
+      }
+
+      .insight-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .insight-chip {
+        min-height: 28px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,106,0,0.22);
+        background: rgba(255,106,0,0.08);
+        color: var(--primary);
+        padding: 0 10px;
+        display: inline-flex;
+        align-items: center;
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      input, select {
+        width: 100%;
+        min-height: 50px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        outline: none;
+        background: rgba(255,255,255,0.055);
+        color: var(--text);
+        padding: 0 15px;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      select {
+        color: var(--text);
+      }
+
+      option {
+        background: #151515;
+        color: var(--text);
+      }
+
+      input:focus, select:focus {
+        border-color: var(--primary);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .option {
+        width: 100%;
+        min-height: 58px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.045);
+        color: var(--soft);
+        text-align: left;
+        padding: 12px;
+        cursor: pointer;
+        transition: transform 120ms ease, border-color 160ms ease, background 160ms ease;
+      }
+
+      .option:active {
+        transform: scale(0.98);
+      }
+
+      .option.active {
+        border-color: var(--primary);
+        background: rgba(255,106,0,0.11);
+        color: var(--text);
+        box-shadow: 0 16px 36px rgba(255, 106, 0, 0.1);
+      }
+
+      .option .icon {
+        color: var(--primary);
+        font-size: 15px;
+        font-weight: 950;
+      }
+
+      .option-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .option-row .icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 11px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 106, 0, 0.1);
+        flex: 0 0 auto;
+        font-size: 12px;
+      }
+
+      .option-row .option-title {
+        margin-top: 0;
+      }
+
+      .option-title {
+        display: block;
+        margin-top: 7px;
+        font-size: 14px;
+        line-height: 1.12;
+        font-weight: 950;
+      }
+
+      .option-desc {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 700;
+      }
+
+      .chip {
+        min-height: 46px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255,255,255,0.045);
+        color: var(--soft);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .chip.active {
+        border-color: var(--primary);
+        background: rgba(255,106,0,0.11);
+        color: var(--primary);
+      }
+
+      .choice-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .metric {
+        display: block;
+        font-size: 21px;
+        line-height: 1;
+      }
+
+      .summary {
+        border: 1px solid rgba(255, 106, 0, 0.22);
+        border-radius: 22px;
+        background: rgba(255,106,0,0.1);
+        padding: 14px;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tag {
+        border: 1px solid rgba(255,106,0,0.22);
+        border-radius: 12px;
+        background: rgba(0,0,0,0.26);
+        color: var(--primary);
+        padding: 6px 9px;
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .summary h2 {
+        margin: 14px 0 0;
+        font-size: 20px;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .summary p {
+        margin: 9px 0 0;
+        color: var(--soft);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .check {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        margin-top: 10px;
+        color: var(--soft);
+        font-size: 14px;
+      }
+
+      .check span:first-child {
+        color: var(--primary);
+        font-weight: 950;
+      }
+
+      .footer {
+        position: fixed;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        width: min(100%, 430px);
+        border-top: 1px solid var(--line);
+        background: rgba(5,5,5,0.95);
+        backdrop-filter: blur(18px);
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      }
+
+      .footer-row {
+        display: flex;
+        gap: 12px;
+      }
+
+      .back, .next {
+        height: 52px;
+        border: 0;
+        border-radius: 17px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .back {
+        width: 52px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.045);
+        color: var(--soft);
+      }
+
+      .back:disabled, .next:disabled {
+        opacity: 0.32;
+        cursor: not-allowed;
+      }
+
+      .next {
+        flex: 1;
+        background: var(--primary);
+        color: var(--text);
+        box-shadow: 0 18px 34px rgba(255,106,0,0.22);
+      }
+
+      .done {
+        display: none;
+        min-height: 100vh;
+        align-items: flex-start;
+        justify-content: center;
+        padding: calc(18px + env(safe-area-inset-top)) 16px calc(22px + env(safe-area-inset-bottom));
+        overflow-y: auto;
+      }
+
+      .done-card {
+        width: min(100%, 398px);
+        background: transparent;
+        padding: 0;
+      }
+
+      .done-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        display: grid;
+        place-items: center;
+        background: rgba(255,106,0,0.1);
+        color: var(--primary);
+        border: 1px solid rgba(255,106,0,0.25);
+        margin-bottom: 22px;
+        font-weight: 950;
+      }
+
+      .spaced {
+        margin-top: 18px;
+      }
+
+      .plans {
+        display: grid;
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .plan-card {
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 30px;
+        background: #0f0f0f;
+        padding: 28px;
+        min-height: 560px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 18px 42px rgba(0,0,0,0.28);
+      }
+
+      .plan-card.featured {
+        order: -1;
+        border-color: var(--primary);
+        background: #101010;
+        box-shadow: 0 22px 54px rgba(255,106,0,0.16);
+      }
+
+      .plan-badge {
+        position: absolute;
+        left: 50%;
+        top: -12px;
+        transform: translateX(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 24px;
+        border-radius: 999px;
+        background: var(--primary);
+        color: var(--text);
+        padding: 0 14px;
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        box-shadow: 0 8px 20px rgba(255,106,0,0.32);
+      }
+
+      .plan-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .plan-name {
+        margin: 4px 0 0;
+        font-size: 24px;
+        line-height: 1;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      .plan-price {
+        margin: 16px 0 0;
+        color: var(--text);
+        font-size: 29px;
+        line-height: 1;
+        font-weight: 950;
+      }
+
+      .plan-price small {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .plan-daily {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .plan-copy {
+        margin: 10px 0 0;
+        color: var(--soft);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .plan-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        margin: 18px 0 0;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        padding: 20px 0 0;
+        list-style: none;
+      }
+
+      .plan-list li {
+        display: flex;
+        gap: 10px;
+        color: var(--soft);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .plan-list li::before {
+        content: "✓";
+        width: 17px;
+        height: 17px;
+        border-radius: 999px;
+        background: var(--primary);
+        color: white;
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 auto;
+        font-size: 10px;
+        font-weight: 950;
+      }
+
+      .plan-action {
+        margin-top: auto;
+        padding-top: 24px;
+      }
+
+      .plan-button {
+        width: 100%;
+        min-height: 54px;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.055);
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 950;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .featured .plan-button {
+        border: 0;
+        background: var(--primary);
+        box-shadow: 0 16px 32px rgba(255,106,0,0.26);
+      }
+
+      .current-button {
+        background: rgba(255,255,255,0.58);
+        color: #050505;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen" id="app">
+      <div class="phone">
+        <header class="topbar">
+          <div class="brand">
+            <div class="mark"><img src="/ironshape-mark.jpeg" alt="IronShape" /></div>
+            <div>
+              <p class="eyebrow">IronShape</p>
+              <p class="subtle">Diagnóstico inicial</p>
+            </div>
+          </div>
+          <div class="step-pill">
+            <p class="eyebrow">Passo</p>
+            <p class="step-number"><span id="stepNow">1</span>/8</p>
+          </div>
+        </header>
+
+        <div class="progress"><span id="progress"></span></div>
+
+        <section class="context">
+          <div class="context-row">
+            <div>
+              <p class="eyebrow" id="contextLabel">Identidade</p>
+              <p class="subtle">Menos treino genérico.</p>
+            </div>
+            <div class="target">+</div>
+          </div>
+        </section>
+
+        <section id="content" class="slide"></section>
+      </div>
+
+      <footer class="footer">
+        <div class="footer-row">
+          <button class="back" id="back" type="button" aria-label="Voltar">←</button>
+          <button class="next" id="next" type="button">Continuar →</button>
+        </div>
+      </footer>
+    </main>
+
+    <section class="done" id="done">
+      <div class="done-card">
+        <p class="eyebrow">Plano recomendado</p>
+        <h1>Continue com o Pro.</h1>
+        <p class="lead">Pelo diagnóstico, o Pro é o melhor custo-benefício para sair do básico e manter evolução contínua.</p>
+
+        <div class="plans">
+          <article class="plan-card featured">
+            <div class="plan-top">
+              <div>
+                <span class="plan-badge">Mais escolhido</span>
+                <p class="eyebrow">Melhor custo-benefício</p>
+                <h2 class="plan-name">Pro</h2>
+              </div>
+            </div>
+            <p class="plan-copy">Evolução contínua com IA, nutrição precisa e protocolos completos.</p>
+            <p class="plan-price">R$ 29,90 <small>/mês</small></p>
+            <p class="plan-daily">Menos de R$ 1 por dia</p>
+            <ul class="plan-list">
+              <li>Tudo do plano Grátis</li>
+              <li>Protocolos Pro para casa e academia</li>
+              <li>Iron Coach IA 24h para adaptar seu treino</li>
+              <li>Planejamento semanal com até 5 treinos</li>
+              <li>Análises nutricionais ilimitadas por g/ml</li>
+              <li>Registro de cargas e histórico completo</li>
+              <li>Ranking global e evolução contínua</li>
+            </ul>
+            <div class="plan-action">
+              <button class="plan-button" type="button">Quero evoluir com o Pro</button>
+            </div>
+          </article>
+
+          <article class="plan-card">
+            <p class="eyebrow">Comece sem pagar</p>
+            <h2 class="plan-name">Iniciante</h2>
+            <p class="plan-copy">Crie sua base, organize a rotina e prove o método IronShape.</p>
+            <p class="plan-price">Grátis</p>
+            <p class="plan-daily">Para sempre</p>
+            <ul class="plan-list">
+              <li>Protocolos iniciais para casa, academia ou híbrido</li>
+              <li>Planejamento semanal com até 3 treinos</li>
+              <li>Calculadora e acompanhamento diário de macros</li>
+              <li>3 análises de refeições com IA por dia</li>
+              <li>Progresso corporal, pontos e comunidade</li>
+              <li>Programa de afiliados</li>
+            </ul>
+            <div class="plan-action">
+              <button class="plan-button current-button" type="button">Plano atual</button>
+            </div>
+          </article>
+
+          <article class="plan-card">
+            <p class="eyebrow">Experiência completa</p>
+            <h2 class="plan-name">Elite</h2>
+            <p class="plan-copy">Máximo controle para quem quer treinar sem limites e ir além.</p>
+            <p class="plan-price">R$ 39,90 <small>/mês</small></p>
+            <p class="plan-daily">Menos de R$ 1,34 por dia</p>
+            <ul class="plan-list">
+              <li>Tudo do Pro</li>
+              <li>Protocolos Elite avançados e de competição</li>
+              <li>Rotina completa com até 7 treinos por semana</li>
+              <li>Planilha do Atleta para organizar sua semana</li>
+              <li>Edição e personalização de treinos</li>
+              <li>Mobilidade e alongamento em nível avançado</li>
+              <li>Acesso antecipado aos novos protocolos</li>
+            </ul>
+            <div class="plan-action">
+              <button class="plan-button" type="button">Quero a experiência completa</button>
+            </div>
+          </article>
+        </div>
+
+        <button class="back spaced" id="restart" type="button" style="width: 100%;">Ver diagnóstico novamente</button>
+      </div>
+    </section>
+
+    <script>
+      const labels = ['Identidade', 'Objetivo', 'Ponto de partida', 'Ambiente', 'Rotina', 'Estrutura', 'Ajustes finos', 'Plano'];
+      const state = {
+        step: 1,
+        name: 'Matheus',
+        age: 25,
+        weight: 70,
+        height: 175,
+        goal: 'Hipertrofia',
+        timeframe: '90 dias',
+        trainingPlace: 'home',
+        experience: 'Iniciante',
+        daysPerWeek: 3,
+        sessionDuration: '30-45 min',
+        homeEquipment: ['Nenhum'],
+        gymFocus: ['Pernas'],
+        limitations: 'Nenhuma',
+        challenge: 'Consistência',
+        plan: 'Pro'
+      };
+
+      const content = document.getElementById('content');
+      const stepNow = document.getElementById('stepNow');
+      const progress = document.getElementById('progress');
+      const contextLabel = document.getElementById('contextLabel');
+      const back = document.getElementById('back');
+      const next = document.getElementById('next');
+      const app = document.getElementById('app');
+      const done = document.getElementById('done');
+
+      function isActive(key, value) {
+        return state[key] === value ? 'active' : '';
+      }
+
+      function includes(key, value) {
+        return state[key].includes(value) ? 'active' : '';
+      }
+
+      function setField(key, value) {
+        state[key] = value;
+        render();
+      }
+
+      function toggleList(key, value, max = 4) {
+        const current = state[key];
+        if (value === 'Nenhum') {
+          state[key] = current.includes('Nenhum') ? [] : ['Nenhum'];
+          render();
+          return;
+        }
+        const cleaned = current.filter(item => item !== 'Nenhum');
+        state[key] = cleaned.includes(value)
+          ? cleaned.filter(item => item !== value)
+          : cleaned.concat(value).slice(0, max);
+        render();
+      }
+
+      function chip(key, value, label = value) {
+        return `<button class="chip ${isActive(key, value)}" type="button" data-set="${key}" data-value="${value}">${label}</button>`;
+      }
+
+      function insight(title, copy, chips) {
+        const safeChips = (chips || []).filter(Boolean);
+        return `<aside class="insight">
+          <p class="insight-title">${title}</p>
+          <p class="insight-copy">${copy}</p>
+          <div class="insight-chips">
+            ${safeChips.map(item => `<span class="insight-chip">${item}</span>`).join('')}
+          </div>
+        </aside>`;
+      }
+
+      function placeLabel() {
+        if (state.trainingPlace === 'gym') return 'Academia';
+        if (state.trainingPlace === 'hybrid') return 'Híbrido';
+        return 'Casa';
+      }
+
+      function listChip(key, value, max) {
+        return `<button class="chip ${includes(key, value)}" type="button" data-list="${key}" data-value="${value}" data-max="${max || 4}">${value}</button>`;
+      }
+
+      function recommendation() {
+        const place = state.trainingPlace === 'home' ? 'Casa' : state.trainingPlace === 'gym' ? 'Academia' : 'Híbrido';
+        const title = state.trainingPlace === 'home'
+          ? `Protocolo Casa ${state.experience === 'Iniciante' ? 'Base' : 'Performance'}`
+          : state.trainingPlace === 'hybrid'
+            ? 'Protocolo Híbrido Inteligente'
+            : `Protocolo Academia ${state.goal}`;
+        const why = state.trainingPlace === 'home'
+          ? 'Baixo atrito, exercícios simples de executar e progressão por repetição para criar constância.'
+          : state.trainingPlace === 'hybrid'
+            ? 'Combina sessões fortes na academia com treinos curtos em casa para manter ritmo mesmo em semanas corridas.'
+            : 'Usa máquinas, cargas e grupos prioritários para evoluir com mais controle.';
+        const exercises = state.trainingPlace === 'home'
+          ? ['Mobilidade de quadril e tornozelo', 'Agachamento livre controlado', 'Flexão inclinada ou tradicional', 'Prancha frontal']
+          : ['Aquecimento articular', 'Composto principal', 'Acessório para grupo prioritário', 'Core anti-rotação'];
+        return { place, title, why, exercises };
+      }
+
+      function valid() {
+        const checks = [
+          state.name.trim().length > 0,
+          state.goal && state.timeframe,
+          state.age > 0 && state.weight > 0 && state.height > 0,
+          !!state.trainingPlace,
+          state.daysPerWeek > 0 && state.sessionDuration,
+          state.trainingPlace === 'gym' ? state.gymFocus.length > 0 : state.homeEquipment.length > 0,
+          state.limitations && state.challenge,
+          true
+        ];
+        return checks[state.step - 1];
+      }
+
+      function render() {
+        stepNow.textContent = state.step;
+        progress.style.width = `${(state.step / 8) * 100}%`;
+        contextLabel.textContent = labels[state.step - 1];
+        back.disabled = state.step === 1;
+        next.disabled = !valid();
+        next.textContent = state.step === 8 ? 'Ver planos →' : 'Continuar →';
+        content.className = 'slide';
+
+        if (state.step === 1) {
+          content.innerHTML = `
+            <h1>Como vamos te chamar?</h1>
+            <p class="lead">Vamos personalizar o diagnóstico sem deixar o cadastro pesado.</p>
+            <div class="section">
+              <label>Seu nome</label>
+              <input id="name" value="${state.name}" placeholder="Digite seu nome" />
+            </div>
+            ${insight('O diagnóstico começa aqui', 'Cada resposta ajuda o IronShape a montar um protocolo menos genérico e mais fácil de seguir.', ['Perfil', 'Rotina', 'Treino'])}`;
+        }
+
+        if (state.step === 2) {
+          content.innerHTML = `
+            <h1>Qual resultado você quer ver primeiro?</h1>
+            <p class="lead">Isso define foco, intensidade e primeiras recomendações.</p>
+            <div class="section choice-list">
+              ${goalCard('Hipertrofia', 'Ganhar massa', '01')}
+              ${goalCard('Emagrecimento', 'Secar gordura', '02')}
+              ${goalCard('Força', 'Ficar forte', '03')}
+              ${goalCard('Condicionamento', 'Mais fôlego', '04')}
+              ${goalCard('Mobilidade', 'Mover melhor', '05')}
+              ${goalCard('Saúde geral', 'Saúde e rotina', '06')}
+            </div>
+            <div class="section">
+              <label>Prazo em mente</label>
+              <div class="grid-3">${chip('timeframe', '30 dias')}${chip('timeframe', '90 dias')}${chip('timeframe', 'Sem pressa')}</div>
+            </div>
+            ${insight('Direção do protocolo', 'Objetivo e prazo definem intensidade, volume e expectativa inicial.', [state.goal, state.timeframe])}`;
+        }
+
+        if (state.step === 3) {
+          content.innerHTML = `
+            <h1>Qual é seu ponto de partida?</h1>
+            <p class="lead">Dados rápidos para calibrar meta e volume inicial.</p>
+            <div class="section grid-2">
+              <div><label>Idade</label><input id="age" type="number" value="${state.age}" /></div>
+              <div><label>Peso kg</label><input id="weight" type="number" value="${state.weight}" /></div>
+            </div>
+            <div class="section">
+              <label>Altura cm</label><input id="height" type="number" value="${state.height}" />
+            </div>
+            ${insight('Calibrando ponto de partida', 'Esses dados dão contexto para meta, gasto estimado e evolução corporal.', [`${state.age} anos`, `${state.weight} kg`, `${state.height} cm`])}`;
+        }
+
+        if (state.step === 4) {
+          content.innerHTML = `
+            <h1>Onde esse treino precisa funcionar?</h1>
+            <p class="lead">A rotina precisa caber na sua semana real.</p>
+            <div class="section choice-list">
+              ${placeCard('home', 'Em casa', 'Baixo atrito, menos desculpas e treino com o que tiver.', 'H')}
+              ${placeCard('gym', 'Academia', 'Máquinas, cargas e progressão com mais controle.', 'A')}
+              ${placeCard('hybrid', 'Casa + academia', 'Flexível para semana corrida sem perder ritmo.', 'M')}
+            </div>
+            ${insight('Ambiente real', 'O app evita recomendar um treino bonito que não cabe no lugar onde você treina.', [placeLabel()])}`;
+        }
+
+        if (state.step === 5) {
+          content.innerHTML = `
+            <h1>Quanto espaço existe na sua rotina?</h1>
+            <p class="lead">Frequência realista antes de cobrar perfeição.</p>
+            <div class="section"><label>Dias por semana</label><div class="grid-4">
+              ${[3,4,5,6].map(d => `<button class="chip ${state.daysPerWeek === d ? 'active' : ''}" type="button" data-set="daysPerWeek" data-value="${d}"><span class="metric">${d}</span>dias</button>`).join('')}
+            </div></div>
+            <div class="section"><label>Tempo por treino</label><div class="grid-2">
+              ${['20-30 min','30-45 min','45-60 min','60+ min'].map(d => chip('sessionDuration', d)).join('')}
+            </div></div>
+            <div class="section"><label>Experiência atual</label><div class="grid-3">
+              ${['Iniciante','Intermediário','Avançado'].map(e => chip('experience', e)).join('')}
+            </div></div>
+            ${insight('Ritmo sustentável', 'Frequência, tempo e nível ajudam a montar uma semana possível de cumprir.', [`${state.daysPerWeek}x/semana`, state.sessionDuration, state.experience])}`;
+        }
+
+        if (state.step === 6) {
+          const home = state.trainingPlace !== 'gym';
+          content.innerHTML = `
+            <h1>${state.trainingPlace === 'gym' ? 'O que você quer priorizar?' : 'O que você tem disponível?'}</h1>
+            <p class="lead">${state.trainingPlace === 'gym' ? 'Escolha até três grupos para direcionar o início.' : 'Assim o app não recomenda o que você não consegue executar.'}</p>
+            <div class="section grid-2">
+              ${home
+                ? ['Nenhum','Halteres','Elástico','Barra fixa','Banco/cadeira','Colchonete'].map(i => listChip('homeEquipment', i, 4)).join('')
+                : ['Peito','Costas','Pernas','Ombros','Bíceps','Tríceps','Abdômen'].map(i => listChip('gymFocus', i, 3)).join('')}
+            </div>
+            ${insight('Treino executável', home ? 'Equipamentos certos evitam recomendações impossíveis para casa.' : 'Prioridades ajudam a direcionar divisão e volume.', home ? state.homeEquipment : state.gymFocus)}`;
+        }
+
+        if (state.step === 7) {
+          content.innerHTML = `
+            <h1>O que mais pode atrapalhar?</h1>
+            <p class="lead">Dores, limitações e a barreira principal do lead.</p>
+            <div class="section">
+              <label>Limitação física</label>
+              <select id="limitations">
+                ${['Nenhuma','Joelho','Lombar','Ombro','Punho','Quadril','Tornozelo','Outro'].map(v => `<option ${state.limitations === v ? 'selected' : ''}>${v}</option>`).join('')}
+              </select>
+            </div>
+            <div class="section"><label>Maior dificuldade hoje</label><div class="grid-2">
+              ${['Consistência','Tempo','Dieta','Motivação','Dor/lesão','Não saber treinar'].map(c => chip('challenge', c)).join('')}
+            </div></div>
+            ${insight('Ajuste de segurança', 'Essa etapa deixa o plano mais realista e reduz chance de abandono.', [state.limitations, state.challenge])}`;
+        }
+
+        if (state.step === 8) {
+          const rec = recommendation();
+          content.innerHTML = `
+            <h1>Seu protocolo inicial está pronto.</h1>
+            <p class="lead">Primeiro direcionamento com base nas respostas.</p>
+            <div class="section summary">
+              <div class="tags">
+                <span class="tag">${rec.place}</span><span class="tag">${state.goal}</span><span class="tag">${state.daysPerWeek}x/semana</span><span class="tag">${state.challenge}</span>
+              </div>
+              <h2>${rec.title}</h2>
+              <p>${rec.why}</p>
+              ${rec.exercises.map(e => `<div class="check"><span>✓</span><span>${e}</span></div>`).join('')}
+            </div>
+            `;
+        }
+
+        bind();
+      }
+
+      function goalCard(value, title, icon) {
+        return `<button class="option ${isActive('goal', value)}" type="button" data-set="goal" data-value="${value}">
+          <span class="option-row"><span class="icon">${icon}</span><span><span class="option-title">${title}</span><span class="option-desc">${value}</span></span></span>
+        </button>`;
+      }
+
+      function placeCard(value, title, desc, icon) {
+        return `<button class="option ${isActive('trainingPlace', value)}" type="button" data-set="trainingPlace" data-value="${value}">
+          <span class="option-row"><span class="icon">${icon}</span><span><span class="option-title">${title}</span><span class="option-desc">${desc}</span></span></span>
+        </button>`;
+      }
+
+      function bind() {
+        document.querySelectorAll('[data-set]').forEach(el => {
+          el.addEventListener('click', () => {
+            const key = el.getAttribute('data-set');
+            let value = el.getAttribute('data-value');
+            if (key === 'daysPerWeek') value = Number(value);
+            setField(key, value);
+          });
+        });
+        document.querySelectorAll('[data-list]').forEach(el => {
+          el.addEventListener('click', () => toggleList(el.getAttribute('data-list'), el.getAttribute('data-value'), Number(el.getAttribute('data-max'))));
+        });
+        const name = document.getElementById('name');
+        if (name) name.addEventListener('input', e => { state.name = e.target.value; next.disabled = !valid(); });
+        const age = document.getElementById('age');
+        if (age) age.addEventListener('input', e => { state.age = Number(e.target.value); next.disabled = !valid(); });
+        const weight = document.getElementById('weight');
+        if (weight) weight.addEventListener('input', e => { state.weight = Number(e.target.value); next.disabled = !valid(); });
+        const height = document.getElementById('height');
+        if (height) height.addEventListener('input', e => { state.height = Number(e.target.value); next.disabled = !valid(); });
+        const limitations = document.getElementById('limitations');
+        if (limitations) limitations.addEventListener('change', e => setField('limitations', e.target.value));
+      }
+
+      back.addEventListener('click', () => {
+        state.step = Math.max(1, state.step - 1);
+        render();
+      });
+
+      next.addEventListener('click', () => {
+        if (!valid()) return;
+        if (state.step === 8) {
+          app.style.display = 'none';
+          done.style.display = 'flex';
+          return;
+        }
+        state.step += 1;
+        render();
+      });
+
+      document.getElementById('restart').addEventListener('click', () => {
+        state.step = 1;
+        app.style.display = 'flex';
+        done.style.display = 'none';
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>

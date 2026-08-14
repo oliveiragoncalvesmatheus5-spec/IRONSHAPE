@@ -6285,8 +6285,10 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
   const favoriteStorageKey = `favorite_workouts_${storageUserId}`;
   const weeklyDoneStorageKey = `weekly_workouts_done_${storageUserId}`;
   const weeklyWorkoutLimit = getWeeklyWorkoutLimit(effectivePlan, isAdmin);
-  const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>('Iniciante');
-  const initialLevel: Level = 'Iniciante';
+  const effectivePlanTab: Plan = effectivePlan === 'Elite' ? 'Elite' : effectivePlan === 'Pro' ? 'Pro' : 'Iniciante';
+  const effectivePlanLevel: Level = effectivePlanTab === 'Elite' ? 'Avançado' : effectivePlanTab === 'Pro' ? 'Intermediário' : 'Iniciante';
+  const [selectedPlanTab, setSelectedPlanTab] = useState<Plan>(effectivePlanTab);
+  const initialLevel: Level = effectivePlanLevel;
   const [selectedLevel, setSelectedLevel] = useState<Level>(initialLevel);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'Todos'>('Todos');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
@@ -6307,6 +6309,13 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
     setSelectedPlanTab(effectivePlan === 'Elite' ? 'Elite' : 'Pro');
     setActiveSubTab('ia');
   }, [effectivePlan]);
+
+  useEffect(() => {
+    setSelectedPlanTab(effectivePlanTab);
+    setSelectedLevel(effectivePlanLevel);
+    setSelectedMuscleGroup('Todos');
+    setSelectedWorkout(null);
+  }, [effectivePlanTab, effectivePlanLevel]);
 
   const [completedWorkouts, setCompletedWorkouts] = useState<string[]>(() => {
     try {
@@ -7051,7 +7060,7 @@ function WorkoutsView({ profile, language, onUpgrade }: { profile: UserProfile, 
       </section>
 
       {/* Main Plan Tabs */}
-      {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="hidden md:static md:bg-transparent md:p-0 flex-col gap-2 md:gap-3">
+      {(!usesHomeProtocol || activeHomeMode === 'training') && <div className="flex flex-col gap-2 md:gap-3 md:static md:bg-transparent md:p-0">
         <div className="flex items-center justify-between gap-3 md:block">
           <span className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-1">{workoutsText.protocol}</span>
           <span className="md:hidden text-[10px] font-bold text-text-muted">{visibleMuscleGroups.length} grupos</span>
@@ -15239,6 +15248,9 @@ function AdminView({ language }: { language: LanguageCode }) {
   const [selectedAdminPlan, setSelectedAdminPlan] = useState<'free' | 'Pro' | 'Elite'>('free');
   const [savingUserPlan, setSavingUserPlan] = useState(false);
   const [userPlanError, setUserPlanError] = useState('');
+  const [sendingOnboardingEmail, setSendingOnboardingEmail] = useState(false);
+  const [onboardingEmailStatus, setOnboardingEmailStatus] = useState('');
+  const [onboardingEmailError, setOnboardingEmailError] = useState('');
   const [ironShopSettings, setIronShopSettings] = useState<IronShopSettings | null>(null);
   const [ironShopAudit, setIronShopAudit] = useState<IronShopAuditEntry[]>([]);
   const [ironShopAdminLoading, setIronShopAdminLoading] = useState(false);
@@ -15435,6 +15447,46 @@ function AdminView({ language }: { language: LanguageCode }) {
   const getUserNutrition = (userId: string) => adminData.nutrition.filter(nutrition => nutrition.user_id === userId);
   const getUserPosts = (userId: string) => adminData.posts.filter(post => post.user_id === userId);
   const getUserConversions = (userId: string) => adminData.conversions.filter(conversion => conversion.user_id === userId);
+
+  const sendOnboardingFeedbackEmails = async (targets: UserProfile[]) => {
+    const recipients = targets
+      .filter(profile => profile.email)
+      .map(profile => ({ email: profile.email, name: profile.name || profile.email }));
+
+    if (!recipients.length) {
+      setOnboardingEmailError('Nenhum email valido encontrado para enviar a pesquisa.');
+      return;
+    }
+
+    setSendingOnboardingEmail(true);
+    setOnboardingEmailStatus('');
+    setOnboardingEmailError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Sua sessão expirou. Entre novamente para continuar.');
+
+      const response = await fetch('/api/admin/send-onboarding-feedback-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ recipients }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Nao foi possivel enviar a pesquisa.');
+
+      setOnboardingEmailStatus(`Pesquisa enviada para ${payload.sent || 0} usuario(s). ${payload.failed ? `${payload.failed} falharam.` : ''}`);
+      trackEvent('admin_onboarding_feedback_email_sent', {
+        sent: payload.sent || 0,
+        failed: payload.failed || 0,
+      });
+    } catch (error: any) {
+      setOnboardingEmailError(error.message || 'Erro ao enviar pesquisa de onboarding.');
+    } finally {
+      setSendingOnboardingEmail(false);
+    }
+  };
 
   const getLatestUserActivity = (user: UserProfile) => {
     const dates = [
@@ -15779,13 +15831,35 @@ function AdminView({ language }: { language: LanguageCode }) {
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div className="bg-surface rounded-[32px] border border-white/5 p-6 space-y-5">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className={onboardingStuck.length ? 'text-error' : 'text-success'} size={22} />
-                    <div>
-                      <h3 className="text-lg font-black uppercase tracking-tight">Gargalos</h3>
-                      <p className="text-xs text-text-muted">Usuários sem onboarding completo.</p>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className={onboardingStuck.length ? 'text-error' : 'text-success'} size={22} />
+                      <div>
+                        <h3 className="text-lg font-black uppercase tracking-tight">Gargalos</h3>
+                        <p className="text-xs text-text-muted">Usuários sem onboarding completo.</p>
+                      </div>
                     </div>
+                    {onboardingStuck.length > 0 && (
+                      <button
+                        onClick={() => sendOnboardingFeedbackEmails(onboardingStuck)}
+                        disabled={sendingOnboardingEmail}
+                        className="min-h-[38px] px-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        {sendingOnboardingEmail ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                        Enviar pesquisa
+                      </button>
+                    )}
                   </div>
+                  {onboardingEmailStatus && (
+                    <div className="rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-xs font-bold text-success">
+                      {onboardingEmailStatus}
+                    </div>
+                  )}
+                  {onboardingEmailError && (
+                    <div className="rounded-2xl border border-error/20 bg-error/10 px-4 py-3 text-xs font-bold text-error">
+                      {onboardingEmailError}
+                    </div>
+                  )}
                   <div className="text-4xl font-black">{onboardingStuck.length}</div>
                   <div className="space-y-2">
                     {onboardingStuck.slice(0, 4).map(user => (
@@ -15936,6 +16010,8 @@ function AdminView({ language }: { language: LanguageCode }) {
             language={language}
             onClose={() => setSelectedUser(null)}
             onManagePlan={() => openPlanManager(selectedUser)}
+            onSendOnboardingFeedback={() => sendOnboardingFeedbackEmails([selectedUser])}
+            sendingOnboardingFeedback={sendingOnboardingEmail}
           />
         )}
 
@@ -16242,6 +16318,8 @@ function AdminUserDetailsDrawer({
   language,
   onClose,
   onManagePlan,
+  onSendOnboardingFeedback,
+  sendingOnboardingFeedback,
 }: {
   user: UserProfile;
   status: AdminUserStatus;
@@ -16256,6 +16334,8 @@ function AdminUserDetailsDrawer({
   language: LanguageCode;
   onClose: () => void;
   onManagePlan: () => void;
+  onSendOnboardingFeedback: () => void;
+  sendingOnboardingFeedback: boolean;
 }) {
   const locale = getLocaleCode(language);
   const dateFnsLocale = getDateFnsLocale(language);
@@ -16273,6 +16353,12 @@ function AdminUserDetailsDrawer({
   const latestNutrition = nutrition[0];
   const latestConversion = conversions[0];
   const hasCompletedOnboarding = Boolean(user.age && user.weight && user.height && user.goal);
+  const missingOnboardingFields = [
+    !user.age ? 'idade' : null,
+    !user.weight ? 'peso' : null,
+    !user.height ? 'altura' : null,
+    !user.goal ? 'objetivo' : null,
+  ].filter(Boolean) as string[];
 
   const formatDateTime = (value?: string) => {
     if (!value) return 'Sem data';
@@ -16298,7 +16384,7 @@ function AdminUserDetailsDrawer({
     .sort((a, b) => new Date((b as any).date).getTime() - new Date((a as any).date).getTime()) as Array<{ type: string; label: string; date: string; tone: string }>;
 
   const riskNotes = [
-    !hasCompletedOnboarding ? 'Onboarding incompleto: falta algum dado corporal ou objetivo.' : null,
+    !hasCompletedOnboarding ? `Onboarding incompleto: falta ${missingOnboardingFields.join(', ')}.` : null,
     workouts.length === 0 ? 'Ainda não concluiu nenhum treino.' : null,
     nutrition.length === 0 ? 'Ainda não possui registro de nutrição carregado.' : null,
     normalizePlan(user.plano) === 'free' && (workouts.length >= 2 || nutrition.length >= 2 || Number(user.points || 0) >= 500) ? 'Free com engajamento: bom candidato para oferta ou abordagem.' : null,
@@ -16353,20 +16439,35 @@ function AdminUserDetailsDrawer({
                 <h4 className="text-sm font-black uppercase tracking-widest">Resumo comportamental</h4>
                 <p className="text-xs text-text-muted mt-1">{status.detail}</p>
               </div>
-              {user.role !== 'admin' && normalizePlan(user.plano) !== 'Admin' && (
-                <button
-                  onClick={onManagePlan}
-                  className="min-h-[42px] px-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all flex items-center justify-center gap-2"
-                >
-                  <Edit3 size={14} /> Gerenciar plano
-                </button>
-              )}
+              <div className="flex flex-col sm:flex-row gap-2">
+                {!hasCompletedOnboarding && user.email && (
+                  <button
+                    onClick={onSendOnboardingFeedback}
+                    disabled={sendingOnboardingFeedback}
+                    className="min-h-[42px] px-4 rounded-2xl bg-white/5 border border-white/10 text-text-secondary text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-text-primary transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {sendingOnboardingFeedback ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                    Enviar pesquisa
+                  </button>
+                )}
+                {user.role !== 'admin' && normalizePlan(user.plano) !== 'Admin' && (
+                  <button
+                    onClick={onManagePlan}
+                    className="min-h-[42px] px-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-text-primary transition-all flex items-center justify-center gap-2"
+                  >
+                    <Edit3 size={14} /> Gerenciar plano
+                  </button>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <AdminDetailLine label="Cadastro" value={formatRegistrationDate(user.criado_em)} />
               <AdminDetailLine label="Última atividade" value={latestActivity ? formatDistanceToNow(latestActivity, { addSuffix: true, locale: dateFnsLocale }) : 'Não detectada'} />
               <AdminDetailLine label="Objetivo" value={user.goal || 'Não informado'} />
               <AdminDetailLine label="Corpo" value={hasCompletedOnboarding ? `${user.weight}kg • ${user.height}cm • ${user.age} anos` : 'Dados incompletos'} />
+              {!hasCompletedOnboarding && (
+                <AdminDetailLine label="Faltando" value={missingOnboardingFields.join(', ')} />
+              )}
               <AdminDetailLine label="Pontos / streak" value={`${Number(user.points || 0)} pts • ${Number(user.streak || 0)} dias`} />
               <AdminDetailLine label="Assinatura" value={user.subscriptionStatus || 'inactive'} />
             </div>

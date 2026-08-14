@@ -1,5 +1,5 @@
 import { createElement, type ReactElement } from 'react';
-import { WelcomeEmail, type WelcomeEmailProps } from '../../emails';
+import { OnboardingFeedbackEmail, type OnboardingFeedbackEmailProps, WelcomeEmail, type WelcomeEmailProps } from '../../emails';
 import { resend } from '../lib/resend';
 
 type EmailAddress = string | string[];
@@ -60,6 +60,20 @@ export class EmailService {
       subject: 'Bem-vindo ao IronShape',
       react: createElement(WelcomeEmail, templateProps),
       tags: [{ name: 'email_type', value: 'welcome' }],
+    });
+  }
+
+  static async sendOnboardingFeedbackEmail({
+    to,
+    replyTo,
+    ...templateProps
+  }: OnboardingFeedbackEmailProps & { to: EmailAddress; replyTo?: EmailAddress }) {
+    return EmailService.sendEmail({
+      to,
+      replyTo,
+      subject: 'Seu plano do IronShape ficou quase pronto',
+      react: createElement(OnboardingFeedbackEmail, templateProps),
+      tags: [{ name: 'email_type', value: 'onboarding_feedback' }],
     });
   }
 }

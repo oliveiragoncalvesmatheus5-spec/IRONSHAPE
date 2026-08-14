@@ -660,6 +660,52 @@ async function startServer() {
     }
   });
 
+  app.post("/api/admin/send-onboarding-feedback-email", async (req, res) => {
+    const authUser = await requireAuthenticatedUser(req, res);
+    if (!authUser) return;
+    if (authUser.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acesso restrito ao administrador." });
+
+    const recipients = Array.isArray(req.body?.recipients) ? req.body.recipients : [];
+    const cleanedRecipients = recipients
+      .map((recipient: any) => ({
+        email: String(recipient?.email || "").trim().toLowerCase(),
+        name: String(recipient?.name || "").trim(),
+      }))
+      .filter((recipient: { email: string }) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email))
+      .slice(0, 20);
+
+    if (!cleanedRecipients.length) {
+      return res.status(400).json({ error: "Nenhum email valido informado." });
+    }
+
+    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const replyToEmail = process.env.RESEND_REPLY_TO_EMAIL || ADMIN_EMAIL;
+    const results = [];
+
+    for (const recipient of cleanedRecipients) {
+      try {
+        const data = await EmailService.sendOnboardingFeedbackEmail({
+          to: recipient.email,
+          name: recipient.name || "atleta",
+          dashboardUrl: `${appUrl}/dashboard`,
+          replyToEmail,
+          replyTo: replyToEmail,
+        });
+        results.push({ ok: true, email: recipient.email, id: data?.id });
+      } catch (error: any) {
+        console.error("[resend] onboarding feedback email failed:", recipient.email, error.message);
+        results.push({ ok: false, email: recipient.email, error: error.message || "Erro ao enviar email." });
+      }
+    }
+
+    return res.json({
+      ok: results.some(result => result.ok),
+      sent: results.filter(result => result.ok).length,
+      failed: results.filter(result => !result.ok).length,
+      results,
+    });
+  });
+
   app.post("/api/admin/update-user-plan", async (req, res) => {
     const url = SUPABASE_PROJECT_URL;
     if (!url || !SUPABASE_PUBLIC_KEY) {

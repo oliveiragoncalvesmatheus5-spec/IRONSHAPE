@@ -79,6 +79,7 @@ export function OnboardingPreviewExperience({ user, profile, persist = false, up
   const [step, setStep] = useState(1);
   const [completed, setCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [lead, setLead] = useState<LeadFormData>(() => buildInitialLead(user, profile));
 
   const totalSteps = stepLabels.length;
@@ -159,6 +160,7 @@ export function OnboardingPreviewExperience({ user, profile, persist = false, up
   };
 
   const choosePlan = async (selectedPlan: Plan) => {
+    setSubmitError('');
     setLead(current => ({ ...current, plan: selectedPlan }));
     if (!persist) {
       setCompleted(false);
@@ -207,6 +209,15 @@ export function OnboardingPreviewExperience({ user, profile, persist = false, up
       onComplete?.(selectedPlan);
     } catch (error) {
       console.error('Error completing onboarding:', error);
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar seu perfil. Verifique sua conexão e tente novamente.';
+      setSubmitError(message);
+      if (user?.id) {
+        localStorage.setItem(`training_onboarding_error_${user.id}`, JSON.stringify({
+          message,
+          selectedPlan,
+          occurredAt: new Date().toISOString(),
+        }));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -236,6 +247,11 @@ export function OnboardingPreviewExperience({ user, profile, persist = false, up
           <p className="mt-3 text-sm leading-relaxed text-text-secondary">
             Pelo diagnóstico, o Pro é o melhor custo-benefício para sair do básico e manter evolução contínua.
           </p>
+          {submitError && (
+            <div className="mt-4 rounded-[22px] border border-error/20 bg-error/10 p-4 text-sm font-bold leading-relaxed text-error">
+              {submitError}
+            </div>
+          )}
 
           <div className="mt-5 space-y-4">
             <PlanCard

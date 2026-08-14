@@ -1,5 +1,95 @@
 import { Exercise, Workout } from '../types';
 
+const WORKOUT_MEDIA = {
+  chest: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-chest-press-with-dumbbells-in-a-gym-23422-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/3838389/pexels-photo-3838389.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+  back: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-seated-cable-row-in-gym-23426-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/4162449/pexels-photo-4162449.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+  legs: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-squats-23425-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+  shoulders: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-shoulder-press-with-dumbbells-23431-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/4162579/pexels-photo-4162579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+  arms: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-curling-dumbbells-23432-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/4162514/pexels-photo-4162514.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+  triceps: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-tricep-pushdowns-23434-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/4164767/pexels-photo-4164767.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+  abs: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-crunches-23435-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/3757376/pexels-photo-3757376.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+  full: {
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-man-doing-deadlift-exercise-23441-large.mp4",
+    thumbnail: "https://images.pexels.com/photos/4162587/pexels-photo-4162587.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+  },
+} as const;
+
+function buildExercise(id: string, name: string, muscleGroup: Workout['muscleGroup'], media: keyof typeof WORKOUT_MEDIA, series = 4, reps = "10-12", restTime = "75s"): Exercise {
+  return {
+    id,
+    name,
+    series,
+    reps,
+    restTime,
+    muscleGroup,
+    description: `${name} com controle, amplitude segura e foco no grupo ${muscleGroup}.`,
+    ...WORKOUT_MEDIA[media],
+    instructions: [
+      "Ajuste a postura e prepare a carga antes de iniciar.",
+      "Execute a fase principal com controle e sem perder alinhamento.",
+      "Retorne lentamente, mantendo tensão no músculo alvo.",
+      "Respire de forma ritmada e preserve a técnica até a última repetição."
+    ],
+    proTips: [
+      "Priorize amplitude e controle antes de aumentar a carga.",
+      "Pare a série se a técnica começar a quebrar."
+    ],
+    commonErrors: [
+      "Usar impulso para completar repetições.",
+      "Reduzir a amplitude para levantar mais carga."
+    ]
+  };
+}
+
+function buildWorkout(
+  id: string,
+  name: string,
+  muscleGroup: Workout['muscleGroup'],
+  level: Workout['level'],
+  planRequired: Workout['planRequired'],
+  duration: string,
+  carga: Workout['carga'],
+  description: string,
+  media: keyof typeof WORKOUT_MEDIA,
+  exerciseNames: string[],
+): Workout {
+  return {
+    id,
+    name,
+    muscleGroup,
+    level,
+    duration,
+    carga,
+    description,
+    planRequired,
+    authorUid: "system",
+    exercises: exerciseNames.map((exerciseName, index) =>
+      buildExercise(`${id}-ex-${index + 1}`, exerciseName, muscleGroup, media, level === "Avançado" ? 4 : 3, level === "Avançado" ? "8-10" : "10-12", level === "Avançado" ? "90s" : "75s")
+    ),
+  };
+}
+
 export const BEGINNER_WORKOUTS: Workout[] = [
   {
     id: "peito-iniciante-1",
@@ -1335,7 +1425,19 @@ export const BEGINNER_WORKOUTS: Workout[] = [
         ]
       }
     ]
-  }
+  },
+  buildWorkout(
+    "triceps-iniciante-2",
+    "Tríceps Base 2",
+    "Tríceps",
+    "Iniciante",
+    "Iniciante",
+    "35 min",
+    "Baixa",
+    "Variações simples para criar base nas três cabeças do tríceps sem excesso de carga.",
+    "triceps",
+    ["Tríceps Corda", "Extensão Unilateral na Polia", "Tríceps Banco Controlado"],
+  ),
 ];
 
 export const INTERMEDIATE_WORKOUTS: Workout[] = [
@@ -3174,7 +3276,79 @@ export const INTERMEDIATE_WORKOUTS: Workout[] = [
         ]
       }
     ]
-  }
+  },
+  buildWorkout(
+    "biceps-pro-3",
+    "Braquial e Antebraço Pro",
+    "Bíceps",
+    "Intermediário",
+    "Pro",
+    "45 min",
+    "Média",
+    "Treino para completar o braço com foco em braquial, braquiorradial e pegada.",
+    "arms",
+    ["Rosca Martelo Cruzada", "Rosca Inversa com Barra EZ", "Rosca Scott Pegada Neutra"],
+  ),
+  buildWorkout(
+    "triceps-pro-2",
+    "Tríceps Cabeça Longa",
+    "Tríceps",
+    "Intermediário",
+    "Pro",
+    "45 min",
+    "Média",
+    "Ênfase em movimentos acima da cabeça para desenvolver a cabeça longa do tríceps.",
+    "triceps",
+    ["Tríceps Francês Unilateral", "Extensão Acima da Cabeça na Corda", "Tríceps Testa Inclinado"],
+  ),
+  buildWorkout(
+    "triceps-pro-3",
+    "Tríceps Polia e Testa",
+    "Tríceps",
+    "Intermediário",
+    "Pro",
+    "45 min",
+    "Média",
+    "Combinação de polia, barra e peso corporal para volume e definição no tríceps.",
+    "triceps",
+    ["Tríceps Barra V", "Tríceps Testa com Barra EZ", "Mergulho entre Bancos"],
+  ),
+  buildWorkout(
+    "fullbody-pro-1",
+    "Full Body Força Base",
+    "Full Body",
+    "Intermediário",
+    "Pro",
+    "50 min",
+    "Média",
+    "Sessão completa com movimentos compostos para força geral e consistência semanal.",
+    "full",
+    ["Agachamento Goblet", "Supino com Halteres", "Remada Baixa", "Prancha com Toque no Ombro"],
+  ),
+  buildWorkout(
+    "fullbody-pro-2",
+    "Full Body Hipertrofia",
+    "Full Body",
+    "Intermediário",
+    "Pro",
+    "55 min",
+    "Média",
+    "Rotina de corpo inteiro com volume moderado para ganhar massa sem dividir muitos dias.",
+    "full",
+    ["Leg Press", "Puxada Alta", "Desenvolvimento com Halteres", "Rosca Direta + Tríceps Corda"],
+  ),
+  buildWorkout(
+    "fullbody-pro-3",
+    "Full Body Metabólico",
+    "Full Body",
+    "Intermediário",
+    "Pro",
+    "45 min",
+    "Média",
+    "Circuito de intensidade controlada para condicionamento, gasto calórico e resistência.",
+    "full",
+    ["Kettlebell Swing", "Flexão de Braços", "Remada Curvada", "Abdominal Bicicleta"],
+  ),
 ];
 
 export const ELITE_WORKOUTS: Workout[] = [
@@ -4798,7 +4972,211 @@ export const ELITE_WORKOUTS: Workout[] = [
         ]
       }
     ]
-  }
+  },
+  buildWorkout(
+    "elite-peito-4",
+    "Peito Completo 3D",
+    "Peito",
+    "Avançado",
+    "Elite",
+    "70 min",
+    "Alta",
+    "Protocolo completo para atacar peitoral superior, médio e inferior na mesma sessão.",
+    "chest",
+    ["Supino Inclinado Pesado", "Supino Reto com Pausa", "Cross Over Baixo-Alto", "Dips com Peso"],
+  ),
+  buildWorkout(
+    "elite-costas-4",
+    "Costas V-Taper",
+    "Costas",
+    "Avançado",
+    "Elite",
+    "70 min",
+    "Alta",
+    "Sessão para largura e acabamento visual em V com puxadas e remadas estratégicas.",
+    "back",
+    ["Barra Fixa com Peso", "Puxada Neutra Pesada", "Remada Cavalinho", "Pullover na Polia"],
+  ),
+  buildWorkout(
+    "elite-pernas-4",
+    "Pernas Completo Atleta",
+    "Pernas",
+    "Avançado",
+    "Elite",
+    "75 min",
+    "Alta",
+    "Treino completo de membros inferiores com força, volume e finalização metabólica.",
+    "legs",
+    ["Agachamento Livre Pesado", "Terra Romeno", "Leg Press Rest-pause", "Panturrilha em Pé"],
+  ),
+  buildWorkout(
+    "elite-ombros-4",
+    "Ombros 3D Completo",
+    "Ombros",
+    "Avançado",
+    "Elite",
+    "60 min",
+    "Alta",
+    "Ataque completo para deltoide anterior, medial e posterior com técnicas avançadas.",
+    "shoulders",
+    ["Desenvolvimento Militar", "Elevação Lateral Mecânica", "Face Pull Pesado", "Crucifixo Inverso"],
+  ),
+  buildWorkout(
+    "elite-biceps-2",
+    "Pico de Bíceps",
+    "Bíceps",
+    "Avançado",
+    "Elite",
+    "55 min",
+    "Alta",
+    "Isolamento avançado para pico de contração e controle de amplitude nos bíceps.",
+    "arms",
+    ["Rosca Scott Unilateral", "Rosca Concentrada com Pausa", "Rosca Cabo Alto", "Rosca 21s"],
+  ),
+  buildWorkout(
+    "elite-biceps-3",
+    "Braquial Elite",
+    "Bíceps",
+    "Avançado",
+    "Elite",
+    "55 min",
+    "Alta",
+    "Foco em braquial e antebraço para dar espessura ao braço e melhorar pegada.",
+    "arms",
+    ["Rosca Martelo Pesada", "Rosca Inversa Barra EZ", "Rosca Spider Neutra", "Farmer Hold"],
+  ),
+  buildWorkout(
+    "elite-biceps-4",
+    "Bíceps Drop-set",
+    "Bíceps",
+    "Avançado",
+    "Elite",
+    "55 min",
+    "Alta",
+    "Sessão de exaustão com drop-sets e cadência lenta para máximo pump.",
+    "arms",
+    ["Rosca Direta Drop-set", "Rosca Alternada Inclinada", "Rosca Cabo com Drop Triplo", "Martelo Finalizador"],
+  ),
+  buildWorkout(
+    "elite-triceps-2",
+    "Cabeça Longa Elite",
+    "Tríceps",
+    "Avançado",
+    "Elite",
+    "55 min",
+    "Alta",
+    "Treino acima da cabeça para alongamento máximo e hipertrofia da cabeça longa.",
+    "triceps",
+    ["Tríceps Francês Pesado", "Extensão Overhead na Corda", "Tríceps Testa Inclinado", "Pullover Press"],
+  ),
+  buildWorkout(
+    "elite-triceps-3",
+    "Tríceps Lateral Elite",
+    "Tríceps",
+    "Avançado",
+    "Elite",
+    "55 min",
+    "Alta",
+    "Ênfase na cabeça lateral para densidade visual e finalização do braço.",
+    "triceps",
+    ["Tríceps Barra Reta Pesado", "Tríceps Corda Drop-set", "Mergulho Máquina", "Coice Unilateral"],
+  ),
+  buildWorkout(
+    "elite-triceps-4",
+    "Tríceps Densidade",
+    "Tríceps",
+    "Avançado",
+    "Elite",
+    "60 min",
+    "Alta",
+    "Protocolo pesado com compostos e isoladores para densidade nas três cabeças.",
+    "triceps",
+    ["Supino Fechado Pesado", "Paralelas com Peso", "Tríceps Testa Pausado", "Extensão Reversa na Polia"],
+  ),
+  buildWorkout(
+    "elite-abdomen-1",
+    "Abdômen com Carga",
+    "Abdômen",
+    "Avançado",
+    "Elite",
+    "35 min",
+    "Alta",
+    "Core com sobrecarga progressiva para hipertrofia abdominal real.",
+    "abs",
+    ["Crunch na Polia Pesado", "Abdominal Máquina", "Prancha com Carga", "Elevação de Pernas Suspenso"],
+  ),
+  buildWorkout(
+    "elite-abdomen-2",
+    "Core Anti-rotação",
+    "Abdômen",
+    "Avançado",
+    "Elite",
+    "35 min",
+    "Alta",
+    "Estabilidade avançada para proteger lombar e transferir força para exercícios compostos.",
+    "abs",
+    ["Pallof Press", "Prancha Lateral com Carga", "Dead Bug com Cabo", "Farmer Walk Unilateral"],
+  ),
+  buildWorkout(
+    "elite-abdomen-3",
+    "Oblíquos Elite",
+    "Abdômen",
+    "Avançado",
+    "Elite",
+    "35 min",
+    "Alta",
+    "Treino de oblíquos e rotação controlada para definição e estabilidade lateral.",
+    "abs",
+    ["Woodchopper na Polia", "Russian Twist com Carga", "Elevação Lateral de Pernas", "Prancha Copenhagen"],
+  ),
+  buildWorkout(
+    "elite-abdomen-4",
+    "Core Atleta",
+    "Abdômen",
+    "Avançado",
+    "Elite",
+    "40 min",
+    "Alta",
+    "Circuito de core para atletas, combinando anti-extensão, rotação e resistência.",
+    "abs",
+    ["Ab Wheel Avançado", "Hollow Hold", "Mountain Climber Controlado", "Prancha RKC"],
+  ),
+  buildWorkout(
+    "elite-full-2",
+    "Full Body Força",
+    "Full Body",
+    "Avançado",
+    "Elite",
+    "80 min",
+    "Alta",
+    "Treino total focado em força com compostos pesados e descansos estratégicos.",
+    "full",
+    ["Agachamento Livre", "Supino Reto Pesado", "Remada Curvada", "Terra Romeno"],
+  ),
+  buildWorkout(
+    "elite-full-3",
+    "Full Body Hipertrofia",
+    "Full Body",
+    "Avançado",
+    "Elite",
+    "75 min",
+    "Alta",
+    "Sessão completa com volume alto para estimular vários grupos no mesmo dia.",
+    "full",
+    ["Leg Press", "Supino Inclinado", "Puxada Alta", "Desenvolvimento Arnold"],
+  ),
+  buildWorkout(
+    "elite-full-4",
+    "Full Body Condicionamento",
+    "Full Body",
+    "Avançado",
+    "Elite",
+    "65 min",
+    "Alta",
+    "Protocolo atlético de condicionamento com força, potência e core integrado.",
+    "full",
+    ["Levantamento Terra", "Thruster com Halteres", "Remada Renegada", "Burpee Controlado"],
+  ),
 ];
 
 const SHOULDER_REAR_DELT_WORKOUT_COPY: Record<string, Pick<Workout, 'name' | 'description'>> = {

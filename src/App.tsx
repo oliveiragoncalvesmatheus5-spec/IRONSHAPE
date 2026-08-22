@@ -10,7 +10,6 @@ import { getLocalExerciseMedia } from './utils/exerciseTranslations';
 import { getExerciseDisplay, getWorkoutDisplay, translateMuscleGroup, translateWorkoutName } from './utils/workoutDataI18n';
 import { installUiAutoTranslate } from './utils/uiAutoTranslate';
 import AIChat from './AIChat';
-import ironShopHeroBanner from './assets/ironshop-hero-banner.png';
 import ironshapeLogo from './assets/ironshape-logo.jpeg';
 import { DashboardMetricCard } from './components/dashboardCards';
 import { LoadingScreen, ViewErrorBoundary } from './components/feedback';
@@ -144,6 +143,9 @@ type IronShopDisplayProduct = {
   category: IronShopProduct['category'];
   price: number;
   image: string;
+  images?: string[];
+  description?: string;
+  checkoutUrl?: string;
   oldPrice?: number;
   badge?: string;
 };
@@ -956,7 +958,13 @@ function getInitialTab() {
   if (typeof window === 'undefined') return 'dashboard';
   const requestedTab = new URLSearchParams(window.location.search).get('tab');
   const allowedTabs = new Set(['dashboard', 'workouts', 'nutrition', 'progress', 'shop', 'affiliates', 'settings']);
-  return requestedTab && allowedTabs.has(requestedTab) ? requestedTab : 'dashboard';
+  if (requestedTab && allowedTabs.has(requestedTab)) return requestedTab;
+  const storedTab = sessionStorage.getItem('ironshape_active_tab');
+  return storedTab && allowedTabs.has(storedTab) ? storedTab : 'dashboard';
+}
+
+function getTabUrl(tab: string) {
+  return tab === 'dashboard' ? '/' : `/?tab=${encodeURIComponent(tab)}`;
 }
 
 function isAuthNavigationUrl() {
@@ -1618,8 +1626,12 @@ export default function App() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
+    sessionStorage.setItem('ironshape_active_tab', activeTab);
+    if (user && !isAuthNavigationUrl()) {
+      window.history.replaceState({ ironshapeScreen: activeTab }, document.title, getTabUrl(activeTab));
+    }
     trackEvent('app_screen_view', { screen_name: activeTab });
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -1645,8 +1657,9 @@ export default function App() {
     }
 
     if (!authHistoryGuardedRef.current) {
-      window.history.replaceState({ ironshapeScreen: 'dashboard' }, document.title, '/');
-      window.history.pushState({ ironshapeScreen: 'dashboard-safe-back' }, document.title, '/');
+      const currentTabUrl = getTabUrl(activeTab);
+      window.history.replaceState({ ironshapeScreen: activeTab }, document.title, currentTabUrl);
+      window.history.pushState({ ironshapeScreen: `${activeTab}-safe-back` }, document.title, currentTabUrl);
       authHistoryGuardedRef.current = true;
     }
 
@@ -1657,7 +1670,7 @@ export default function App() {
 
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [user]);
+  }, [user, activeTab]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -2331,6 +2344,7 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
     const match = window.location.pathname.match(/^\/categoria\/([^/]+)/);
     return match ? decodeURIComponent(match[1]) : '';
   });
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     if (!access.hasAccess) {
@@ -2370,41 +2384,65 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
   const thirdProductImage = featuredProducts[2]?.image || firstProductImage;
   const fourthProductImage = featuredProducts[3]?.image || secondProductImage;
   const categoryCards = [
-    { name: 'Suplementos', slug: 'suplementos', image: firstProductImage, icon: <ShoppingBag size={22} /> },
-    { name: 'Roupas', slug: 'roupas', image: secondProductImage, icon: <Shirt size={22} /> },
-    { name: 'Acessórios', slug: 'acessorios', image: thirdProductImage, icon: <Package size={22} /> },
-    { name: 'Kits', slug: 'kits', image: fourthProductImage, icon: <Star size={22} /> }
+    { name: 'Creatina', slug: 'creatina', icon: <Zap size={22} /> },
+    { name: 'Whey Protein', slug: 'whey', icon: <Dumbbell size={22} /> },
+    { name: 'Pré-treino', slug: 'pre-treino', icon: <Flame size={22} /> },
+    { name: 'Roupas e Kits', slug: 'roupas-kits', icon: <ShoppingBag size={22} /> }
   ];
-  const benefits = [
-    { label: 'Frete grátis', icon: <Truck size={22} /> },
-    { label: 'Compra segura', icon: <ShieldCheck size={22} /> },
-    { label: 'Parcelamento', icon: <CreditCard size={22} /> },
-    { label: 'Suporte', icon: <Headphones size={22} /> }
+  const quickFilters = [
+    'Creatina',
+    'Whey Protein',
+    'Pré-treino',
+    'Hipertrofia',
+    'Roupas',
+    'Acessórios'
   ];
   const productCategoryLabel = (category: IronShopProduct['category']) => (
     category === 'supplement' ? 'Suplemento' : category === 'apparel' ? 'Roupa' : 'Acessório'
   );
   const findProduct = (matcher: (product: IronShopProduct) => boolean) => products.find(matcher) || products[0];
   const wheyProduct = findProduct(product => product.id.includes('whey') || product.name.toLowerCase().includes('whey'));
-  const apparelProduct = findProduct(product => product.category === 'apparel' || product.name.toLowerCase().includes('camiseta'));
   const shakerProduct = findProduct(product => product.name.toLowerCase().includes('shaker') || product.category === 'accessory');
   const bestSellingProducts = [
     {
       id: 'best-whey-protein',
       name: 'Whey Protein IronShape',
       category: 'supplement' as IronShopProduct['category'],
-      price: wheyProduct?.price || 129.9,
-      image: wheyProduct?.image || firstProductImage,
-      oldPrice: 159.9,
-      badge: 'Mais vendido'
+      price: 133.31,
+      image: '/ironshop/products/whey-cookies-bottle.jpg',
+      images: [
+        '/ironshop/products/whey-cookies-bottle.jpg',
+        '/ironshop/products/whey-cookies-info.jpg',
+        '/ironshop/products/whey-cookies-shake.jpg'
+      ],
+      oldPrice: 177.55,
+      badge: '24% OFF NO PIX',
+      checkoutUrl: 'https://meli.la/2vBNX6e'
     },
     {
-      id: 'best-camiseta-dry-fit',
-      name: 'Camiseta Dry Fit IronShape',
-      category: 'apparel' as IronShopProduct['category'],
-      price: apparelProduct?.price || 89.9,
-      image: apparelProduct?.image || secondProductImage,
-      badge: 'Novo'
+      id: 'best-profit-whey-leite-ninho',
+      name: '100% Whey Quality Concentrate Protein Refil 900g - Profit Sabor Leite Ninho',
+      category: 'supplement' as IronShopProduct['category'],
+      price: 64.9,
+      image: '/ironshop/products/profit-whey-leite-ninho-refil.png',
+      images: [
+        '/ironshop/products/profit-whey-leite-ninho-refil.png',
+        '/ironshop/products/profit-whey-leite-ninho-info.png',
+        '/ironshop/products/profit-whey-leite-ninho-model.png'
+      ],
+      oldPrice: 74.9,
+      badge: '6% OFF',
+      checkoutUrl: 'https://meli.la/1LvMihe',
+      description: `Aumente sua performance e alcance seus objetivos com o Whey 100% Protein Refil 900g da Profit, sabor Leite Ninho. Este suplemento é ideal para quem busca uma fonte de proteína de alta qualidade, com 24g de proteína por porção, contribuindo para o desenvolvimento muscular e recuperação pós-treino.
+
+Com uma fórmula rica em creatina, glicina e taurina, cada dose fornece 159 kcal, 9.8g de carboidratos e apenas 2.6g de gordura, tornando-se uma excelente opção para quem deseja manter uma alimentação equilibrada. O produto contém lactose e não é vegano, sendo indicado para adultos a partir de 19 anos.
+
+A embalagem de 900g é prática e ideal para quem treina regularmente, garantindo que você tenha sempre à mão a proteína necessária para potencializar seus resultados. Experimente o sabor Leite Ninho e transforme seu shake em um momento delicioso e nutritivo.
+
+Aviso legal
+• Idade mínima recomendada: 19 anos.
+• Consumir junto com alimentos para facilitar sua assimilação.
+• Este produto é um suplemento dietético, não um medicamento. Suplementa dietas insuficientes. Consulte o seu médico e/ou farmacêutico.`
     },
     {
       id: 'best-shaker-steel',
@@ -2433,64 +2471,157 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
     }
   ] satisfies IronShopDisplayProduct[];
   const categoryProducts: Record<string, { title: string; description: string; products: IronShopDisplayProduct[] }> = {
-    suplementos: {
-      title: 'Suplementos',
-      description: 'Proteínas, creatinas e pré-treinos selecionados para performance, recuperação e evolução diária.',
+    creatina: {
+      title: 'Creatina',
+      description: 'Creatinas e combinações para força, explosão e evolução constante nos treinos.',
       products: [
-        bestSellingProducts[0],
         bestSellingProducts[3],
-        bestSellingProducts[4],
-        { id: 'iso-whey-black', name: 'Iso Whey Black IronShape', category: 'supplement', price: 179.9, image: firstProductImage, oldPrice: 209.9, badge: 'Premium' },
-        { id: 'bcaa-performance', name: 'BCAA Performance IronShape', category: 'supplement', price: 79.9, image: thirdProductImage || firstProductImage, badge: 'Novo' },
-        { id: 'glutamina-recovery', name: 'Glutamina Recovery IronShape', category: 'supplement', price: 69.9, image: firstProductImage || thirdProductImage, badge: 'Recuperação' }
+        {
+          id: 'max-titanium-creatina-monohidratada-300g',
+          name: 'Creatina 300g Creatina Monohidratada Max Titanium Sem Sabor Alta Pureza',
+          category: 'supplement',
+          price: 45,
+          image: '/ironshop/products/max-titanium-creatina-300g.png',
+          images: [
+            '/ironshop/products/max-titanium-creatina-300g.png',
+            '/ironshop/products/max-titanium-creatina-300g-back.png',
+            '/ironshop/products/max-titanium-creatina-300g-nutrition.png',
+            '/ironshop/products/max-titanium-creatina-300g-gym.png',
+            '/ironshop/products/max-titanium-creatina-300g-use.png'
+          ],
+          oldPrice: 85.42,
+          badge: '47% OFF',
+          description: 'Creatina Monohidratada Max Titanium 300g sem sabor, com alta pureza, indicada para complementar a rotina de força, potência e performance nos treinos.'
+        },
+        { id: 'creatina-hardcore-300g', name: 'Creatina Hardcore 300g', category: 'supplement', price: 99.9, image: firstProductImage || thirdProductImage, badge: 'Força' },
+        { id: 'creatina-growth-pack', name: 'Combo Creatina + Coqueteleira', category: 'supplement', price: 129.9, image: fourthProductImage || firstProductImage, badge: 'Combo' },
+        { id: 'kit-whey-creatina', name: 'Kit Whey + Creatina IronShape', category: 'supplement', price: 209.9, image: firstProductImage || fourthProductImage, badge: 'Mais vendido' },
+        { id: 'creatina-micronizada-300g', name: 'Creatina Micronizada IronShape 300g', category: 'supplement', price: 94.9, image: firstProductImage || thirdProductImage, oldPrice: 119.9, badge: 'Alta pureza' }
       ]
     },
-    roupas: {
-      title: 'Roupas',
-      description: 'Peças dry fit e lifestyle com visual premium para treinar, trabalhar e viver a rotina IronShape.',
+    whey: {
+      title: 'Whey Protein',
+      description: 'Proteínas selecionadas para recuperação, ganho de massa e shakes práticos no dia a dia.',
       products: [
+        bestSellingProducts[0],
         bestSellingProducts[1],
+        {
+          id: 'soldiers-whey-chocolate-belga-1kg',
+          name: 'Whey Protein Concentrado 1kg Sabor Chocolate Belga Soldiers Nutrition Rico em Proteína Treino',
+          category: 'supplement',
+          price: 147.05,
+          image: '/ironshop/products/soldiers-whey-chocolate-belga.png',
+          images: [
+            '/ironshop/products/soldiers-whey-chocolate-belga.png',
+            '/ironshop/products/soldiers-whey-chocolate-belga-flavor.png',
+            '/ironshop/products/soldiers-whey-chocolate-belga-benefits.png'
+          ],
+          oldPrice: 429.9,
+          badge: '65% OFF',
+          checkoutUrl: 'https://meli.la/2xu9iWZ',
+          description: 'Whey Protein Concentrado Soldiers Nutrition sabor Chocolate Belga em embalagem de 1kg, uma opção rica em proteína para complementar a rotina de treino e recuperação muscular.'
+        },
+        {
+          id: 'black-skull-whey-100-hd-baunilha-900g',
+          name: 'Whey 100% Hd Refil Black Skull 900g Wpc Wpi E Wph Sabor Baunilha',
+          category: 'supplement',
+          price: 94.46,
+          image: '/ironshop/products/black-skull-whey-100-hd-baunilha.png',
+          images: [
+            '/ironshop/products/black-skull-whey-100-hd-baunilha.png',
+            '/ironshop/products/black-skull-whey-100-hd-label.png',
+            '/ironshop/products/black-skull-whey-100-hd-lifestyle.png'
+          ],
+          oldPrice: 129.9,
+          badge: '27% OFF',
+          checkoutUrl: 'https://meli.la/2AzE8qQ',
+          description: 'Whey 100% HD Refil Black Skull 900g sabor Baunilha, com combinação de WPC, WPI e WPH para apoiar ingestão proteica, recuperação e rotina de treinos.'
+        },
+        {
+          id: 'ftw-whey-protein-ultra-morango-900g',
+          name: 'Whey Protein Ultra Refil 900g Sabor Morango - FTW',
+          category: 'supplement',
+          price: 56.9,
+          image: '/ironshop/products/ftw-whey-ultra-morango-900g.png',
+          images: [
+            '/ironshop/products/ftw-whey-ultra-morango-900g.png',
+            '/ironshop/products/ftw-whey-ultra-morango-pack.png',
+            '/ironshop/products/ftw-whey-ultra-morango-back.png',
+            '/ironshop/products/ftw-whey-ultra-morango-lifestyle.png'
+          ],
+          oldPrice: 89.9,
+          badge: '36% OFF',
+          checkoutUrl: 'https://meli.la/2P3kpYV',
+          description: 'Whey Protein Ultra Refil FTW 900g sabor Morango, suplemento proteico para complementar a dieta, apoiar recuperação pós-treino e facilitar a rotina de quem busca performance.'
+        },
+        { id: 'whey-concentrado-900g', name: 'Whey Concentrado IronShape 900g', category: 'supplement', price: 149.9, image: firstProductImage || thirdProductImage, oldPrice: 189.9, badge: 'Oferta' }
+      ]
+    },
+    'pre-treino': {
+      title: 'Pré-treino',
+      description: 'Fórmulas e packs para foco, energia e performance antes dos treinos intensos.',
+      products: [
+        bestSellingProducts[4],
+        { id: 'pre-treino-fire-300g', name: 'Pré-Treino Fire 300g', category: 'supplement', price: 119.9, image: thirdProductImage || firstProductImage, badge: 'Performance' },
+        { id: 'pre-treino-focus', name: 'Pré-Treino Focus IronShape', category: 'supplement', price: 109.9, image: thirdProductImage || firstProductImage, oldPrice: 139.9, badge: 'Foco' },
+        { id: 'bcaa-performance', name: 'BCAA Performance IronShape', category: 'supplement', price: 79.9, image: thirdProductImage || firstProductImage, badge: 'Novo' },
+        { id: 'glutamina-recovery', name: 'Glutamina Recovery IronShape', category: 'supplement', price: 69.9, image: firstProductImage || thirdProductImage, badge: 'Recuperação' },
+        { id: 'pre-treino-extreme-pump', name: 'Pré-Treino Extreme Pump IronShape', category: 'supplement', price: 129.9, image: thirdProductImage || firstProductImage, oldPrice: 159.9, badge: 'Pump' }
+      ]
+    },
+    'roupas-kits': {
+      title: 'Roupas e Kits',
+      description: 'Peças, acessórios e combos para deixar a rotina fitness mais prática e organizada.',
+      products: [
         { id: 'regata-performance', name: 'Regata Performance IronShape', category: 'apparel', price: 74.9, image: secondProductImage, badge: 'Treino' },
         { id: 'shorts-training', name: 'Shorts Training IronShape', category: 'apparel', price: 99.9, image: secondProductImage, oldPrice: 119.9, badge: 'Novo' },
         { id: 'hoodie-black', name: 'Hoodie Black IronShape', category: 'apparel', price: 189.9, image: secondProductImage, badge: 'Lifestyle' },
-        { id: 'calca-tech', name: 'Calça Tech IronShape', category: 'apparel', price: 159.9, image: secondProductImage, badge: 'Premium' }
-      ]
-    },
-    acessorios: {
-      title: 'Acessórios',
-      description: 'Itens essenciais para deixar sua rotina mais prática, organizada e com identidade premium.',
-      products: [
+        { id: 'calca-tech', name: 'Calça Tech IronShape', category: 'apparel', price: 159.9, image: secondProductImage, badge: 'Premium' },
         bestSellingProducts[2],
-        { id: 'gym-bag-pro', name: 'Gym Bag Pro IronShape', category: 'accessory', price: 149.9, image: thirdProductImage, badge: 'Mais vendido' },
-        { id: 'strap-training', name: 'Strap Training IronShape', category: 'accessory', price: 49.9, image: thirdProductImage, badge: 'Força' },
-        { id: 'munhequeira-pro', name: 'Munhequeira Pro IronShape', category: 'accessory', price: 39.9, image: thirdProductImage, badge: 'Suporte' },
-        { id: 'garrafa-steel', name: 'Garrafa Steel 1L IronShape', category: 'accessory', price: 69.9, image: thirdProductImage, oldPrice: 89.9, badge: 'Frete grátis' }
+        { id: 'gym-bag-pro', name: 'Gym Bag Pro IronShape', category: 'accessory', price: 149.9, image: thirdProductImage, badge: 'Mais vendido' }
       ]
-    },
-    kits: {
-      title: 'Kits',
-      description: 'Combinações inteligentes para quem quer praticidade, economia e uma rotina fitness completa.',
-      products: [
-        { id: 'kit-performance', name: 'Kit Performance IronShape', category: 'supplement', price: 249.9, image: fourthProductImage || firstProductImage, oldPrice: 299.9, badge: 'Oferta' },
-        { id: 'kit-whey-creatina', name: 'Kit Whey + Creatina IronShape', category: 'supplement', price: 209.9, image: firstProductImage || fourthProductImage, badge: 'Mais vendido' },
-        { id: 'kit-treino-total', name: 'Kit Treino Total IronShape', category: 'accessory', price: 189.9, image: thirdProductImage || fourthProductImage, badge: 'Completo' },
-        { id: 'kit-dry-fit-shaker', name: 'Kit Dry Fit + Shaker IronShape', category: 'apparel', price: 139.9, image: secondProductImage || thirdProductImage, badge: 'Novo' },
-        { id: 'kit-start', name: 'Kit Start IronShape', category: 'supplement', price: 159.9, image: fourthProductImage || firstProductImage, badge: 'Iniciante' }
-      ]
+    }
+  };
+  const groupedCategoryProducts = Object.values(categoryProducts).flatMap(category => category.products);
+  const categoryPages = {
+    ...categoryProducts,
+    todos: {
+      title: 'Todos os produtos',
+      description: 'Catálogo completo da IronShop com suplementos, roupas, acessórios e kits em uma única página.',
+      products: Array.from(new Map([...bestSellingProducts, ...groupedCategoryProducts].map(product => [product.id, product])).values())
     }
   };
   const allDisplayProducts = [
     ...bestSellingProducts,
-    ...Object.values(categoryProducts).flatMap(category => category.products)
+    ...groupedCategoryProducts
   ];
+  const catalogProducts = Array.from(new Map(allDisplayProducts.map(product => [product.id, product])).values());
+  const formatCurrency = (value: number) => value.toLocaleString(locale, { style: 'currency', currency: 'BRL' });
+  const getProductRating = (index: number) => {
+    const ratings = [
+      { score: '4,8', count: 327 },
+      { score: '4,9', count: 521 },
+      { score: '4,7', count: 186 },
+      { score: '4,8', count: 244 },
+      { score: '4,9', count: 398 }
+    ];
+    return ratings[index % ratings.length];
+  };
   const selectedProduct = allDisplayProducts.find(product => slugifyText(product.name) === selectedProductSlug) || bestSellingProducts[0];
-  const selectedCategory = selectedCategorySlug ? categoryProducts[selectedCategorySlug] : null;
+  const selectedCategory = selectedCategorySlug ? categoryPages[selectedCategorySlug] : null;
   const openProduct = (product: IronShopDisplayProduct) => {
     const slug = slugifyText(product.name);
     setSelectedProductSlug(slug);
     setSelectedCategorySlug('');
     window.history.pushState({ ironshopProduct: slug }, document.title, `/produto/${slug}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const addToCart = (_product: IronShopDisplayProduct) => {
+    setCartCount(count => count + 1);
+  };
+  const openCheckout = (product: IronShopDisplayProduct) => {
+    if (!product.checkoutUrl) return;
+    window.open(product.checkoutUrl, '_blank', 'noopener,noreferrer');
   };
   const openCategory = (slug: string) => {
     setSelectedProductSlug('');
@@ -2529,31 +2660,49 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
         locale={locale}
         onBack={closeCategory}
         onOpenProduct={openProduct}
+        onAddToCart={addToCart}
+        cartCount={cartCount}
         categoryLabel={productCategoryLabel}
       />
     );
   }
 
   return (
-    <div id="ironshop-full-catalog" className="ironshop-font bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-14 sm:space-y-16 pb-10">
-      <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-[42px] sm:text-5xl font-black leading-[0.95] tracking-normal"><span className="text-primary">Loja</span> IronShape</h1>
-          <p className="text-base sm:text-lg font-normal text-[#AFAFAF] mt-4 max-w-xl leading-relaxed">
-            Tudo o que você precisa para evoluir seus resultados.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 w-full xl:w-auto">
-          <div className="flex-1 xl:w-[520px] h-14 rounded-2xl border border-[#232323] bg-[#111111] px-5 flex items-center gap-3 text-[#6F6F6F] shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
-            <Search size={20} className="text-[#AFAFAF]" />
-            <span className="text-sm font-semibold">Buscar suplementos, roupas e kits</span>
+    <div id="ironshop-full-catalog" className="ironshop-font bg-[#050505] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 space-y-4 sm:space-y-7 pb-28 sm:pb-10">
+      <header className="rounded-[20px] sm:rounded-[30px] border border-white/15 bg-[#050505] p-3 sm:p-6 shadow-[0_14px_42px_rgba(0,0,0,0.38)]">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-sm font-black uppercase tracking-[0.28em] text-primary leading-none">IronShop</p>
+            <h1 className="mt-1 text-[26px] sm:text-[44px] font-black leading-[0.9] tracking-normal">Loja</h1>
+            <p className="hidden sm:block mt-2 text-lg font-semibold text-[#AFAFAF] leading-snug">
+              Produtos, kits e acessórios para seu treino.
+            </p>
           </div>
-          <button className="relative w-14 h-14 rounded-2xl border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary hover:-translate-y-1 transition-all duration-200 shadow-[0_12px_35px_rgba(0,0,0,0.35)]" aria-label="Carrinho">
-            <ShoppingBag size={22} />
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">2</span>
+          <button className="relative w-12 h-12 sm:w-[72px] sm:h-[72px] rounded-2xl sm:rounded-[22px] border border-white/15 bg-[#080808] text-white flex items-center justify-center active:scale-95 transition-all duration-200 shrink-0" aria-label="Carrinho">
+            <ShoppingBag size={22} strokeWidth={1.9} />
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-6 h-6 sm:min-w-9 sm:h-9 px-1 rounded-full bg-primary text-white text-xs sm:text-lg font-black flex items-center justify-center shadow-lg shadow-primary/25">{cartCount}</span>
+            )}
           </button>
-          <button className="w-14 h-14 rounded-full border border-[#232323] bg-[#111111] text-white flex items-center justify-center hover:border-primary hover:text-primary hover:-translate-y-1 transition-all duration-200 shadow-[0_12px_35px_rgba(0,0,0,0.35)]" aria-label="Usuário">
-            <UserIcon size={22} />
+        </div>
+
+        <div className="mt-3 h-11 sm:h-14 rounded-[18px] sm:rounded-[22px] border border-white/15 bg-[#060606] px-3.5 sm:px-5 flex items-center gap-3 text-[#9C9C9C]">
+          <Search size={19} className="text-primary shrink-0" strokeWidth={2.1} />
+          <span className="text-[13px] sm:text-lg font-bold truncate">Buscar creatina, whey, roupas...</span>
+        </div>
+
+        <div className="mt-2 min-h-[50px] sm:min-h-[68px] rounded-[18px] sm:rounded-[20px] border border-white/15 bg-[#080808] px-3.5 sm:px-5 py-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <span className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl border border-primary/30 bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Bookmark size={18} strokeWidth={2.1} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[12px] sm:text-xl font-black uppercase tracking-wider text-primary leading-none">IRON10</p>
+              <p className="mt-0.5 text-[11px] sm:text-base font-semibold text-white truncate">10% OFF em todo o site</p>
+            </div>
+          </div>
+          <button className="min-h-9 sm:min-h-[48px] px-3.5 sm:px-6 rounded-[16px] sm:rounded-2xl border border-white/15 bg-[#0A0A0A] text-primary text-[11px] sm:text-base font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">
+            Copiar
           </button>
         </div>
       </header>
@@ -2572,49 +2721,33 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
         </div>
       ) : (
         <>
-          <section className="rounded-[18px] sm:rounded-[24px] lg:rounded-3xl border border-[#232323] bg-[#050505] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
-            <a href="#ironshop-full-catalog" className="block w-full" aria-label="Ver produtos da IronShop">
-              <img
-                src={ironShopHeroBanner}
-                alt="IronShop: mais que suplementos, sao resultados."
-                className="block w-full h-auto aspect-[2010/782] object-contain object-center"
-              />
-            </a>
-          </section>
-
-          <section className="space-y-5">
-            <div className="flex items-center justify-between gap-5">
-              <h2 className="text-[32px] sm:text-[38px] font-black tracking-normal">Categorias</h2>
-              <button className="text-sm sm:text-base font-black text-primary flex items-center gap-2 hover:text-[#FF7E1F] transition-colors duration-200">Ver todos <ArrowRight size={18} /></button>
+          <section className="space-y-2.5">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl sm:text-[34px] font-bold leading-none">Categorias</h2>
+              <button onClick={() => openCategory('todos')} className="text-primary text-[13px] sm:text-lg font-black flex items-center gap-1.5">Ver todas <ChevronRight size={16} /></button>
             </div>
-            <div className="flex md:grid md:grid-cols-4 gap-6 overflow-x-auto pb-2 snap-x">
+            <div className="grid grid-cols-4 gap-1.5 min-[390px]:gap-2 sm:gap-4">
               {categoryCards.map(category => (
-                <article key={category.name} className="min-w-[260px] md:min-w-0 h-[220px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden group hover:border-primary hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] hover:-translate-y-1 transition-all duration-200 snap-start">
-                  <div className="h-[154px] bg-[#090909] overflow-hidden">
-                    {category.image && <img src={category.image} alt="" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />}
-                  </div>
-                  <div className="h-[66px] px-5 flex items-center justify-between gap-4 bg-[#111111]">
-                    <div className="flex items-center gap-3">
-                      <span className="w-10 h-10 rounded-full bg-[#090909] border border-[#232323] text-primary flex items-center justify-center">{category.icon}</span>
-                      <h3 className="text-base sm:text-lg font-black uppercase">{category.name}</h3>
-                    </div>
-                    <button onClick={() => openCategory(category.slug)} className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 hover:text-[#FF7E1F] active:scale-[0.98] transition-all duration-200">
-                      Ver produtos <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </article>
+                <button key={category.name} onClick={() => openCategory(category.slug)} className="min-h-[82px] min-[390px]:min-h-[86px] sm:min-h-[134px] rounded-[14px] sm:rounded-[22px] border border-white/15 bg-[#080808] px-1.5 py-2 flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-all duration-200 cursor-pointer">
+                  <span className="w-6 h-6 sm:w-11 sm:h-11 text-primary flex items-center justify-center [&>svg]:w-6 [&>svg]:h-6 sm:[&>svg]:w-11 sm:[&>svg]:h-11 [&>svg]:stroke-[1.9]">{category.icon}</span>
+                  <span className="text-[9.5px] min-[390px]:text-[10px] sm:text-base font-black uppercase tracking-normal text-white text-center leading-tight line-clamp-2">{category.name}</span>
+                </button>
               ))}
             </div>
           </section>
 
-          <section className="space-y-5">
-            <div className="flex items-center justify-between gap-5">
-              <h2 className="text-[32px] sm:text-[38px] font-black tracking-normal">Mais vendidos</h2>
-              <a href="#ironshop-full-catalog" className="text-sm sm:text-base font-black text-primary flex items-center gap-2 hover:text-[#FF7E1F] active:scale-[0.98] transition-all duration-200">Ver todos <ArrowRight size={18} /></a>
+          <section id="ironshop-best-sellers" className="space-y-2.5">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl sm:text-[34px] font-bold tracking-normal leading-none">Mais vendidos</h2>
+              <button onClick={() => openCategory('todos')} className="text-primary text-[13px] sm:text-lg font-black flex items-center gap-1.5">Ver todas <ChevronRight size={16} /></button>
             </div>
-            <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto snap-x snap-mandatory scroll-smooth touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex gap-3 sm:gap-4 pb-2 will-change-transform">
-                {bestSellingProducts.map(product => (
+            <div className="-mx-2 px-2 overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex gap-2.5 sm:gap-5 pb-1">
+                {bestSellingProducts.slice(0, 5).map((product, index) => {
+                  const oldPrice = product.oldPrice || product.price * 1.28;
+                  const installment = product.price / 3;
+                  const rating = getProductRating(index);
+                  return (
                   <article
                     key={product.id}
                     role="button"
@@ -2623,72 +2756,100 @@ function IronShopView({ access, language }: { access: IronShopAccessState; langu
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') openProduct(product);
                     }}
-                    className="group snap-center shrink-0 w-[172px] min-[390px]:w-[185px] sm:w-[220px] lg:w-[280px] h-[300px] sm:h-[340px] lg:h-[420px] rounded-[20px] border border-[#232323] bg-[#0D0D0D]/95 overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:border-primary lg:hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] lg:hover:-translate-y-1 transition-all duration-[250ms] cursor-pointer focus:outline-none focus:border-primary"
+                    className="group snap-start shrink-0 w-[156px] min-[390px]:w-[164px] sm:w-[260px] min-h-[312px] min-[390px]:min-h-[322px] sm:min-h-[520px] rounded-[16px] sm:rounded-[22px] border border-white/15 bg-[#080808] overflow-hidden active:scale-[1.01] lg:hover:border-primary transition-all duration-200 cursor-pointer focus:outline-none focus:border-primary"
                   >
-                    <div className="relative h-[65%] bg-[#090909] overflow-hidden">
+                    <div className="relative h-[102px] min-[390px]:h-[108px] sm:h-[210px] bg-[#070707] overflow-hidden">
                       {product.image && (
                         <img
                           src={product.image}
                           alt={product.name}
                           loading="lazy"
                           decoding="async"
-                          className="w-full h-full object-cover translate-z-0 group-hover:lg:scale-[1.03] transition-transform duration-200"
+                          className="w-full h-full object-contain p-2.5 sm:p-5 translate-z-0 group-hover:lg:scale-[1.03] transition-transform duration-200"
                         />
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#090909]/55 via-transparent to-transparent" />
-                      <button onClick={(event) => event.stopPropagation()} className="absolute top-3 right-3 w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-[#090909]/70 backdrop-blur-md border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Favoritar">
-                        <Heart size={17} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-transparent to-transparent" />
+                      {product.badge && (
+                        <span className="absolute left-2 top-2 rounded-md bg-primary px-1.5 py-1 text-[8px] sm:text-xs font-black uppercase tracking-normal text-white line-clamp-1">
+                          {product.badge}
+                        </span>
+                      )}
+                      <button onClick={(event) => event.stopPropagation()} className="absolute right-1.5 top-1.5 w-9 h-9 sm:w-10 sm:h-10 rounded-full text-[#9C9C9C] flex items-center justify-center active:scale-95 transition-all duration-200" aria-label="Favoritar">
+                        <Heart size={19} strokeWidth={1.9} />
                       </button>
                     </div>
-                    <div className="h-[35%] p-3.5 sm:p-4 lg:p-5 flex flex-col justify-between bg-[#111111]/90 backdrop-blur-md">
-                      <div className="space-y-1.5 lg:space-y-2.5">
-                        <p className="text-[10px] lg:text-xs font-black uppercase tracking-[0.16em] text-[#6F6F6F]">{productCategoryLabel(product.category)}</p>
-                        <h3 className="text-[14px] sm:text-base lg:text-[22px] font-black leading-[1.08] line-clamp-2">{product.name}</h3>
+                    <div className="p-2.5 sm:p-5 flex flex-col gap-1.5">
+                      <div className="space-y-1">
+                        <h3 className="text-[12px] min-[390px]:text-[13px] sm:text-xl font-bold leading-tight line-clamp-2 min-h-[31px]">{product.name}</h3>
+                        <div className="flex items-center gap-1 text-primary">
+                          <Star size={12} fill="currentColor" />
+                          <span className="text-[10px] sm:text-base font-semibold">{rating.score} ({rating.count})</span>
+                        </div>
+                        <p className="text-[10px] sm:text-base font-semibold text-[#8C8C8C] line-through leading-tight">{formatCurrency(oldPrice)}</p>
+                        <p className="text-[17px] min-[390px]:text-lg sm:text-[28px] font-black text-primary leading-none">{formatCurrency(product.price)}</p>
+                        <p className="text-[10px] sm:text-base font-semibold text-white leading-tight">3x de {formatCurrency(installment)}</p>
                       </div>
-                      <div className="flex items-end justify-between gap-2">
-                        <span className="text-xl sm:text-2xl lg:text-[38px] font-black text-primary leading-none">{product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}</span>
-                        <button onClick={(event) => event.stopPropagation()} className="w-9 h-9 lg:w-12 lg:h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white active:scale-95 lg:hover:scale-[1.03] transition-all duration-200" aria-label="Adicionar">
-                          <Plus size={18} />
-                        </button>
-                      </div>
+                      <button onClick={(event) => { event.stopPropagation(); addToCart(product); }} className="mt-1 min-h-9 sm:min-h-[54px] rounded-[18px] sm:rounded-[22px] border border-primary/70 bg-transparent text-primary text-[10px] sm:text-base font-black uppercase tracking-[0.12em] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all duration-200" aria-label="Adicionar ao carrinho">
+                        <Plus size={15} /> Adicionar
+                      </button>
                     </div>
                   </article>
-                ))}
-                <div aria-hidden className="shrink-0 w-1" />
+                  );
+                })}
               </div>
             </div>
           </section>
 
-          <section className="grid lg:grid-cols-2 gap-6">
-            {[
-              { title: 'Roupas IronShape', image: secondProductImage },
-              { title: 'Kits Promocionais', image: fourthProductImage }
-            ].map(banner => (
-              <article key={banner.title} className="min-h-[260px] rounded-3xl border border-[#232323] bg-[#111111] overflow-hidden grid sm:grid-cols-2 group hover:border-primary hover:shadow-[0_12px_35px_rgba(0,0,0,0.35)] hover:-translate-y-1 transition-all duration-[250ms]">
-                <div className="p-8 flex flex-col justify-center">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-3">IronShape</p>
-                  <h3 className="text-[34px] sm:text-[38px] font-black italic leading-[1.02]">{banner.title}</h3>
-                  <button className="mt-7 w-fit min-h-[46px] px-8 rounded-2xl border border-primary bg-transparent text-primary text-sm font-black uppercase tracking-widest hover:bg-primary hover:text-white hover:scale-[1.03] transition-all duration-200">
-                    Ver mais
-                  </button>
-                </div>
-                <div className="min-h-[220px] bg-[#090909] overflow-hidden">
-                  {banner.image && <img src={banner.image} alt="" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />}
-                </div>
-              </article>
-            ))}
+          <section className="space-y-2.5">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl sm:text-[34px] font-bold tracking-normal leading-none">Todos os produtos</h2>
+              <button onClick={() => openCategory('todos')} className="min-h-10 sm:min-h-[52px] px-3.5 sm:px-6 rounded-[20px] sm:rounded-[24px] border border-white/15 bg-[#080808] text-primary text-[11px] sm:text-base font-black uppercase tracking-widest flex items-center gap-2">
+                <SlidersHorizontal size={17} /> Filtrar
+              </button>
+            </div>
+            <div className="space-y-2 md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-4 md:space-y-0">
+              {catalogProducts.map((product, index) => {
+                const rating = getProductRating(index);
+                return (
+                <article
+                  key={product.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openProduct(product)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') openProduct(product);
+                  }}
+                  className="group min-h-[100px] sm:min-h-[120px] rounded-[16px] sm:rounded-[18px] border border-white/15 bg-[#080808] overflow-hidden active:scale-[1.01] lg:hover:border-primary transition-all duration-200 cursor-pointer focus:outline-none focus:border-primary flex items-center"
+                >
+                  <div className="relative w-[78px] sm:w-[124px] self-stretch bg-[#070707] overflow-hidden shrink-0">
+                    {product.image && (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-contain p-2 sm:p-4 translate-z-0 group-hover:lg:scale-[1.03] transition-transform duration-200"
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 p-2.5 sm:p-4 flex items-center justify-between gap-2.5 bg-[#080808]">
+                    <div className="min-w-0">
+                      <h3 className="text-[12px] min-[390px]:text-[13px] sm:text-base font-black leading-tight line-clamp-2">{product.name}</h3>
+                      <p className="mt-1 text-[10px] sm:text-sm font-semibold text-[#AFAFAF] line-clamp-1">
+                        <span className="text-primary">★ {rating.score}</span> • Em estoque
+                      </p>
+                      <p className="mt-1 text-[17px] sm:text-2xl font-black text-primary leading-none">{formatCurrency(product.price)}</p>
+                      <p className="mt-0.5 text-[10px] sm:text-sm font-semibold text-white">3x de {formatCurrency(product.price / 3)}</p>
+                    </div>
+                    <button onClick={(event) => { event.stopPropagation(); addToCart(product); }} className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center active:scale-95 transition-all duration-200 shrink-0" aria-label="Adicionar ao carrinho">
+                      <Plus size={17} />
+                    </button>
+                  </div>
+                </article>
+                );
+              })}
+            </div>
           </section>
-
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 rounded-3xl border border-[#232323] bg-[#111111] p-4 sm:p-5">
-            {benefits.map(benefit => (
-              <div key={benefit.label} className="min-h-[96px] rounded-2xl bg-[#090909] border border-[#232323] flex items-center gap-4 px-5">
-                <span className="w-12 h-12 rounded-2xl bg-[#111111] border border-[#232323] text-primary flex items-center justify-center">{benefit.icon}</span>
-                <span className="text-sm sm:text-base font-black">{benefit.label}</span>
-              </div>
-            ))}
-          </section>
-
-          <div aria-hidden className="h-10 border-t border-[#232323]" />
         </>
       )}
     </div>
@@ -2710,7 +2871,7 @@ function IronShopProductPage({
   onOpenProduct: (product: IronShopDisplayProduct) => void;
   categoryLabel: (category: IronShopProduct['category']) => string;
 }) {
-  const galleryImages = [product.image, product.image, product.image].filter(Boolean);
+  const galleryImages = product.images?.length ? product.images : [product.image, product.image, product.image].filter(Boolean);
   const [selectedImage, setSelectedImage] = useState(galleryImages[0] || product.image);
   const price = product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' });
   const installment = (product.price / 12).toLocaleString(locale, { style: 'currency', currency: 'BRL' });
@@ -2722,16 +2883,16 @@ function IronShopProductPage({
   return (
     <div className="ironshop-font bg-[#090909] text-white w-full lg:w-[calc(100vw-10rem)] max-w-[1600px] mx-auto lg:relative lg:left-1/2 lg:-translate-x-1/2 pb-28 lg:pb-12">
       <ProductHeader onBack={onBack} />
-      <div className="grid lg:grid-cols-[52%_48%] gap-8 lg:gap-12 mt-5">
+      <div className="grid lg:grid-cols-[52%_48%] gap-5 sm:gap-8 lg:gap-12 mt-4 sm:mt-5">
         <ProductGallery productName={product.name} images={galleryImages} selectedImage={selectedImage} onSelectImage={setSelectedImage} />
-        <section className="space-y-6 lg:sticky lg:top-8 lg:self-start">
+        <section className="space-y-4 sm:space-y-6 lg:sticky lg:top-8 lg:self-start">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-[#6F6F6F]">{categoryLabel(product.category)}</span>
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-[#6F6F6F]">{categoryLabel(product.category)}</span>
               {product.badge && <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">{product.badge}</span>}
             </div>
-            <h1 className="text-[34px] sm:text-[44px] lg:text-[52px] font-black leading-[0.98] tracking-normal line-clamp-2">{product.name}</h1>
-            <div className="mt-4 flex items-center gap-2 text-sm font-bold text-[#AFAFAF]">
+            <h1 className="text-[30px] sm:text-[44px] lg:text-[52px] font-black leading-[0.98] tracking-normal line-clamp-2">{product.name}</h1>
+            <div className="mt-3 sm:mt-4 flex items-center gap-2 text-xs sm:text-sm font-bold text-[#AFAFAF]">
               <span className="text-primary tracking-[0.12em]">★★★★★</span>
               <span className="text-white">4.9</span>
               <span>(128 avaliações)</span>
@@ -2742,13 +2903,13 @@ function IronShopProductPage({
           <QuantitySelector />
         </section>
       </div>
-      <div className="mt-10 grid lg:grid-cols-[58%_42%] gap-6">
-        <DescriptionCard productName={product.name} />
+      <div className="mt-7 sm:mt-10 grid lg:grid-cols-[58%_42%] gap-4 sm:gap-6">
+        <DescriptionCard productName={product.name} description={product.description} />
         <SpecificationTable category={categoryLabel(product.category)} />
       </div>
       <CustomerReviews />
       <RelatedProducts products={relatedProducts} locale={locale} categoryLabel={categoryLabel} onOpenProduct={onOpenProduct} />
-      <BottomActionBar price={price} />
+      <BottomActionBar price={price} checkoutUrl={product.checkoutUrl} />
     </div>
   );
 }
@@ -2758,12 +2919,16 @@ function IronShopCategoryPage({
   locale,
   onBack,
   onOpenProduct,
+  onAddToCart,
+  cartCount,
   categoryLabel
 }: {
   category: { title: string; description: string; products: IronShopDisplayProduct[] };
   locale: string;
   onBack: () => void;
   onOpenProduct: (product: IronShopDisplayProduct) => void;
+  onAddToCart: (product: IronShopDisplayProduct) => void;
+  cartCount: number;
   categoryLabel: (category: IronShopProduct['category']) => string;
 }) {
   return (
@@ -2772,24 +2937,32 @@ function IronShopCategoryPage({
         <button onClick={onBack} className="w-12 h-12 rounded-full bg-[#111111] border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200" aria-label="Voltar para loja">
           <ChevronLeft size={23} />
         </button>
-        <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary">
-          Categoria
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary">
+            Categoria
+          </span>
+          <button className="relative w-12 h-12 rounded-full bg-[#111111] border border-[#232323] text-white flex items-center justify-center active:scale-95 transition-all duration-200" aria-label="Carrinho">
+            <ShoppingBag size={20} strokeWidth={1.9} />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">{cartCount}</span>
+            )}
+          </button>
+        </div>
       </header>
 
-      <section className="mt-6 rounded-[28px] border border-[#232323] bg-[#111111] p-6 sm:p-8 lg:p-10 shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-primary">IronShop</p>
-        <h1 className="mt-3 text-[36px] sm:text-[48px] font-black leading-none tracking-normal">{category.title}</h1>
-        <p className="mt-4 max-w-2xl text-sm sm:text-base leading-relaxed text-[#AFAFAF]">{category.description}</p>
+      <section className="mt-4 sm:mt-6 rounded-[22px] sm:rounded-[28px] border border-[#232323] bg-[#111111] p-5 sm:p-8 lg:p-10 shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+        <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.22em] text-primary">IronShop</p>
+        <h1 className="mt-2 sm:mt-3 text-[32px] sm:text-[48px] font-black leading-none tracking-normal">{category.title}</h1>
+        <p className="mt-3 sm:mt-4 max-w-2xl text-xs sm:text-base leading-relaxed text-[#AFAFAF]">{category.description}</p>
       </section>
 
-      <section className="mt-8">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="text-[28px] sm:text-[38px] font-black tracking-normal">Produtos de {category.title}</h2>
+      <section className="mt-6 sm:mt-8">
+        <div className="flex items-end justify-between gap-3 sm:gap-4">
+          <h2 className="text-[24px] sm:text-[38px] font-black tracking-normal leading-none">Produtos de {category.title}</h2>
           <span className="text-xs font-black uppercase tracking-widest text-[#6F6F6F]">{category.products.length} itens</span>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
+        <div className="mt-4 sm:mt-5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-5">
           {category.products.map(product => (
             <article
               key={product.id}
@@ -2799,7 +2972,7 @@ function IronShopCategoryPage({
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') onOpenProduct(product);
               }}
-              className="group h-[310px] sm:h-[360px] lg:h-[420px] rounded-[22px] border border-[#232323] bg-[#0D0D0D] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:-translate-y-1 lg:hover:border-primary transition-all duration-200 cursor-pointer focus:outline-none focus:border-primary"
+              className="group h-[270px] min-[390px]:h-[295px] sm:h-[360px] lg:h-[420px] rounded-[18px] sm:rounded-[22px] border border-[#232323] bg-[#0D0D0D] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)] active:scale-[1.02] lg:hover:-translate-y-1 lg:hover:border-primary transition-all duration-200 cursor-pointer focus:outline-none focus:border-primary"
             >
               <div className="relative h-[64%] bg-[#090909] overflow-hidden">
                 {product.image && (
@@ -2812,26 +2985,26 @@ function IronShopCategoryPage({
                   />
                 )}
                 {product.badge && (
-                  <span className="absolute left-3 top-3 rounded-full bg-[#090909]/75 border border-[#232323] px-3 py-1 text-[9px] font-black uppercase tracking-widest text-primary backdrop-blur-md">
+                  <span className="absolute left-2.5 sm:left-3 top-2.5 sm:top-3 rounded-full bg-[#090909]/75 border border-[#232323] px-2.5 sm:px-3 py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-primary backdrop-blur-md">
                     {product.badge}
                   </span>
                 )}
-                <button onClick={(event) => event.stopPropagation()} className="absolute right-3 top-3 w-9 h-9 rounded-full bg-[#090909]/75 border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200 backdrop-blur-md" aria-label="Favoritar">
-                  <Heart size={16} />
+                <button onClick={(event) => event.stopPropagation()} className="absolute right-2.5 sm:right-3 top-2.5 sm:top-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#090909]/75 border border-[#232323] text-white flex items-center justify-center hover:text-primary hover:border-primary active:scale-95 transition-all duration-200 backdrop-blur-md" aria-label="Favoritar">
+                  <Heart size={15} />
                 </button>
               </div>
 
-              <div className="h-[36%] p-4 flex flex-col justify-between">
+              <div className="h-[36%] p-3 sm:p-4 flex flex-col justify-between">
                 <div>
-                  <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.16em] text-[#6F6F6F]">{categoryLabel(product.category)}</p>
-                  <h3 className="mt-1.5 text-base sm:text-lg lg:text-xl font-black leading-tight line-clamp-2">{product.name}</h3>
+                  <p className="text-[8px] sm:text-xs font-black uppercase tracking-[0.16em] text-[#6F6F6F]">{categoryLabel(product.category)}</p>
+                  <h3 className="mt-1 sm:mt-1.5 text-[12px] min-[390px]:text-[13px] sm:text-lg lg:text-xl font-black leading-tight line-clamp-2">{product.name}</h3>
                 </div>
                 <div className="flex items-end justify-between gap-2">
-                  <span className="text-2xl lg:text-[32px] font-black text-primary leading-none">
+                  <span className="text-base min-[390px]:text-lg sm:text-2xl lg:text-[32px] font-black text-primary leading-none">
                     {product.price.toLocaleString(locale, { style: 'currency', currency: 'BRL' })}
                   </span>
-                  <button onClick={(event) => event.stopPropagation()} className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white active:scale-95 transition-all duration-200" aria-label="Adicionar">
-                    <Plus size={18} />
+                  <button onClick={(event) => { event.stopPropagation(); onAddToCart(product); }} className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-xl sm:rounded-2xl bg-primary/30 border border-primary/30 text-primary flex items-center justify-center hover:bg-[#FF7E1F] hover:text-white active:scale-95 transition-all duration-200" aria-label="Adicionar ao carrinho">
+                    <Plus size={16} />
                   </button>
                 </div>
               </div>
@@ -2875,8 +3048,8 @@ function ShareButton() {
 
 function ProductGallery({ productName, images, selectedImage, onSelectImage }: { productName: string; images: string[]; selectedImage: string; onSelectImage: (image: string) => void }) {
   return (
-    <section className="space-y-4">
-      <div className="relative h-[45vh] min-h-[320px] lg:h-[680px] rounded-[22px] border border-[#232323] bg-[#111111] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+    <section className="space-y-3 sm:space-y-4">
+      <div className="relative h-[310px] sm:h-[45vh] sm:min-h-[320px] lg:h-[680px] rounded-[18px] sm:rounded-[22px] border border-[#232323] bg-[#111111] overflow-hidden shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
         {selectedImage ? (
           <motion.img key={selectedImage} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} src={selectedImage} alt={productName} className="w-full h-full object-cover" loading="eager" />
         ) : (
@@ -2886,7 +3059,7 @@ function ProductGallery({ productName, images, selectedImage, onSelectImage }: {
       </div>
       <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {images.map((image, index) => (
-          <button key={`${image}-${index}`} onClick={() => onSelectImage(image)} className={`snap-start shrink-0 w-20 h-20 rounded-2xl border bg-[#111111] overflow-hidden active:scale-95 transition-all duration-200 ${selectedImage === image && index === images.indexOf(selectedImage) ? 'border-primary' : 'border-[#232323]'}`} aria-label={`Imagem ${index + 1}`}>
+          <button key={`${image}-${index}`} onClick={() => onSelectImage(image)} className={`snap-start shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border bg-[#111111] overflow-hidden active:scale-95 transition-all duration-200 ${selectedImage === image && index === images.indexOf(selectedImage) ? 'border-primary' : 'border-[#232323]'}`} aria-label={`Imagem ${index + 1}`}>
             <img src={image} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
           </button>
         ))}
@@ -2897,10 +3070,10 @@ function ProductGallery({ productName, images, selectedImage, onSelectImage }: {
 
 function PriceSection({ price, oldPrice, installment }: { price: string; oldPrice?: string; installment: string }) {
   return (
-    <section className="rounded-3xl border border-[#232323] bg-[#111111]/90 p-5 sm:p-6 backdrop-blur-md shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
+    <section className="rounded-[22px] sm:rounded-3xl border border-[#232323] bg-[#111111]/90 p-4 sm:p-6 backdrop-blur-md shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
       {oldPrice && <p className="text-sm font-bold text-[#6F6F6F] line-through mb-2">{oldPrice}</p>}
-      <p className="text-[42px] sm:text-[52px] font-black leading-none text-primary">{price}</p>
-      <p className="mt-3 text-sm sm:text-base font-semibold text-[#AFAFAF]">ou até 12x de {installment} sem juros</p>
+      <p className="text-[34px] sm:text-[52px] font-black leading-none text-primary">{price}</p>
+      <p className="mt-2 sm:mt-3 text-xs sm:text-base font-semibold text-[#AFAFAF]">ou até 12x de {installment} sem juros</p>
     </section>
   );
 }
@@ -2908,11 +3081,11 @@ function PriceSection({ price, oldPrice, installment }: { price: string; oldPric
 function BenefitsList() {
   const benefits = ['Produto Original', 'Envio Rápido', 'Compra Segura', 'Garantia IronShape'];
   return (
-    <section className="grid grid-cols-2 gap-3">
+    <section className="grid grid-cols-2 gap-2 sm:gap-3">
       {benefits.map(benefit => (
-        <div key={benefit} className="min-h-[58px] rounded-2xl border border-[#232323] bg-[#111111] px-4 flex items-center gap-3">
-          <CheckCircle2 size={18} className="text-primary shrink-0" />
-          <span className="text-sm font-black">{benefit}</span>
+        <div key={benefit} className="min-h-[52px] sm:min-h-[58px] rounded-2xl border border-[#232323] bg-[#111111] px-3 sm:px-4 flex items-center gap-2 sm:gap-3">
+          <CheckCircle2 size={16} className="text-primary shrink-0" />
+          <span className="text-[11px] sm:text-sm font-black leading-tight">{benefit}</span>
         </div>
       ))}
     </section>
@@ -2921,17 +3094,17 @@ function BenefitsList() {
 
 function QuantitySelector() {
   return (
-    <section className="rounded-3xl border border-[#232323] bg-[#111111] p-4 flex items-center justify-between">
+    <section className="rounded-[22px] sm:rounded-3xl border border-[#232323] bg-[#111111] p-4 flex items-center justify-between">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6F6F6F]">Quantidade</p>
-        <p className="text-sm font-semibold text-[#AFAFAF] mt-1">Seleção visual para próxima fase</p>
+        <p className="text-xs sm:text-sm font-semibold text-[#AFAFAF] mt-1">Seleção visual para próxima fase</p>
       </div>
-      <div className="flex items-center gap-3">
-        <button className="w-11 h-11 rounded-2xl border border-[#232323] bg-[#090909] text-white flex items-center justify-center active:scale-95 hover:text-primary transition-all duration-200" aria-label="Diminuir quantidade">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border border-[#232323] bg-[#090909] text-white flex items-center justify-center active:scale-95 hover:text-primary transition-all duration-200" aria-label="Diminuir quantidade">
           <Minus size={18} />
         </button>
-        <span className="w-10 text-center text-xl font-black">1</span>
-        <button className="w-11 h-11 rounded-2xl border border-primary/30 bg-primary/20 text-primary flex items-center justify-center active:scale-95 hover:bg-primary hover:text-white transition-all duration-200" aria-label="Aumentar quantidade">
+        <span className="w-8 sm:w-10 text-center text-lg sm:text-xl font-black">1</span>
+        <button className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border border-primary/30 bg-primary/20 text-primary flex items-center justify-center active:scale-95 hover:bg-primary hover:text-white transition-all duration-200" aria-label="Aumentar quantidade">
           <Plus size={18} />
         </button>
       </div>
@@ -2939,16 +3112,26 @@ function QuantitySelector() {
   );
 }
 
-function DescriptionCard({ productName }: { productName: string }) {
+function DescriptionCard({ productName, description }: { productName: string; description?: string }) {
   return (
     <section className="rounded-3xl border border-[#232323] bg-[#111111] p-6 sm:p-8 shadow-[0_12px_35px_rgba(0,0,0,0.35)]">
       <h2 className="text-2xl sm:text-[32px] font-black">Descrição</h2>
-      <p className="mt-4 text-sm sm:text-base leading-relaxed text-[#AFAFAF]">
-        O {productName} foi selecionado para atletas e alunos que buscam performance, praticidade e confiança na rotina. A proposta da IronShape é entregar uma experiência premium desde a escolha do produto até o uso diário, com visual sofisticado e informações claras para decisões rápidas.
-      </p>
-      <p className="mt-4 text-sm sm:text-base leading-relaxed text-[#AFAFAF]">
-        Ideal para acompanhar treinos intensos, recuperação e evolução constante, este produto combina qualidade percebida, acabamento moderno e posicionamento fitness de alto padrão. Esta página usa dados simulados e está pronta para receber integrações reais nas próximas fases.
-      </p>
+      {description ? (
+        description.split('\n\n').map((paragraph) => (
+          <p key={paragraph} className="mt-4 text-sm sm:text-base leading-relaxed text-[#AFAFAF] whitespace-pre-line">
+            {paragraph}
+          </p>
+        ))
+      ) : (
+        <>
+          <p className="mt-4 text-sm sm:text-base leading-relaxed text-[#AFAFAF]">
+            O {productName} foi selecionado para atletas e alunos que buscam performance, praticidade e confiança na rotina. A proposta da IronShape é entregar uma experiência premium desde a escolha do produto até o uso diário, com visual sofisticado e informações claras para decisões rápidas.
+          </p>
+          <p className="mt-4 text-sm sm:text-base leading-relaxed text-[#AFAFAF]">
+            Ideal para acompanhar treinos intensos, recuperação e evolução constante, este produto combina qualidade percebida, acabamento moderno e posicionamento fitness de alto padrão. Esta página usa dados simulados e está pronta para receber integrações reais nas próximas fases.
+          </p>
+        </>
+      )}
     </section>
   );
 }
@@ -3031,7 +3214,12 @@ function RelatedProducts({ products, locale, categoryLabel, onOpenProduct }: { p
   );
 }
 
-function BottomActionBar({ price }: { price: string }) {
+function BottomActionBar({ price, checkoutUrl }: { price: string; checkoutUrl?: string }) {
+  const openCheckout = () => {
+    if (!checkoutUrl) return;
+    window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="fixed left-0 right-0 bottom-0 z-[90] border-t border-[#232323] bg-[#090909]/95 backdrop-blur-xl px-4 py-3 lg:hidden">
       <div className="max-w-[1600px] mx-auto flex items-center gap-3">
@@ -3039,8 +3227,8 @@ function BottomActionBar({ price }: { price: string }) {
           <p className="text-[10px] font-black uppercase tracking-widest text-[#6F6F6F]">Total</p>
           <p className="text-lg font-black text-primary">{price}</p>
         </div>
-        <button className="flex-1 min-h-[48px] rounded-2xl border border-primary/35 bg-primary/15 text-primary text-[10px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Adicionar ao Carrinho</button>
-        <button className="flex-1 min-h-[48px] rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Comprar Agora</button>
+        <button onClick={openCheckout} className="flex-1 min-h-[48px] rounded-2xl border border-primary/35 bg-primary/15 text-primary text-[10px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Adicionar ao Carrinho</button>
+        <button onClick={openCheckout} className="flex-1 min-h-[48px] rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest active:scale-[0.98] transition-all duration-200">Comprar Agora</button>
       </div>
     </div>
   );
